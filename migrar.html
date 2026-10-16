@@ -29,6 +29,11 @@ pre{background:#F3F5F3;border-radius:8px;padding:10px;max-height:240px;overflow:
     <h2>1 · Entra con tu cuenta de administrador</h2>
     <form id="fL"><label>Número de nómina<input name="u" inputmode="numeric" required></label><label>Contraseña<input name="p" type="password" required></label><p class="m" id="mL"></p><button>Entrar</button></form>
   </section>
+  <section class="box" id="bReg">
+    <h2>¿Primera vez? Crea tu cuenta</h2>
+    <p class="m" style="color:var(--muted);font-size:13.5px">Solo para la primera cuenta de administrador. Las demás personas se dan de alta desde cada aplicación. Una cuenta nueva no ve ningún dato hasta que su nómina esté dada de alta en el personal.</p>
+    <form id="fR"><label>Número de nómina<input name="u" inputmode="numeric" required></label><label>Contraseña (mínimo 6)<input name="p" type="password" minlength="6" autocomplete="new-password" required></label><label>Repite la contraseña<input name="p2" type="password" minlength="6" autocomplete="new-password" required></label><p class="m" id="mR"></p><button>Crear mi cuenta</button></form>
+  </section>
   <section class="box" id="bArch" hidden>
     <h2>2 · Elige el archivo de migración</h2>
     <p class="m" id="quien"></p>
@@ -54,7 +59,13 @@ $('fL').addEventListener('submit', e => {
   e.preventDefault(); $('mL').className = 'm'; $('mL').textContent = 'Entrando…';
   auth.signInWithEmailAndPassword(e.target.u.value.trim() + '@' + DOMINIO, e.target.p.value).catch(er => { $('mL').className = 'm err'; $('mL').textContent = 'No se pudo entrar: ' + (er.code === 'auth/invalid-credential' ? 'nómina o contraseña incorrecta.' : er.message); });
 });
-auth.onAuthStateChanged(u => { if (!u) return; $('bLogin').hidden = true; $('bArch').hidden = false; $('quien').textContent = 'Sesión: nómina ' + u.email.split('@')[0]; });
+$('fR').addEventListener('submit', e => {
+  e.preventDefault(); const f = e.target, m = $('mR');
+  if (f.p.value !== f.p2.value) { m.className = 'm err'; m.textContent = 'Las contraseñas no coinciden.'; return; }
+  m.className = 'm'; m.textContent = 'Creando cuenta…';
+  auth.createUserWithEmailAndPassword(f.u.value.trim() + '@' + DOMINIO, f.p.value).catch(er => { m.className = 'm err'; m.textContent = er.code === 'auth/email-already-in-use' ? 'Esa nómina ya tiene cuenta: usa "Entrar".' : er.code === 'auth/weak-password' ? 'La contraseña debe tener al menos 6 caracteres.' : er.message; });
+});
+auth.onAuthStateChanged(u => { if (!u) return; $('bLogin').hidden = true; $('bReg').hidden = true; $('bArch').hidden = false; $('quien').textContent = 'Sesión: nómina ' + u.email.split('@')[0]; });
 $('arch').addEventListener('change', e => {
   const f = e.target.files[0]; if (!f) return;
   const r = new FileReader();
