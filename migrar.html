@@ -55,15 +55,27 @@ const auth = firebase.auth(), fs = firebase.firestore();
 const $ = id => document.getElementById(id);
 let datos = null;
 const log = t => { const l = $('log'); l.hidden = false; l.textContent += t + '\n'; l.scrollTop = l.scrollHeight; };
+// límite de tiempo: si el navegador no logra hablar con Firebase, avisa en vez de quedarse cargando
+const conLimite = p => Promise.race([p, new Promise((_, j) => setTimeout(() => j({ code: 'timeout' }), 20000))]);
+const textoError = er => er.code === 'timeout' ? 'Firebase no respondió en 20 s. Este navegador está bloqueando la conexión (extensión, red o caché): prueba en Edge, en ventana de incógnito o en el panel de Claude.'
+  : er.code === 'auth/network-request-failed' ? 'Sin conexión con Firebase (red o extensión del navegador bloqueando).'
+  : er.code === 'auth/invalid-credential' || er.code === 'auth/wrong-password' || er.code === 'auth/user-not-found' ? 'nómina o contraseña incorrecta.'
+  : er.code === 'auth/email-already-in-use' ? 'Esa nómina ya tiene cuenta: usa "Entrar".'
+  : er.code === 'auth/weak-password' ? 'La contraseña debe tener al menos 6 caracteres.'
+  : er.code === 'auth/too-many-requests' ? 'Demasiados intentos; espera unos minutos.'
+  : (er.message || String(er));
+function enviar(form, m, msg, accion) {
+  const b = form.querySelector('button'); b.disabled = true; m.className = 'm'; m.textContent = msg;
+  conLimite(accion()).catch(er => { console.error('[migrar]', er); m.className = 'm err'; m.textContent = textoError(er); }).finally(() => { b.disabled = false; });
+}
 $('fL').addEventListener('submit', e => {
-  e.preventDefault(); $('mL').className = 'm'; $('mL').textContent = 'Entrando…';
-  auth.signInWithEmailAndPassword(e.target.u.value.trim() + '@' + DOMINIO, e.target.p.value).catch(er => { $('mL').className = 'm err'; $('mL').textContent = 'No se pudo entrar: ' + (er.code === 'auth/invalid-credential' ? 'nómina o contraseña incorrecta.' : er.message); });
+  e.preventDefault(); const f = e.target;
+  enviar(f, $('mL'), 'Entrando…', () => auth.signInWithEmailAndPassword(f.u.value.trim() + '@' + DOMINIO, f.p.value));
 });
 $('fR').addEventListener('submit', e => {
   e.preventDefault(); const f = e.target, m = $('mR');
   if (f.p.value !== f.p2.value) { m.className = 'm err'; m.textContent = 'Las contraseñas no coinciden.'; return; }
-  m.className = 'm'; m.textContent = 'Creando cuenta…';
-  auth.createUserWithEmailAndPassword(f.u.value.trim() + '@' + DOMINIO, f.p.value).catch(er => { m.className = 'm err'; m.textContent = er.code === 'auth/email-already-in-use' ? 'Esa nómina ya tiene cuenta: usa "Entrar".' : er.code === 'auth/weak-password' ? 'La contraseña debe tener al menos 6 caracteres.' : er.message; });
+  enviar(f, m, 'Creando cuenta…', () => auth.createUserWithEmailAndPassword(f.u.value.trim() + '@' + DOMINIO, f.p.value));
 });
 auth.onAuthStateChanged(u => { if (!u) return; $('bLogin').hidden = true; $('bReg').hidden = true; $('bArch').hidden = false; $('quien').textContent = 'Sesión: nómina ' + u.email.split('@')[0]; });
 $('arch').addEventListener('change', e => {
