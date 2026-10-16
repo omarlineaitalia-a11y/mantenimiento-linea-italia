@@ -92,10 +92,14 @@ $('arch').addEventListener('change', e => {
   };
   r.readAsText(f);
 });
+// Firestore no acepta listas dentro de listas: la lista interna va como {__a:[...]} (lib/li-firebase.js la regresa a lista al leer)
+const esObj = v => v !== null && typeof v === 'object' && !Array.isArray(v);
+const cod = (v, enLista) => Array.isArray(v) ? (a => enLista ? { __a: a } : a)(v.map(x => cod(x, true)))
+  : esObj(v) ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, cod(x, false)])) : v;
 async function escribir(lista) {
   for (let i = 0; i < lista.length; i += 400) {
     const b = fs.batch();
-    lista.slice(i, i + 400).forEach(([ruta, d]) => b.set(fs.doc(ruta), d));
+    lista.slice(i, i + 400).forEach(([ruta, d]) => b.set(fs.doc(ruta), cod(d, false)));
     await b.commit();
   }
 }
@@ -104,7 +108,7 @@ $('btnImp').addEventListener('click', async () => {
   $('btnImp').disabled = true; $('mI').className = 'm'; $('mI').textContent = 'Pasando datos…';
   try {
     // primero el personal (las reglas lo usan para saber quién es administrador)
-    for (const app in datos.apps) { const p = datos.apps[app].config && datos.apps[app].config.personal; if (p) { await fs.doc('apps/' + app + '/config/personal').set(p); log('✔ ' + app + '/config/personal'); } }
+    for (const app in datos.apps) { const p = datos.apps[app].config && datos.apps[app].config.personal; if (p) { await fs.doc('apps/' + app + '/config/personal').set(cod(p, false)); log('✔ ' + app + '/config/personal'); } }
     for (const app in datos.apps) for (const col in datos.apps[app]) {
       const lista = Object.entries(datos.apps[app][col]).filter(([id]) => !(col === 'config' && id === 'personal')).map(([id, d]) => ['apps/' + app + '/' + col + '/' + id, d]);
       if (lista.length) { await escribir(lista); log('✔ ' + app + '/' + col + ': ' + lista.length + ' documentos'); }
