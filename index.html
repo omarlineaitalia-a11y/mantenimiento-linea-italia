@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Mantenimiento Línea Italia</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600;700&display=swap">
+<style>
+:root{--bg:#C9CDCB;--panel:#fff;--fg:#1C2620;--muted:#4F5A54;--hero:#1E4A2A;--hero-fg:#F2F6F2;--accent:#2E7D32;--line:#C2C7C4}
+@media (prefers-color-scheme: dark){:root{--bg:#2A2D2C;--panel:#1C1F1E;--fg:#E6ECE8;--muted:#A3B0A8;--hero:#16301E;--accent:#66BB6A;--line:#3A3F3D;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 'IBM Plex Sans',system-ui,'Segoe UI',Arial,sans-serif}
+.wrap{max-width:900px;margin:0 auto;padding-inline:16px;padding-block:32px 48px;display:flex;flex-direction:column;gap:20px}
+.hero{background:var(--hero);color:var(--hero-fg);border-radius:14px;padding:24px;display:flex;gap:18px;align-items:center}
+.hero img{height:72px;border-radius:8px}
+.hero p{margin:0;opacity:.75;font-size:13px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+.hero h1{margin:4px 0 0;font-size:28px;line-height:1.15}
+.apps{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+a.app{background:var(--panel);border:1px solid var(--line);border-left:6px solid var(--accent);border-radius:12px;padding:20px;text-decoration:none;color:var(--fg);display:flex;flex-direction:column;gap:6px}
+a.app:hover{border-color:var(--accent)}
+a.app b{font-size:20px}
+a.app span{color:var(--muted)}
+.foot{color:var(--muted);font-size:13px;text-align:center;margin:0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="hero">
+    <img id="logo" alt="Línea Italia">
+    <div><p>Línea Italia · Mantenimiento</p><h1>Aplicaciones de mantenimiento</h1></div>
+  </header>
+  <section class="apps">
+    <a class="app" href="almacen/"><b>📦 Almacén de refacciones</b><span>Existencias, estantes, fotos, retiros, límites por persona, gasto y valor del almacén.</span></a>
+    <a class="app" href="paros/"><b>⏱ Control de paros</b><span>Alertas de falla, tiempos de llegada y reparación, tablero de mantenimiento, gráficas y reportes.</span></a>
+  </section>
+  <p class="foot">Creaciones Industriales, S.A. de C.V. · Área de mantenimiento</p>
+</div>
+<script>
+document.getElementById('logo').src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 300"><rect width="340" height="300" fill="#0F2B3D"/><rect x="113" y="52" width="114" height="114" fill="none" stroke="#fff" stroke-width="7"/><text x="170" y="138" text-anchor="middle" font-family="Century Gothic, Arial, sans-serif" font-size="74" font-weight="300" fill="#fff">LI</text><text x="164" y="232" text-anchor="middle" font-family="Century Gothic, Arial, sans-serif" font-size="42" font-weight="300" fill="#fff">línea italia</text><text x="170" y="268" text-anchor="middle" font-family="Century Gothic, Arial, sans-serif" font-size="14.5" letter-spacing="4.6" fill="#fff">ECCELLENZA IN MOBILE</text></svg>');
+</script>
+</body>
+</html>
