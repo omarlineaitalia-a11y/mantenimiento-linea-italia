@@ -1,0 +1,23 @@
+rules_version = '2';
+// Reglas de Cloud Firestore · Mantenimiento Línea Italia
+// - Solo personal con cuenta (nómina + contraseña) puede leer y escribir.
+// - La configuración (personal, máquinas, pantallas, apariencia) solo la cambian administradores.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function nomina() {
+      return request.auth.token.email.split('@')[0];
+    }
+    function rutaPersonal(app) {
+      return /databases/$(database)/documents/apps/$(app)/config/personal;
+    }
+    function esAdmin(app) {
+      return !exists(rutaPersonal(app))
+        || (nomina() in get(rutaPersonal(app)).data.p
+            && get(rutaPersonal(app)).data.p[nomina()].r in ['admin', 'general']);
+    }
+    match /apps/{app}/{col}/{rest=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && (col != 'config' || esAdmin(app));
+    }
+  }
+}

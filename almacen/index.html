@@ -1,4 +1,4 @@
-<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>[hidden]{display:none!important}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}</style></head><body><title>Almacén de Mantenimiento</title>
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>[hidden]{display:none!important}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}</style><script>window.LI_APP="almacen";</script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script><script src="../firebase-config.js"></script><script src="../lib/li-firebase.js"></script></head><body><title>Almacén de Mantenimiento</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
 <style>
 :root{
@@ -443,7 +443,7 @@ label.f{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--mu
         <label class="f">Núm. de nómina *<input name="nom" required class="mono" inputmode="numeric" placeholder="4800"></label>
         <label class="f w2">Nombre completo *<input name="n" required placeholder="APELLIDOS NOMBRE"></label>
         <label class="f">Rol<select name="r"><option value="usuario">Usuario (consulta)</option><option value="admin">Administrador</option></select></label>
-        <label class="f w2">Puesto / área<input name="puesto" placeholder="Mantenimiento"></label>
+        <label class="f w2">Puesto / área<input name="puesto" placeholder="Mantenimiento"></label><label class="f w2">Contraseña inicial (solo personas nuevas, mín. 6)<input name="pw" type="password" autocomplete="new-password" placeholder="La persona la cambia después"></label>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="primary" type="submit">Guardar persona</button><p class="msg" id="mPers"></p></div>
     </form>
@@ -573,6 +573,7 @@ function applyRole(){
 function entrar(nomina){
   const p = S.pers && S.pers[nomina];
   if (!p || p.a === false) return false;
+  if (window.LI && LI.nomina() && String(nomina) !== String(LI.nomina())) return false;
   S.yo = { nomina, n:p.n, r:p.r }; LS.set('alm_nomina', nomina); S.last = Date.now(); LS.set('alm_last', String(S.last));
   $('login').hidden = true; applyRole(); return true;
 }
@@ -1290,8 +1291,10 @@ $('fPers').addEventListener('submit', async e => {
   if (!/^\d+$/.test(k)) { msg.className='msg err'; msg.textContent='La nómina debe ser numérica.'; return; }
   const p = { n:String(fd.get('n')).trim().toUpperCase(), r:String(fd.get('r')), a:true, puesto:String(fd.get('puesto')).trim() };
   if (S.pers[k] && S.pers[k].r === 'general') { msg.className='msg err'; msg.textContent='La administración general no se puede modificar aquí.'; return; }
-  try { await db.doc('config/personal').update({ p: { [k]: p } }); e.target.reset(); msg.className='msg okm'; msg.textContent='Guardado: '+k+' · '+p.n; }
-  catch(err) { msg.className='msg err'; msg.textContent='No se pudo guardar ('+(err.code||'error')+').'; }
+  const pw = String(fd.get('pw') || '');
+  if (pw && pw.length < 6) { msg.className='msg err'; msg.textContent='La contraseña debe tener al menos 6 caracteres.'; return; }
+  try { await db.doc('config/personal').update({ p: { [k]: p } }); let extra = ''; if (pw && window.LI) { const r = await LI.crearCuenta(k, pw); extra = r === 'existe' ? ' · ya tenía cuenta (no se cambió su contraseña)' : ' · cuenta creada'; } e.target.reset(); msg.className='msg okm'; msg.textContent='Guardado: '+k+' · '+p.n+extra; }
+  catch(err) { msg.className='msg err'; msg.textContent='No se pudo guardar ('+(err.code||err.message||'error')+').'; }
 });
 document.addEventListener('click', async e => {
   const b = e.target.closest('[data-pact]'); if (!b || !S.isGeneral) return;

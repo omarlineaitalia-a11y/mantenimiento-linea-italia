@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Migración a Firebase</title>
+<style>
+:root{--bg:#C9CDCB;--panel:#fff;--fg:#1C2620;--muted:#4F5A54;--hero:#1E4A2A;--accent:#2E7D32;--line:#C2C7C4;--bad:#C62828}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,'Segoe UI',Arial,sans-serif}
+.wrap{max-width:720px;margin:0 auto;padding-inline:16px;padding-block:28px 48px;display:flex;flex-direction:column;gap:16px}
+.hero{background:var(--hero);color:#F2F6F2;border-radius:14px;padding:20px 22px}
+.hero h1{margin:0;font-size:24px}.hero p{margin:6px 0 0;opacity:.8}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px}
+.box h2{margin:0;font-size:15px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
+label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted);font-weight:600}
+input{font:inherit;padding:9px 11px;border:1px solid var(--line);border-radius:8px}
+button{font:inherit;font-weight:700;padding:11px;border-radius:8px;border:0;background:var(--accent);color:#fff;cursor:pointer}
+button:disabled{opacity:.5;cursor:default}
+.m{margin:0;min-height:1.2em}.err{color:var(--bad)}.ok{color:var(--accent)}
+table{border-collapse:collapse;width:100%;font-size:14px}td,th{padding:6px 8px;border-top:1px solid var(--line);text-align:left}
+pre{background:#F3F5F3;border-radius:8px;padding:10px;max-height:240px;overflow:auto;font-size:12.5px;margin:0;white-space:pre-wrap}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="hero"><h1>Migración de datos a Firebase</h1><p>Se usa una sola vez: pasa la información del Almacén y de Control de Paros a la base de datos de Firebase.</p></header>
+  <section class="box" id="bLogin">
+    <h2>1 · Entra con tu cuenta de administrador</h2>
+    <form id="fL"><label>Número de nómina<input name="u" inputmode="numeric" required></label><label>Contraseña<input name="p" type="password" required></label><p class="m" id="mL"></p><button>Entrar</button></form>
+  </section>
+  <section class="box" id="bArch" hidden>
+    <h2>2 · Elige el archivo de migración</h2>
+    <p class="m" id="quien"></p>
+    <label>Archivo <code>migracion_datos_*.json</code> (carpeta <i>control de mantenimiento\migracion</i>)<input type="file" id="arch" accept=".json,application/json"></label>
+    <div id="resumen"></div>
+    <button id="btnImp" disabled>3 · Pasar los datos a Firebase</button>
+    <p class="m" id="mI"></p>
+    <pre id="log" hidden></pre>
+  </section>
+</div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+const DOMINIO = 'mtto-lineaitalia.app';
+firebase.initializeApp(window.FIREBASE_CONFIG);
+const auth = firebase.auth(), fs = firebase.firestore();
+const $ = id => document.getElementById(id);
+let datos = null;
+const log = t => { const l = $('log'); l.hidden = false; l.textContent += t + '\n'; l.scrollTop = l.scrollHeight; };
+$('fL').addEventListener('submit', e => {
+  e.preventDefault(); $('mL').className = 'm'; $('mL').textContent = 'Entrando…';
+  auth.signInWithEmailAndPassword(e.target.u.value.trim() + '@' + DOMINIO, e.target.p.value).catch(er => { $('mL').className = 'm err'; $('mL').textContent = 'No se pudo entrar: ' + (er.code === 'auth/invalid-credential' ? 'nómina o contraseña incorrecta.' : er.message); });
+});
+auth.onAuthStateChanged(u => { if (!u) return; $('bLogin').hidden = true; $('bArch').hidden = false; $('quien').textContent = 'Sesión: nómina ' + u.email.split('@')[0]; });
+$('arch').addEventListener('change', e => {
+  const f = e.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try {
+      datos = JSON.parse(r.result);
+      let html = '<table><tr><th>Aplicación</th><th>Colección</th><th>Documentos</th></tr>';
+      for (const app in datos.apps) for (const col in datos.apps[app]) html += '<tr><td>' + app + '</td><td>' + col + '</td><td>' + Object.keys(datos.apps[app][col]).length + '</td></tr>';
+      for (const app in (datos.fotos || {})) html += '<tr><td>' + app + '</td><td>fotos</td><td>' + Object.keys(datos.fotos[app]).length + '</td></tr>';
+      $('resumen').innerHTML = html + '</table>'; $('btnImp').disabled = false;
+    } catch (er) { $('resumen').innerHTML = '<p class="m err">El archivo no es válido: ' + er.message + '</p>'; }
+  };
+  r.readAsText(f);
+});
+async function escribir(lista) {
+  for (let i = 0; i < lista.length; i += 400) {
+    const b = fs.batch();
+    lista.slice(i, i + 400).forEach(([ruta, d]) => b.set(fs.doc(ruta), d));
+    await b.commit();
+  }
+}
+$('btnImp').addEventListener('click', async () => {
+  if (!datos) return;
+  $('btnImp').disabled = true; $('mI').className = 'm'; $('mI').textContent = 'Pasando datos…';
+  try {
+    // primero el personal (las reglas lo usan para saber quién es administrador)
+    for (const app in datos.apps) { const p = datos.apps[app].config && datos.apps[app].config.personal; if (p) { await fs.doc('apps/' + app + '/config/personal').set(p); log('✔ ' + app + '/config/personal'); } }
+    for (const app in datos.apps) for (const col in datos.apps[app]) {
+      const lista = Object.entries(datos.apps[app][col]).filter(([id]) => !(col === 'config' && id === 'personal')).map(([id, d]) => ['apps/' + app + '/' + col + '/' + id, d]);
+      if (lista.length) { await escribir(lista); log('✔ ' + app + '/' + col + ': ' + lista.length + ' documentos'); }
+    }
+    for (const app in (datos.fotos || {})) for (const [id, d] of Object.entries(datos.fotos[app])) { await fs.doc('apps/' + app + '/fotos/' + id).set({ data: d, t: new Date().toISOString(), por: 'migracion' }); log('✔ foto ' + id); }
+    $('mI').className = 'm ok'; $('mI').textContent = '¡Listo! Todos los datos están en Firebase.';
+  } catch (er) { $('mI').className = 'm err'; $('mI').textContent = 'Error: ' + (er.code === 'permission-denied' ? 'sin permiso. Revisa que las reglas de Firestore estén publicadas.' : er.message); $('btnImp').disabled = false; }
+});
+</script>
+</body>
+</html>

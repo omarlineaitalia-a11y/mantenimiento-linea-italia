@@ -1,4 +1,4 @@
-<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>[hidden]{display:none!important}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}</style></head><body><title>Control de Paros</title>
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>[hidden]{display:none!important}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}</style><script>window.LI_APP="paros";</script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script><script src="../firebase-config.js"></script><script src="../lib/li-firebase.js"></script></head><body><title>Control de Paros</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600;700&display=swap">
 <style>
 :root{
@@ -315,7 +315,7 @@ body.kiosk .top nav.nav, body.kiosk .hide-kiosk{display:none}
             <label class="f" style="grid-column:span 2">Nombre completo *<input name="n" required placeholder="APELLIDOS NOMBRE"></label>
             <label class="f">Rol<select name="r" id="perRol"></select></label>
             <label class="f">Máquina asignada (operadores)<select name="maq" id="perMaq"></select></label>
-            <label class="f">Área / puesto<input name="area" placeholder="Corte láser"></label>
+            <label class="f">Área / puesto<input name="area" placeholder="Corte láser"></label><label class="f">Contraseña inicial (personas nuevas, mín. 6)<input name="pw" type="password" autocomplete="new-password" placeholder="La persona la cambia después"></label>
           </div>
           <div class="f" style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:var(--muted);font-weight:500">Pantallas que puede ver (los administradores ven todas)</span>
             <div id="perVis" style="display:flex;flex-wrap:wrap;gap:14px"></div>
@@ -1074,7 +1074,12 @@ $('fPer').addEventListener('submit', async e => {
   if (k === S.admin.nomina) { msg.className='msg err'; msg.textContent='No puedes cambiar tu propio rol.'; return; }
   const vis = [...f.querySelectorAll('input[name=vis]:checked')].map(x => x.value);
   const p = { n:f.n.value.trim().toUpperCase(), r:f.r.value, maq:f.maq.value, area:f.area.value.trim(), a:true, vis: vis.length ? vis : (VIS_DEF[f.r.value] || ['graf']).filter(v => v !== 'rep' && v !== 'cfg') };
-  if (await upd('config/personal', { p: { [k]: p } }, 'Guardado: ' + k + ' · ' + p.n + ' · ' + ROLES[p.r])) f.reset();
+  const pw = f.pw ? f.pw.value : '';
+  if (pw && pw.length < 6) { msg.className='msg err'; msg.textContent='La contraseña debe tener al menos 6 caracteres.'; return; }
+  if (await upd('config/personal', { p: { [k]: p } }, 'Guardado: ' + k + ' · ' + p.n + ' · ' + ROLES[p.r])) {
+    if (pw && window.LI) { try { const r = await LI.crearCuenta(k, pw); toast(r === 'existe' ? k + ' ya tenía cuenta: no se cambió su contraseña.' : 'Cuenta creada para ' + k + '.'); } catch(er) { msg.className='msg err'; msg.textContent='Persona guardada, pero no se pudo crear su cuenta: ' + er.message; } }
+    f.reset();
+  }
 });
 document.addEventListener('change', async e => {
   const s = e.target.closest('[data-prol]'); if (!s || !S.admin) return;
