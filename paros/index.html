@@ -88,6 +88,8 @@ label.f{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--mu
 .alerta{position:fixed;inset:0;z-index:40;background:var(--bad);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px;text-align:center}
 @keyframes parpadeo{0%,100%{background:var(--bad)}50%{background:var(--bad-ink)}}
 .alerta{animation:parpadeo 1.2s infinite}
+@keyframes parpadeoP{0%,100%{background:#5B2C83}50%{background:#2E1446}}
+.alerta.prueba{animation:parpadeoP 1.2s infinite}
 .alerta .a1{font-size:clamp(30px,6vw,84px);font-weight:700;letter-spacing:.04em;line-height:1}
 .alerta .a2{font-size:clamp(26px,5vw,64px);font-weight:700;line-height:1.05}
 .alerta .a3{font-size:clamp(17px,2.4vw,30px);max-width:1100px}
@@ -219,13 +221,14 @@ body.kiosk .top nav.nav, body.kiosk .hide-kiosk{display:none}
       <label class="f" style="min-width:200px">Máquina<select id="grMaq"><option value="">Todas</option></select></label>
       <p class="foot" style="flex:1;min-width:200px">Solo consulta. Los tiempos de paro se cuentan en <b>minutos</b>, desde la alerta hasta que se libera la máquina.</p>
     </div>
-    <div class="kpis" id="grKpis"></div>
+    <div class="kpis" id="grKpis" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))"></div>
     <div class="charts">
       <div class="box"><h3 id="grT1">Minutos de paro</h3><div id="gr1"></div></div>
       <div class="box"><h3 id="grT2">Número de paros</h3><div id="gr2"></div></div>
       <div class="box"><h3>Llegada promedio del técnico (min)</h3><div id="gr3"></div></div>
       <div class="box"><h3>Reparación promedio (min)</h3><div id="gr4"></div></div>
       <div class="box"><h3 id="grT5">Máquinas con más minutos de paro</h3><div id="gr5"></div></div>
+      <div class="box" style="grid-column:1 / -1"><h3 id="grT6">🧪 Minutos de prueba de alarma</h3><p class="foot">Pruebas lanzadas por administradores: minutos desde la alarma hasta que el técnico llega. <b>No cuentan como paro.</b></p><div id="gr6"></div></div>
       <div class="box" style="justify-content:space-between">
         <div style="display:flex;flex-direction:column;gap:8px"><h3>💰 Gasto de refacciones (Almacén)</h3><p class="foot">El gasto de refacciones por semana, mes y año está en la página del almacén, calculado con las salidas y el costo de cada refacción.</p></div>
         <a class="btn primary" href="https://claude.ai/artifact/S6L3TagmzkhNDVHKoEKbYK#gasto" target="_blank" rel="noopener" style="text-decoration:none;background:var(--accent);color:var(--accent-fg);border-color:var(--accent)">Abrir gasto de refacciones ↗</a>
@@ -274,6 +277,7 @@ body.kiosk .top nav.nav, body.kiosk .hide-kiosk{display:none}
       <div class="box"><h3>Máquinas con más paros</h3><div id="chParos"></div></div>
     </div>
     <div class="box"><h3>Detalle de paros del periodo</h3><div class="scroll" id="repTabla"></div></div>
+    <div class="box"><h3>🧪 Registro de pruebas de alarma del periodo</h3><p class="foot">No cuentan como paro ni en la disponibilidad. Se mide el tiempo desde la alarma hasta que el técnico registra "en sitio".</p><div class="scroll" id="repPruebas"></div></div>
   </section>
 
   <!-- CONFIGURACION -->
@@ -389,7 +393,7 @@ const PUEDE = {
   ver:['operador','procesos','admin','general','mtto']
 };
 const TPM_TIPOS = ['Limpieza','Lubricación','Apriete / ajuste','Fuga (aire, aceite, agua)','Ruido o vibración','Desgaste o pieza dañada','Seguridad (guardas, paro de emergencia)','Fuente de suciedad','Otra'];
-const S = { per:{}, maq:{}, est:{}, evs:[], bit:[], cfg:{ inact:5, mtto:'tab', procesos:'tab', operador:'op' }, view:'tab', opMaq:'', last:Date.now(), lastUser:null, admin:null, sonido:false, hideAlert:0, rep:{ p:'7' }, ct:'per', tpm:[], gr:{ per:'sem' }, repOk:false };
+const S = { per:{}, maq:{}, est:{}, evs:[], pru:[], bit:[], cfg:{ inact:5, mtto:'tab', procesos:'tab', operador:'op' }, view:'tab', opMaq:'', last:Date.now(), lastUser:null, admin:null, sonido:false, hideAlert:0, rep:{ p:'7' }, ct:'per', tpm:[], gr:{ per:'sem' }, repOk:false };
 let db = null;
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -406,7 +410,10 @@ const fday = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'
 function toast(t){ const el=$('toast'); el.textContent=t; el.hidden=false; clearTimeout(toast.h); toast.h=setTimeout(()=>el.hidden=true, Math.max(3200, t.length*60)); }
 const maqName = k => (S.maq[k] && S.maq[k].n) || k;
 const persona = n => S.per[n];
-const evById = id => S.evs.find(e => e.id === id);
+const evById = id => S.evs.find(e => e.id === id) || S.pru.find(e => e.id === id);
+// alertas esperando técnico: fallas reales y pruebas de alarma
+const enEspera = () => S.evs.concat(S.pru).filter(e => e.estado === 'espera').sort((a,b) => (a.prueba ? 1 : 0) - (b.prueba ? 1 : 0) || (a.t0||'').localeCompare(b.t0||''));
+const minPrueba = e => ms(e.t0, e.tLleg || e.tLib);
 $('logo').src = LOGO;
 const DEF_A = { bg:'#C9CDCB', acc:'#2E7D32', hero:'#1E4A2A', ok:'#2E7D32', bad:'#C62828', warn:'#C99700', xnom:'Control de paros', xdir:'' };
 S.apa = Object.assign({}, DEF_A); S.apaDraft = null;
@@ -439,7 +446,8 @@ function ejemploX(){ $('aXEj').textContent = ($('aXNom').value.trim() || DEF_A.x
   db.doc('config/pantallas').onSnapshot(s => { if (s.exists) Object.assign(S.cfg, s.data()); }, () => {});
   db.doc('config/apariencia').onSnapshot(s => { S.apa = Object.assign({}, DEF_A, (s.exists && s.data()) || {}); if (!S.apaDraft) applyApa(S.apa); }, () => {});
   db.doc('estado/maquinas').onSnapshot(s => { S.est = (s.exists && (s.data()||{}).e) || {}; render(); }, () => {});
-  db.collection('eventos').orderBy('t0','desc').limit(1000).onSnapshot(s => { S.evs = s.docs.map(d => Object.assign({ id:d.id }, d.data())); render(); }, () => {});
+  // las pruebas de alarma (prueba:true) van aparte: no cuentan como paro real
+  db.collection('eventos').orderBy('t0','desc').limit(1000).onSnapshot(s => { const t = s.docs.map(d => Object.assign({ id:d.id }, d.data())); S.evs = t.filter(e => !e.prueba); S.pru = t.filter(e => e.prueba); render(); }, () => {});
   db.collection('tpm').orderBy('t0','desc').limit(500).onSnapshot(s => { S.tpm = s.docs.map(d => Object.assign({ id:d.id }, d.data())); render(); }, () => {});
   db.collection('bitacora').orderBy('t1','desc').limit(1000).onSnapshot(s => { S.bit = s.docs.map(d => Object.assign({ id:d.id }, d.data())); if (S.view==='rep') renderRep(); }, () => {});
 })();
@@ -618,6 +626,37 @@ async function accionLiberar(ev){
     } catch(err) { $('flMsg').className='msg err'; $('flMsg').textContent='No se pudo liberar ('+(err.code||'error')+').'; }
   });
 }
+// ---------- pruebas de alarma (solo administradores)
+async function accionPrueba(k){
+  if (S.pru.some(x => x.estado === 'espera')) { toast('Ya hay una prueba de alarma en curso.'); return; }
+  const p = await pedirNomina('🧪 Prueba de alarma · ' + maqName(k), 'config', 'Solo administradores · nómina de administrador'); if (!p) return;
+  abrirModal('<div class="mhead" style="background:#5B2C83;color:#fff"><div><h2>🧪 Prueba de alarma · ' + esc(maqName(k)) + '</h2><p style="color:#fff;opacity:.85">Lanza: ' + esc(p.n) + '. Suena en todos los equipos de mantenimiento como una falla real, pero se guarda como <b>prueba</b>: no cuenta en los minutos de paro.</p></div><button type="button" data-close>✕</button></div>' +
+    '<form id="fPru" class="box"><label class="f">Nota (opcional)<input id="fpNota" placeholder="ej. simulacro turno 1, prueba de tableta del taller"></label><p class="msg" id="fpMsg"></p>' +
+    '<button type="submit" style="padding:16px;font-size:18px;background:#5B2C83;border-color:#5B2C83;color:#fff">🧪 Lanzar prueba de alarma</button></form>');
+  $('fPru').addEventListener('submit', async e => {
+    e.preventDefault(); const btn = e.submitter; if (btn) btn.disabled = true;
+    try { await db.collection('eventos').add({ prueba:true, maq:k, maqN:maqName(k), t0:nowIso(), estado:'espera', tipo:'Prueba de alarma', falla:'PRUEBA DE ALARMA (no es falla real)', nota:$('fpNota').value.trim(), op:{ n:p.n, nom:p.nomina } }); cerrarModal(); toast('Prueba de alarma lanzada. Corre el tiempo de respuesta.'); }
+    catch(err) { $('fpMsg').className='msg err'; $('fpMsg').textContent='No se pudo lanzar ('+(err.code||'error')+').'; if (btn) btn.disabled = false; }
+  });
+}
+async function accionSitioPrueba(ev){
+  if (!ev) return;
+  const p = await pedirNomina('🧪 Técnico en sitio · PRUEBA · ' + ev.maqN, 'sitio', 'Nómina del técnico que llegó a la máquina'); if (!p) return;
+  const t = nowIso();
+  try { await db.doc('eventos/'+ev.id).update({ estado:'liberada', tLleg:t, tLib:t, tec:{ n:p.n, nom:p.nomina } }); cerrarModal(); toast('Prueba terminada: ' + p.n + ' llegó en ' + dur(ms(ev.t0, t)) + '.'); }
+  catch(err) { toast('No se pudo registrar ('+(err.code||'error')+').'); }
+}
+async function accionCancelarPrueba(ev){
+  if (!ev) return;
+  const p = await pedirNomina('Cancelar prueba de alarma', 'config', 'Nómina de administrador'); if (!p) return;
+  try { await db.doc('eventos/'+ev.id).update({ estado:'liberada', tLib:nowIso(), cancelada:true, lib:{ n:p.n, nom:p.nomina } }); cerrarModal(); toast('Prueba de alarma cancelada.'); }
+  catch(err) { toast('No se pudo cancelar ('+(err.code||'error')+').'); }
+}
+function detallePrueba(ev){
+  abrirModal('<div class="mhead" style="background:#5B2C83;color:#fff"><div><h2>🧪 Prueba de alarma · ' + esc(ev.maqN) + '</h2><p style="color:#fff;opacity:.85">' + fdt(ev.t0) + ' · lanzó ' + esc(ev.op?.n||'') + '</p></div><button type="button" data-close>✕</button></div>' +
+    '<div class="box"><p style="margin:0">' + (ev.estado === 'espera' ? 'En curso · esperando técnico <b class="mono" data-since="'+esc(ev.t0)+'">' + hms(ms(ev.t0)) + '</b>' : ev.cancelada ? 'Cancelada por ' + esc(ev.lib?.n||'') + ' a los ' + dur(minPrueba(ev)) : 'Técnico en sitio: <b>' + esc(ev.tec?.n||'') + '</b> · respuesta en <b>' + dur(minPrueba(ev)) + '</b>') + '</p>' + (ev.nota ? '<p class="foot">Nota: ' + esc(ev.nota) + '</p>' : '') +
+    (ev.estado === 'espera' ? '<div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" data-a="sitioPrueba" data-ev="'+ev.id+'" style="background:#5B2C83;border-color:#5B2C83;color:#fff">🧰 Técnico en sitio (prueba)</button><button type="button" data-a="cancelarPrueba" data-ev="'+ev.id+'">Cancelar prueba (admin.)</button></div>' : '') + '</div>');
+}
 function tiempos(ev){
   const cs = ciclos(ev), reps = cs.filter(c => c.rep != null).map(c => c.rep);
   return { lleg: cs[0].lleg, rep: reps.length ? reps.reduce((s,x) => s + x, 0) : null, lib: ev.tRep && ev.tLib ? ms(ev.tRep, ev.tLib) : null, total: ev.tLib ? ms(ev.t0, ev.tLib) : null };
@@ -642,7 +681,7 @@ const estadoTxt = ev => ({ espera: ev.reab ? 'La falla continúa · esperando t�
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-a]'); if (!b) return;
   const ev = b.dataset.ev ? evById(b.dataset.ev) : null, k = b.dataset.maq;
-  ({ sitio:()=>accionSitio(ev), reparada:()=>accionReparada(ev), liberar:()=>accionLiberar(ev), reabrir:()=>accionReabrir(ev), alerta:()=>accionAlerta(k), ok:()=>accionEstado(k,'ok'), sinprod:()=>accionEstado(k,'sinprod'), ver:()=>{ if (ev) detalleEvento(ev); } })[b.dataset.a]?.();
+  ({ prueba:()=>accionPrueba(k), sitioPrueba:()=>accionSitioPrueba(ev), cancelarPrueba:()=>accionCancelarPrueba(ev), sitio:()=>accionSitio(ev), reparada:()=>accionReparada(ev), liberar:()=>accionLiberar(ev), reabrir:()=>accionReabrir(ev), alerta:()=>accionAlerta(k), ok:()=>accionEstado(k,'ok'), sinprod:()=>accionEstado(k,'sinprod'), ver:()=>{ if (ev) (ev.prueba ? detallePrueba : detalleEvento)(ev); } })[b.dataset.a]?.();
 });
 
 // ---------- sugerencias (base de conocimiento)
@@ -702,6 +741,8 @@ function renderTablero(){
   S.tpm.filter(t => t.estado !== 'atendido').forEach(t => items.push({ tpm:t, t:t.t0, h:'📋 Pendiente TPM · ' + ({alta:'prioridad alta',media:'prioridad media',baja:'prioridad baja'}[t.prio]||''), d: t.maqN + ' · ' + t.desc + ' · ' + (t.op?.n||'') }));
   const h2 = Date.now() - 2*3600000;
   S.evs.filter(e => e.estado === 'liberada' && new Date(e.tLib) > h2).forEach(e => items.push({ ev:e, t:e.tLib, h:'✔ Liberada', d: e.maqN + ' · paro de ' + dur(tiempos(e).total) }));
+  S.pru.filter(e => e.estado === 'espera').forEach(e => items.push({ ev:e, t:e.t0, h:'🧪 Prueba de alarma en curso', d: e.maqN + ' · lanzó ' + (e.op?.n||'') }));
+  S.pru.filter(e => e.estado === 'liberada' && new Date(e.tLib) > h2).forEach(e => items.push({ ev:e, t:e.tLib, h:'🧪 Prueba de alarma ' + (e.cancelada ? 'cancelada' : 'atendida'), d: e.maqN + (e.cancelada ? '' : ' · ' + (e.tec?.n||'') + ' llegó en ' + dur(minPrueba(e))) }));
   items.sort((a,b) => (b.t||'').localeCompare(a.t||''));
   $('buzon').innerHTML = '<h3>📬 Buzón de seguimiento</h3>' + (items.length ? items.slice(0,14).map(i => '<button type="button" class="bitem" '+(i.ev ? 'data-a="ver" data-ev="'+i.ev.id+'"' : i.tpm ? 'data-vtpm="'+i.tpm.id+'"' : 'data-goop="'+esc(i.maq)+'"')+'><b>'+esc(i.h)+'</b><span>'+esc(i.d)+'</span><span class="foot" style="color:inherit;opacity:.8">'+fdt(i.t)+'</span></button>').join('') : '<p class="foot" style="color:inherit">Sin pendientes. Todo en orden.</p>');
 }
@@ -709,13 +750,21 @@ function renderTablero(){
 const alertaAqui = () => devArea() !== 'prod' && !(S.sesion && sinTabMtto(S.sesion)) && (S.view === 'tab' || devArea() === 'mtto');
 const TITULO = document.title;
 function renderAlerta(){
-  const esp = S.evs.filter(e => e.estado === 'espera').sort((a,b) => (a.t0||'').localeCompare(b.t0||''));
+  const esp = enEspera();
   avisarSistema(esp);
-  document.title = esp.length && devArea() === 'mtto' ? '⚠ FALLA · ' + esp[0].maqN : TITULO;
+  document.title = esp.length && devArea() === 'mtto' ? '⚠ FALLA · ' + (esp[0].prueba ? '🧪 PRUEBA · ' : '') + esp[0].maqN : TITULO;
   const show = alertaAqui() && esp.length && Date.now() > S.hideAlert;
   $('alerta').hidden = !show;
   if (!show) { beep(false); return; }
   const ev = esp[0];
+  $('alerta').classList.toggle('prueba', !!ev.prueba);
+  if (ev.prueba) {
+    $('alerta').innerHTML = '<div class="a1">🧪 PRUEBA DE ALARMA</div><div class="a2">' + esc(ev.maqN) + '</div><div class="at" data-since="'+esc(ev.t0)+'">' + hms(ms(ev.t0)) + '</div>' +
+      '<div class="a3">No es una falla real. Lanzó la prueba: <b>' + esc(ev.op?.n || '') + '</b>' + (ev.nota ? '<br>' + esc(ev.nota) : '') + '</div>' +
+      '<div class="a3" style="font-size:clamp(16px,2vw,24px)">🧰 Atiéndela igual que una falla: el técnico va a la máquina y registra <b>"Técnico en sitio (prueba)"</b> con su nómina. Se mide el tiempo de respuesta.</div>' +
+      '<div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center"><button type="button" id="btnOcultar" style="background:transparent;color:#fff;border-color:#fff">Ver tablero 1 min</button></div>';
+    beep(true); return;
+  }
   $('alerta').innerHTML = '<div class="a1">⚠ ' + (ev.reab ? 'LA FALLA CONTINÚA' : 'FALLA EN MÁQUINA') + '</div><div class="a2">' + esc(ev.maqN) + '</div><div class="at" data-since="'+esc(ev.tAlerta||ev.t0)+'">' + hms(ms(ev.tAlerta||ev.t0)) + '</div>' +
     '<div class="a3">Operador: <b>' + esc((ev.reab ? ev.reabOp?.n : ev.op?.n) || '') + '</b><br>' + (ev.reab ? 'Sigue fallando: <b>' + esc(ev.reabNota || '') + '</b> · ' + (ev.reab + 1) + 'ª intervención<br>Falla original: ' + esc(ev.falla) : 'Posible falla: <b>' + esc(ev.falla) + '</b> (' + esc(ev.tipo||'') + ')') + '</div>' +
     (esp.length > 1 ? '<div class="a3">+ ' + (esp.length-1) + ' máquina(s) más esperando técnico: ' + esc(esp.slice(1).map(e => e.maqN).join(', ')) + '</div>' : '') +
@@ -743,6 +792,10 @@ function renderOp(){
     B.push('<button class="ok" data-a="ok" data-maq="'+esc(k)+'"'+(st==='ok'?' disabled':'')+'>🟢 EN FUNCIÓN<small>la máquina está trabajando</small></button>');
   }
   B.push('<button data-tpm="'+esc(k)+'" style="grid-column:1 / -1;background:var(--warn-bg);color:var(--warn-ink);border:2px solid var(--warn)">📋 PENDIENTE TPM<small>avisar algo que hay que corregir · la máquina sigue trabajando</small></button>');
+  // prueba de alarma: solo administradores la lanzan; el técnico la atiende como una falla
+  const pr = S.pru.find(x => x.maq === k && x.estado === 'espera');
+  if (pr) B.unshift('<button data-a="sitioPrueba" data-ev="'+pr.id+'" style="grid-column:1 / -1;background:#5B2C83;border-color:#5B2C83;color:#fff">🧪 TÉCNICO EN SITIO (PRUEBA)<small>prueba de alarma en curso · nómina del técnico · <span data-since="'+esc(pr.t0)+'">'+hms(ms(pr.t0))+'</span></small></button>');
+  else if (S.sesion && esAdm(S.sesion)) B.push('<button data-a="prueba" data-maq="'+esc(k)+'" style="grid-column:1 / -1;background:transparent;color:#5B2C83;border:2px dashed #5B2C83">🧪 PRUEBA DE ALARMA<small>solo administradores · no cuenta como paro · se registra como prueba</small></button>');
   $('opBtns').innerHTML = B.join('');
   const tAb = S.tpm.filter(t => t.maq === k && t.estado !== 'atendido');
   const tpmHtml = tAb.length ? '<div class="box" style="border-left:6px solid var(--warn)"><h3>📋 Pendientes TPM abiertos de esta máquina · ' + tAb.length + '</h3>' + tAb.map(t => '<button type="button" class="bitem" style="background:var(--warn-bg);color:var(--warn-ink)" data-vtpm="'+t.id+'"><b>' + esc(t.tipo) + ' · ' + esc(t.desc) + '</b><span class="foot" style="color:inherit">' + esc(t.op?.n||'') + ' · ' + fdt(t.t0) + ' · prioridad ' + esc(t.prio) + '</span></button>').join('') + '</div>' : '';
@@ -822,6 +875,9 @@ function renderRep(){
   barras('chTipo', Object.entries(tp).map(([l,v]) => ({ l, v })).sort((a,b)=>b.v-a.v), v => v + ' paros');
   const pm = {}; evs.forEach(e => { pm[e.maqN] = (pm[e.maqN]||0)+1; });
   barras('chParos', Object.entries(pm).map(([l,v]) => ({ l, v })).sort((a,b)=>b.v-a.v).slice(0,15), v => v + ' paros');
+  const [pA, pB] = periodo(), fmP = $('repMaq').value;
+  const prs = S.pru.filter(e => new Date(e.t0) >= pA && new Date(e.t0) <= pB && (!fmP || e.maq === fmP));
+  $('repPruebas').innerHTML = prs.length ? '<table class="tbl"><tr><th>Fecha</th><th>Máquina</th><th>Lanzó</th><th>Técnico en sitio</th><th>Minutos de prueba</th><th>Resultado</th><th>Nota</th></tr>' + prs.map(e => '<tr data-a="ver" data-ev="'+e.id+'" style="cursor:pointer"><td>'+fdt(e.t0)+'</td><td>'+esc(e.maqN)+'</td><td>'+esc(e.op?.n||'')+'</td><td>'+esc(e.tec?.n||'—')+'</td><td class="num">'+(e.estado==='espera' ? '<span class="tag warn">en curso</span>' : fmtN(mins(minPrueba(e))) + ' min')+'</td><td>'+(e.estado==='espera' ? 'En curso' : e.cancelada ? '<span class="tag">Cancelada</span>' : '<span class="tag ok">Atendida</span>')+'</td><td>'+esc(e.nota||'')+'</td></tr>').join('') + '</table>' : '<p class="foot">Sin pruebas de alarma en este periodo.</p>';
   $('repTabla').innerHTML = evs.length ? '<table class="tbl"><tr><th>Alerta</th><th>Máquina</th><th>Falla</th><th>Operador</th><th>Técnico</th><th>Llegada</th><th>Reparación</th><th>Paro total</th><th>Estado</th></tr>' + evs.map(e => { const t = tiempos(e); return '<tr data-a="ver" data-ev="'+e.id+'" style="cursor:pointer"><td>'+fdt(e.t0)+'</td><td>'+esc(e.maqN)+'</td><td>'+esc(e.falla)+'</td><td>'+esc(e.op?.n||'')+'</td><td>'+esc(e.tec?.n||'—')+'</td><td class="num">'+dur(t.lleg)+'</td><td class="num">'+dur(t.rep)+'</td><td class="num">'+(e.tLib?dur(t.total):'<span class="tag bad">abierto</span>')+'</td><td>'+esc(estadoTxt(e))+'</td></tr>'; }).join('') + '</table>' : '<p class="foot">Sin paros en este periodo.</p>';
 }
 // ---------- gráficas para el Excel (imagen PNG dibujada en canvas)
@@ -960,6 +1016,7 @@ async function excel(){
   hoja('ESTADOS', ['Máquina', 'Estado', 'Desde', 'Hasta', 'Duración (min)'], S.bit.filter(b => overlap(b.t0,b.t1,A,B) > 0).map(b => [maqName(b.maq), {ok:'En función',falla:'Falla',sinprod:'Sin producción'}[b.st]||b.st, fdt(b.t0), fdt(b.t1), min(ms(b.t0,b.t1))]), [28,16,18,18,14]);
   hoja('FALLAS Y SOLUCIONES', ['Fecha', 'Máquina', 'Tipo', 'Falla', 'Causa', 'Solución', 'Refacciones', 'Técnico'], S.evs.filter(e => e.solucion).map(e => [fdt(e.t0), e.maqN, e.tipo||'', e.falla, e.causa||'', e.solucion, e.refac||'', e.tec?.n||'']), [16,26,14,36,30,40,24,24]);
   hoja('PENDIENTES TPM', ['Fecha', 'Máquina', 'Tipo', 'Prioridad', 'Pendiente', 'Reportó', 'Nómina', 'Estado', 'Atendió', 'Fecha atención', 'Días abierto', 'Qué se hizo'], S.tpm.filter(t => !fmx || t.maq === fmx).map(t => [fdt(t.t0), t.maqN, t.tipo, t.prio, t.desc, t.op?.n||'', t.op?.nom||'', t.estado, t.tec?.n||'', t.tAt ? fdt(t.tAt) : '', Math.round(ms(t.t0, t.tAt)/86400000*10)/10, t.sol||'']), [16,26,22,10,40,24,10,10,24,16,10,36]);
+  hoja('PRUEBAS DE ALARMA', ['Fecha', 'Máquina', 'Lanzó (admin.)', 'Nómina', 'Técnico en sitio', 'Nómina técnico', 'Minutos de prueba', 'Resultado', 'Nota'], S.pru.filter(e => new Date(e.t0) >= A && new Date(e.t0) <= B && (!fmx || e.maq === fmx)).map(e => [fdt(e.t0), e.maqN, e.op?.n||'', e.op?.nom||'', e.tec?.n||'', e.tec?.nom||'', e.estado === 'espera' ? '' : min(minPrueba(e)), e.estado === 'espera' ? 'En curso' : e.cancelada ? 'Cancelada' : 'Atendida', e.nota||'']), [16,26,24,10,24,12,14,12,36]);
   const buf = await wb.xlsx.writeBuffer();
   const name = (S.apa.xnom || DEF_A.xnom).replace(/[\\/:*?"<>|]/g,' ').trim() + ' ' + fday(A) + ' a ' + fday(B) + '.xlsx';
   try { const dl = await window.claude.use('downloads'); if (!dl) { toast('La descarga no está disponible en esta vista.'); return; } await dl.save({ filename:name, data:new Blob([buf]) }); toast('Excel descargado: ' + name + (S.apa.xdir ? ' · Guárdalo en: ' + S.apa.xdir : '')); }
@@ -998,7 +1055,8 @@ function renderGraf(){
   const hoy = new Date(), h0 = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate()), sem0 = lunesDe(hoy), mes0 = new Date(hoy.getFullYear(), hoy.getMonth(), 1), an0 = new Date(hoy.getFullYear(), 0, 1), fin = new Date(Date.now() + 1000);
   const evs = S.evs.filter(e => !fm || e.maq === fm), pm = (a) => mins(evs.reduce((s,e) => s + overlap(e.t0, e.tLib, a, fin), 0));
   const tpmA = S.tpm.filter(t => t.estado !== 'atendido' && (!fm || t.maq === fm)).length;
-  $('grKpis').innerHTML = [['min de paro hoy', pm(h0), 'bad'], ['min de paro esta semana', pm(sem0), ''], ['min de paro este mes', pm(mes0), ''], ['min de paro este año', pm(an0), ''], ['pendientes TPM abiertos', tpmA, 'warn']]
+  const pruF = S.pru.filter(e => !e.cancelada && (!fm || e.maq === fm)), pruMes = pruF.filter(e => new Date(e.t0) >= mes0);
+  $('grKpis').innerHTML = [['min de paro hoy', pm(h0), 'bad'], ['min de paro esta semana', pm(sem0), ''], ['min de paro este mes', pm(mes0), ''], ['min de paro este año', pm(an0), ''], ['pendientes TPM abiertos', tpmA, 'warn'], ['🧪 min de prueba este mes (' + pruMes.length + ' pruebas)', mins(pruMes.reduce((s,e) => s + minPrueba(e), 0)), '']]
     .map(([l,v,c]) => '<div class="kpi '+c+'"><b>'+fmtN(v)+'</b><span>'+l+'</span></div>').join('');
   $('grT1').textContent = 'Minutos de paro ' + nom; $('grT2').textContent = 'Número de paros ' + nom;
   vchart('gr1', rows.map(r => ({ l:r.l, v:mins(r.paro), t:r.n+' paros iniciados' })), v => fmtN(v) + ' min');
@@ -1009,6 +1067,8 @@ function renderGraf(){
   S.evs.filter(e => !fm || e.maq === fm).forEach(e => { const o = overlap(e.t0, e.tLib, A, fin); if (o > 0) porM[e.maqN] = (porM[e.maqN]||0) + o; });
   $('grT5').textContent = 'Máquinas con más minutos de paro (' + (rows.length ? rows[0].l + ' a hoy' : '') + ')';
   barras('gr5', Object.entries(porM).map(([l,v]) => ({ l, v:mins(v) })).sort((a,b) => b.v - a.v).slice(0, 12), v => fmtN(v) + ' min', 'var(--bad)');
+  $('grT6').textContent = '🧪 Minutos de prueba de alarma ' + nom;
+  vchart('gr6', cubetas(S.gr.per).map(c => { const xs = pruF.filter(e => new Date(e.t0) >= c.a && new Date(e.t0) < c.b); return { l:c.l, v:mins(xs.reduce((s,e) => s + minPrueba(e), 0)), t:xs.length + ' pruebas' }; }), v => fmtN(v) + ' min');
 }
 const fmtN = n => (Number(n)||0).toLocaleString('es-MX');
 
@@ -1166,7 +1226,7 @@ $('btnFull').addEventListener('click', () => { const d = document; if (!d.fullsc
 setInterval(() => {
   $('reloj').textContent = new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
   document.querySelectorAll('[data-since]').forEach(el => { const s = el.dataset.since; if (s) el.textContent = hms(ms(s)); });
-  if (alertaAqui() && $('alerta').hidden && S.evs.some(e => e.estado === 'espera') && Date.now() > S.hideAlert) renderAlerta();
+  if (alertaAqui() && $('alerta').hidden && enEspera().length && Date.now() > S.hideAlert) renderAlerta();
 }, 1000);
 
 // ---------- avisos del sistema (Windows / Android) para equipos de mantenimiento
@@ -1182,7 +1242,7 @@ function avisarSistema(esp){
   if (devArea() !== 'mtto' || !('Notification' in window) || Notification.permission !== 'granted') return;
   esp.forEach(ev => {
     const key = ev.id + '|' + (ev.tAlerta || ev.t0); if (avisados.has(key)) return; avisados.add(key);
-    try { mostrarAviso('⚠ ' + (ev.reab ? 'LA FALLA CONTINÚA' : 'FALLA EN MÁQUINA') + ' · ' + ev.maqN, (ev.reab ? (ev.reabNota || '') : (ev.falla || '')) + '\nReporta: ' + ((ev.reab ? ev.reabOp?.n : ev.op?.n) || ''), 'paro-' + ev.id); } catch(e) {}
+    try { mostrarAviso(ev.prueba ? '⚠ FALLA · 🧪 PRUEBA DE ALARMA · ' + ev.maqN : '⚠ ' + (ev.reab ? 'LA FALLA CONTINÚA' : 'FALLA EN MÁQUINA') + ' · ' + ev.maqN, (ev.reab ? (ev.reabNota || '') : (ev.falla || '')) + '\nReporta: ' + ((ev.reab ? ev.reabOp?.n : ev.op?.n) || ''), 'paro-' + ev.id); } catch(e) {}
   });
 }
 async function activarAvisos(){
@@ -1217,7 +1277,7 @@ document.addEventListener('click', async e => {
 });
 $('btnProbarAviso').addEventListener('click', async () => {
   const p = await activarAvisos(), m = $('mAviso');
-  beep(true); setTimeout(() => { if (!S.evs.some(e => e.estado === 'espera')) beep(false); }, 2000);
+  beep(true); setTimeout(() => { if (!enEspera().length) beep(false); }, 2000);
   // el aviso de prueba sale en 10 s: da tiempo de ir a otra aplicación o apagar la pantalla (prueba de MacroDroid)
   if (p === 'granted') { m.className = 'msg okm'; m.textContent = 'Avisos activados. El aviso de prueba llega en 10 segundos: sal a otra aplicación o apaga la pantalla.'; setTimeout(() => { try { mostrarAviso('⚠ FALLA · PRUEBA', 'Aviso de prueba de Control de Paros. No es una falla real.', 'paro-prueba'); } catch(e) { m.className = 'msg err'; m.textContent = 'No se pudo mostrar el aviso: ' + e.message; } }, 10000); }
   else { m.className = 'msg err'; m.textContent = p === 'no' ? 'Este navegador no maneja avisos.' : 'Las notificaciones están bloqueadas: da clic en el candado junto a la dirección → Notificaciones → Permitir.'; }
