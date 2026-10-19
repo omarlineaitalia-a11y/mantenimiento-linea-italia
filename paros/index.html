@@ -1217,8 +1217,9 @@ document.addEventListener('click', async e => {
 });
 $('btnProbarAviso').addEventListener('click', async () => {
   const p = await activarAvisos(), m = $('mAviso');
-  beep(true); setTimeout(() => { if (!S.evs.some(e => e.estado === 'espera')) beep(false); }, 3000);
-  if (p === 'granted') { try { await mostrarAviso('⚠ PRUEBA · Control de paros', 'Así llega el aviso de falla a este equipo.', 'paro-prueba'); m.className = 'msg okm'; m.textContent = 'Avisos activados en este equipo.'; } catch(e) { m.className = 'msg err'; m.textContent = 'No se pudo mostrar el aviso: ' + e.message; } }
+  beep(true); setTimeout(() => { if (!S.evs.some(e => e.estado === 'espera')) beep(false); }, 2000);
+  // el aviso de prueba sale en 10 s: da tiempo de ir a otra aplicación o apagar la pantalla (prueba de MacroDroid)
+  if (p === 'granted') { m.className = 'msg okm'; m.textContent = 'Avisos activados. El aviso de prueba llega en 10 segundos: sal a otra aplicación o apaga la pantalla.'; setTimeout(() => { try { mostrarAviso('⚠ FALLA · PRUEBA', 'Aviso de prueba de Control de Paros. No es una falla real.', 'paro-prueba'); } catch(e) { m.className = 'msg err'; m.textContent = 'No se pudo mostrar el aviso: ' + e.message; } }, 10000); }
   else { m.className = 'msg err'; m.textContent = p === 'no' ? 'Este navegador no maneja avisos.' : 'Las notificaciones están bloqueadas: da clic en el candado junto a la dirección → Notificaciones → Permitir.'; }
 });
 
