@@ -106,6 +106,7 @@ label.f{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--mu
 .bigbtns{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
 .bigbtns button{font-size:clamp(16px,2vw,22px);padding:22px 12px;border-radius:14px;flex-direction:column}
 .bigbtns button small{font-weight:500;font-size:13px;opacity:.9}
+.bigbtns.bloq button:not([data-entrar]){opacity:.35;filter:grayscale(.7)}
 .steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
 .step{background:var(--panel2);border-radius:10px;padding:10px;font-size:13px;display:flex;flex-direction:column;gap:2px;border:2px solid transparent}
 .step b{font-size:14px}
@@ -476,8 +477,10 @@ function devScreen(){
 function puedeVer(v){
   if (v === 'home') return true;
   if (v === 'tab' && devArea() === 'prod' && !(S.sesion && S.sesion.r === 'general')) return false;
-  if (S.sesion) return vistasDe(S.sesion).includes(v);
-  const d = devScreen(); return !!d && d.v === v;
+  if (v === 'tab' && S.sesion && sinTabMtto(S.sesion)) return false;
+  // la pantalla fija del equipo siempre se puede ver (ej. el técnico entra en la tableta de una máquina)
+  const d = devScreen(); if (d && d.v === v) return true;
+  return !!S.sesion && vistasDe(S.sesion).includes(v);
 }
 function actualizarNav(){
   document.querySelectorAll('nav.nav button').forEach(b => { b.hidden = !puedeVer(b.dataset.v); });
@@ -485,7 +488,7 @@ function actualizarNav(){
   const dv = devScreen(); $('opMaq').disabled = !S.sesion && !!dv && dv.v === 'op' && !!dv.maq;
 }
 function setView(v){
-  if (!puedeVer(v)) { if (!S.sesion) { v = devScreen() ? devScreen().v : 'home'; } else { toast('No tienes permiso para ver esa pantalla. Pídelo a la administración.'); v = vistasDe(S.sesion)[0] || 'home'; } }
+  if (!puedeVer(v)) { if (!S.sesion) { v = devScreen() ? devScreen().v : 'home'; } else { toast('No tienes permiso para ver esa pantalla. Pídelo a la administración.'); v = vistasDe(S.sesion).find(puedeVer) || (devScreen() ? devScreen().v : 'home'); } }
   S.view = v;
   document.querySelectorAll('nav.nav button').forEach(b => b.setAttribute('aria-current', b.dataset.v === v));
   ['home','tab','graf','op','kb','rep','cfg'].forEach(x => $('v-'+x).hidden = x !== v);
@@ -515,7 +518,10 @@ setInterval(() => {
 }, 5000);
 
 // ---------- nómina
+// con sesión abierta, las acciones que esa persona sí puede hacer usan su nómina sin volver a pedirla
+const USA_SESION = ['alerta','estado','liberar','tpm','sitio','reparada','tpmCerrar'];
 function pedirNomina(titulo, accion, sub){
+  if (S.sesion && USA_SESION.includes(accion) && PUEDE[accion].includes(S.sesion.r)) { S.lastUser = S.sesion.nomina; return Promise.resolve(Object.assign({}, S.sesion)); }
   return new Promise(res => {
     abrirModal('<div class="mhead"><div><h2>'+esc(titulo)+'</h2><p>'+esc(sub || 'Escribe tu número de nómina')+'</p></div><button type="button" data-close>✕</button></div>' +
       '<form id="fNom" class="box"><input id="nomIn" class="mono nomina" inputmode="numeric" autocomplete="off" placeholder="0000" required><p class="msg" id="nomMsg"></p><button class="primary" type="submit" style="padding:14px">Confirmar</button></form>');
@@ -679,7 +685,10 @@ function detalleEvento(ev){
 }
 const estadoTxt = ev => ({ espera: ev.reab ? 'La falla continúa · esperando técnico (' + (ev.reab + 1) + 'ª intervención)' : 'Esperando técnico', reparando:'En reparación' + (ev.tec ? ' · ' + ev.tec.n : ''), reparada:'Reparada · por liberar', liberada:'Liberada' })[ev.estado] || ev.estado;
 document.addEventListener('click', e => {
+  if (e.target.closest('[data-entrar]')) { entrar(); return; }
   const b = e.target.closest('[data-a]'); if (!b) return;
+  // sin sesión ("👤 Entrar" + nómina) no se puede usar ningún botón; solo consultar
+  if (b.dataset.a !== 'ver' && !S.sesion) { toast('🔒 Primero entra con tu nómina (botón 👤 Entrar).'); entrar(); return; }
   const ev = b.dataset.ev ? evById(b.dataset.ev) : null, k = b.dataset.maq;
   ({ prueba:()=>accionPrueba(k), sitioPrueba:()=>accionSitioPrueba(ev), cancelarPrueba:()=>accionCancelarPrueba(ev), sitio:()=>accionSitio(ev), reparada:()=>accionReparada(ev), liberar:()=>accionLiberar(ev), reabrir:()=>accionReabrir(ev), alerta:()=>accionAlerta(k), ok:()=>accionEstado(k,'ok'), sinprod:()=>accionEstado(k,'sinprod'), ver:()=>{ if (ev) (ev.prueba ? detallePrueba : detalleEvento)(ev); } })[b.dataset.a]?.();
 });
@@ -796,6 +805,8 @@ function renderOp(){
   const pr = S.pru.find(x => x.maq === k && x.estado === 'espera');
   if (pr) B.unshift('<button data-a="sitioPrueba" data-ev="'+pr.id+'" style="grid-column:1 / -1;background:#5B2C83;border-color:#5B2C83;color:#fff">🧪 TÉCNICO EN SITIO (PRUEBA)<small>prueba de alarma en curso · nómina del técnico · <span data-since="'+esc(pr.t0)+'">'+hms(ms(pr.t0))+'</span></small></button>');
   else if (S.sesion && esAdm(S.sesion)) B.push('<button data-a="prueba" data-maq="'+esc(k)+'" style="grid-column:1 / -1;background:transparent;color:#5B2C83;border:2px dashed #5B2C83">🧪 PRUEBA DE ALARMA<small>solo administradores · no cuenta como paro · se registra como prueba</small></button>');
+  if (!S.sesion) B.unshift('<button class="primary" data-entrar style="grid-column:1 / -1;font-size:clamp(18px,2.4vw,26px)">🔒 ENTRAR CON MI NÓMINA<small>los botones se activan al entrar con el botón 👤 Entrar</small></button>');
+  $('opBtns').classList.toggle('bloq', !S.sesion);
   $('opBtns').innerHTML = B.join('');
   const tAb = S.tpm.filter(t => t.maq === k && t.estado !== 'atendido');
   const tpmHtml = tAb.length ? '<div class="box" style="border-left:6px solid var(--warn)"><h3>📋 Pendientes TPM abiertos de esta máquina · ' + tAb.length + '</h3>' + tAb.map(t => '<button type="button" class="bitem" style="background:var(--warn-bg);color:var(--warn-ink)" data-vtpm="'+t.id+'"><b>' + esc(t.tipo) + ' · ' + esc(t.desc) + '</b><span class="foot" style="color:inherit">' + esc(t.op?.n||'') + ' · ' + fdt(t.t0) + ' · prioridad ' + esc(t.prio) + '</span></button>').join('') + '</div>' : '';
@@ -1098,13 +1109,14 @@ function detalleTpm(t){
   if (f) f.addEventListener('submit', async e => {
     e.preventDefault();
     const sol = $('tcSol').value.trim(); if (!sol) return;
+    if (!S.sesion) { toast('🔒 Primero entra con tu nómina (botón 👤 Entrar).'); cerrarModal(); entrar(); return; }
     const p = await pedirNomina('Atender pendiente TPM', 'tpmCerrar', 'Nómina de quien lo atendió'); if (!p) return;
     try { await db.doc('tpm/'+t.id).update({ estado:'atendido', tAt:nowIso(), tec:{ n:p.n, nom:p.nomina }, sol }); cerrarModal(); toast('Pendiente TPM atendido.'); }
     catch(err) { toast('No se pudo guardar ('+(err.code||'error')+').'); }
   });
 }
 document.addEventListener('click', e => {
-  const b = e.target.closest('[data-tpm]'); if (b) { accionTpm(b.dataset.tpm); return; }
+  const b = e.target.closest('[data-tpm]'); if (b) { if (!S.sesion) { toast('🔒 Primero entra con tu nómina (botón 👤 Entrar).'); entrar(); return; } accionTpm(b.dataset.tpm); return; }
   const v = e.target.closest('[data-vtpm]'); if (v) { const t = S.tpm.find(x => x.id === v.dataset.vtpm); if (t) detalleTpm(t); }
 });
 
