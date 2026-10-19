@@ -486,6 +486,11 @@ function actualizarNav(){
   document.querySelectorAll('nav.nav button').forEach(b => { b.hidden = !puedeVer(b.dataset.v); });
   $('btnSesion').textContent = S.sesion ? '👤 ' + S.sesion.n.split(' ').slice(0, 2).join(' ') + ' · Salir' : '👤 Entrar';
   const dv = devScreen(); $('opMaq').disabled = !S.sesion && !!dv && dv.v === 'op' && !!dv.maq;
+  // el sonido solo lo maneja el personal de mantenimiento con sesión; sin sesión, un equipo de mantenimiento siempre suena
+  $('btnSonido').hidden = !(S.sesion && (depDe(S.sesion) === 'mtto' || S.sesion.r === 'general'));
+  if (!S.sesion && devArea() === 'mtto' && !S.sonido) { S.sonido = true; $('btnSonido').textContent = '🔔 Sonido'; }
+  // en equipos de producción, sin sesión no hay ningún botón disponible (solo "Entrar")
+  $('btnFull').hidden = !S.sesion && devArea() === 'prod';
 }
 function setView(v){
   if (!puedeVer(v)) { if (!S.sesion) { v = devScreen() ? devScreen().v : 'home'; } else { toast('No tienes permiso para ver esa pantalla. Pídelo a la administración.'); v = vistasDe(S.sesion).find(puedeVer) || (devScreen() ? devScreen().v : 'home'); } }
