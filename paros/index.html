@@ -169,7 +169,7 @@ body.kiosk .top nav.nav, body.kiosk .hide-kiosk{display:none}
   <nav class="nav" aria-label="Pantallas">
     <button type="button" data-v="tab">Tablero mantenimiento</button>
     <button type="button" data-v="graf">📊 Gráficas</button>
-    <button type="button" data-v="op">Pantalla de máquina</button>
+    <button type="button" data-v="op">Tablero producción</button>
     <button type="button" data-v="kb">Fallas y soluciones</button>
     <button type="button" data-v="rep">Reportes (admin.)</button>
     <button type="button" data-v="cfg">⚙ Configuración</button>
@@ -313,11 +313,12 @@ body.kiosk .top nav.nav, body.kiosk .hide-kiosk{display:none}
           <div class="g3">
             <label class="f">Núm. de nómina *<input name="nom" required class="mono" inputmode="numeric"></label>
             <label class="f" style="grid-column:span 2">Nombre completo *<input name="n" required placeholder="APELLIDOS NOMBRE"></label>
+            <label class="f">Departamento *<select name="dep" id="perDep"><option value="mtto">🧰 Mantenimiento</option><option value="prod">🏭 Producción</option></select></label>
             <label class="f">Rol<select name="r" id="perRol"></select></label>
             <label class="f">Máquina asignada (operadores)<select name="maq" id="perMaq"></select></label>
             <label class="f">Área / puesto<input name="area" placeholder="Corte láser"></label><label class="f">Contraseña inicial (personas nuevas, mín. 6)<input name="pw" type="password" autocomplete="new-password" placeholder="La persona la cambia después"></label>
           </div>
-          <div class="f" style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:var(--muted);font-weight:500">Pantallas que puede ver (los administradores ven todas)</span>
+          <div class="f" style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:var(--muted);font-weight:500">Pantallas que puede ver (los administradores ven todas). El personal de <b>Producción</b> no ve el tablero de mantenimiento: solo el tablero de producción.</span>
             <div id="perVis" style="display:flex;flex-wrap:wrap;gap:14px"></div>
           </div>
           <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="primary" type="submit">Guardar persona</button><p class="msg" id="mPer"></p></div>
@@ -353,11 +354,13 @@ body.kiosk .top nav.nav, body.kiosk .hide-kiosk{display:none}
           <h3>Este equipo (computadora / pantalla)</h3>
           <p class="foot">Define qué muestra <b>este</b> equipo siempre, por ejemplo la TV del taller como tablero o la tableta de la Selexx como pantalla de máquina. Se guarda solo en este equipo.</p>
           <div class="g3">
+            <label class="f">Área de este equipo<select id="devArea"><option value="mtto">🧰 Mantenimiento (recibe las alertas en grande)</option><option value="prod">🏭 Producción (solo tablero de producción)</option></select></label>
             <label class="f">Pantalla de este equipo<select id="devTipo"><option value="">Automático (según el último usuario)</option><option value="tab">Siempre tablero de mantenimiento</option><option value="op">Siempre pantalla de una máquina</option></select></label>
             <label class="f">Máquina de este equipo<select id="devMaq"></select></label>
             <label class="f">Modo quiosco<select id="devKiosk"><option value="0">No (se ve el menú)</option><option value="1">Sí (oculta el menú)</option></select></label>
           </div>
-          <div><button type="button" class="primary" id="btnDev">Guardar en este equipo</button></div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center"><button type="button" class="primary" id="btnDev">Guardar en este equipo</button><button type="button" id="btnProbarAviso">🔔 Activar y probar avisos</button><p class="msg" id="mAviso"></p></div>
+          <p class="foot">Los equipos de <b>Mantenimiento</b> muestran la alerta en grande en cualquier pantalla, suenan y mandan un aviso de Windows / Android aunque estés en otra página o programa. Para que llegue, la página debe quedar abierta (aunque sea minimizada).</p>
         </div>
       </div>
     </div>
@@ -442,16 +445,35 @@ function ejemploX(){ $('aXEj').textContent = ($('aXNom').value.trim() || DEF_A.x
 
 // ---------- pantallas
 // permisos por pantalla
-const VIS = { tab:'Tablero mantenimiento', graf:'Gráficas', op:'Pantalla de máquina (producción)', kb:'Fallas y soluciones', rep:'Reportes y Excel', cfg:'Configuración' };
+const VIS = { tab:'Tablero mantenimiento', graf:'Gráficas', op:'Tablero producción (pantalla de máquina)', kb:'Fallas y soluciones', rep:'Reportes y Excel', cfg:'Configuración' };
 const VIS_DEF = { general:Object.keys(VIS), admin:Object.keys(VIS), mtto:['tab','graf','kb'], procesos:['op','graf'], operador:['op','graf'] };
+const DEPS = { mtto:'Mantenimiento', prod:'Producción' };
 const esAdm = p => !!p && ['admin','general'].includes(p.r);
-const vistasDe = p => !p ? [] : esAdm(p) ? Object.keys(VIS) : (Array.isArray(p.vis) ? p.vis : (VIS_DEF[p.r] || ['graf'])).filter(v => v !== 'rep' && v !== 'cfg');
-function devScreen(){ const dt = LS.get('tc_dev_tipo'), dm = LS.get('tc_dev_maq'); if (dt === 'tab') return { v:'tab' }; if (dt === 'op' && dm) return { v:'op', maq:dm }; return null; }
-function puedeVer(v){ if (v === 'home') return true; if (S.sesion) return vistasDe(S.sesion).includes(v); const d = devScreen(); return !!d && d.v === v; }
+// departamento: si no se capturó, se deduce del rol (operadores y procesos = producción)
+const depDe = p => !p ? '' : (p.dep || (['operador','procesos'].includes(p.r) ? 'prod' : 'mtto'));
+// el personal de producción nunca ve el tablero de mantenimiento (salvo el administrador general)
+const sinTabMtto = p => depDe(p) === 'prod' && p.r !== 'general';
+const vistasDe = p => !p ? [] : (esAdm(p) ? Object.keys(VIS) : (Array.isArray(p.vis) ? p.vis : (VIS_DEF[p.r] || ['graf'])).filter(v => v !== 'rep' && v !== 'cfg')).filter(v => !(v === 'tab' && sinTabMtto(p)));
+// área de este equipo (computadora / tableta): se elige al abrir la página la primera vez y se queda guardada
+const devArea = () => LS.get('tc_dev_area') || '';
+function devScreen(){
+  const dt = LS.get('tc_dev_tipo'), dm = LS.get('tc_dev_maq'), ar = devArea();
+  if (dt === 'tab' && ar !== 'prod') return { v:'tab' };
+  if (dt === 'op' && dm) return { v:'op', maq:dm };
+  if (ar === 'mtto') return { v:'tab' };
+  if (ar === 'prod') return { v:'op', maq:dm || '' };
+  return null;
+}
+function puedeVer(v){
+  if (v === 'home') return true;
+  if (v === 'tab' && devArea() === 'prod' && !(S.sesion && S.sesion.r === 'general')) return false;
+  if (S.sesion) return vistasDe(S.sesion).includes(v);
+  const d = devScreen(); return !!d && d.v === v;
+}
 function actualizarNav(){
   document.querySelectorAll('nav.nav button').forEach(b => { b.hidden = !puedeVer(b.dataset.v); });
   $('btnSesion').textContent = S.sesion ? '👤 ' + S.sesion.n.split(' ').slice(0, 2).join(' ') + ' · Salir' : '👤 Entrar';
-  const dv = devScreen(); $('opMaq').disabled = !S.sesion && !!dv && dv.v === 'op';
+  const dv = devScreen(); $('opMaq').disabled = !S.sesion && !!dv && dv.v === 'op' && !!dv.maq;
 }
 function setView(v){
   if (!puedeVer(v)) { if (!S.sesion) { v = devScreen() ? devScreen().v : 'home'; } else { toast('No tienes permiso para ver esa pantalla. Pídelo a la administración.'); v = vistasDe(S.sesion)[0] || 'home'; } }
@@ -682,9 +704,14 @@ function renderTablero(){
   items.sort((a,b) => (b.t||'').localeCompare(a.t||''));
   $('buzon').innerHTML = '<h3>📬 Buzón de seguimiento</h3>' + (items.length ? items.slice(0,14).map(i => '<button type="button" class="bitem" '+(i.ev ? 'data-a="ver" data-ev="'+i.ev.id+'"' : i.tpm ? 'data-vtpm="'+i.tpm.id+'"' : 'data-goop="'+esc(i.maq)+'"')+'><b>'+esc(i.h)+'</b><span>'+esc(i.d)+'</span><span class="foot" style="color:inherit;opacity:.8">'+fdt(i.t)+'</span></button>').join('') : '<p class="foot" style="color:inherit">Sin pendientes. Todo en orden.</p>');
 }
+// la alerta grande sale en el tablero de mantenimiento y, en equipos de mantenimiento, en cualquier pantalla
+const alertaAqui = () => devArea() !== 'prod' && !(S.sesion && sinTabMtto(S.sesion)) && (S.view === 'tab' || devArea() === 'mtto');
+const TITULO = document.title;
 function renderAlerta(){
   const esp = S.evs.filter(e => e.estado === 'espera').sort((a,b) => (a.t0||'').localeCompare(b.t0||''));
-  const show = S.view === 'tab' && esp.length && Date.now() > S.hideAlert;
+  avisarSistema(esp);
+  document.title = esp.length && devArea() === 'mtto' ? '⚠ FALLA · ' + esp[0].maqN : TITULO;
+  const show = alertaAqui() && esp.length && Date.now() > S.hideAlert;
   $('alerta').hidden = !show;
   if (!show) { beep(false); return; }
   const ev = esp[0];
@@ -1034,14 +1061,15 @@ function renderCfg(){
   $('perRol').innerHTML = rp.map(r => '<option value="'+r+'">'+ROLES[r]+'</option>').join(''); if (rp.includes(cur)) $('perRol').value = cur;
   const ord = r => Object.keys(ROLES).indexOf(r);
   if (!$('perVis').childElementCount) $('perVis').innerHTML = ['tab','op','graf','kb'].map(v => '<label style="display:flex;gap:6px;align-items:center;font-size:14px"><input type="checkbox" name="vis" value="'+v+'" style="width:auto">'+VIS[v]+'</label>').join('');
-  $('perList').innerHTML = '<table class="tbl"><tr><th>Nómina</th><th>Nombre</th><th>Rol</th><th>Pantallas que puede ver</th><th>Máquina</th><th>Activo</th><th></th></tr>' + Object.entries(S.per).sort((a,b) => ord(a[1].r)-ord(b[1].r) || a[1].n.localeCompare(b[1].n,'es')).map(([k,p]) => {
+  marcarDep();
+  $('perList').innerHTML = '<table class="tbl"><tr><th>Nómina</th><th>Nombre</th><th>Departamento</th><th>Rol</th><th>Pantallas que puede ver</th><th>Máquina</th><th>Activo</th><th></th></tr>' + Object.entries(S.per).sort((a,b) => ord(a[1].r)-ord(b[1].r) || a[1].n.localeCompare(b[1].n,'es')).map(([k,p]) => {
     const editable = k !== S.admin.nomina && (S.admin.r === 'general' || !['general','admin'].includes(p.r));
     const vs = esAdm(p) ? 'Todas (administrador)' : vistasDe(p).map(v => VIS[v]).join(', ') || '—';
-    return '<tr><td class="mono">'+esc(k)+'</td><td>'+esc(p.n)+'</td><td>'+(editable ? '<select data-prol="'+esc(k)+'">'+rp.map(r => '<option value="'+r+'"'+(r===p.r?' selected':'')+'>'+ROLES[r]+'</option>').join('')+'</select>' : '<span class="tag ok">'+ROLES[p.r]+'</span>')+'</td><td style="font-size:12.5px">'+esc(vs)+'</td><td>'+esc(p.maq ? maqName(p.maq) : '')+'</td><td>'+(p.a===false?'No':'Sí')+'</td><td style="white-space:nowrap">'+(editable ? '<button type="button" data-pedit="'+esc(k)+'">Editar</button> <button type="button" data-pact="'+esc(k)+'">'+(p.a===false?'Activar':'Desactivar')+'</button>' : '')+'</td></tr>';
+    return '<tr><td class="mono">'+esc(k)+'</td><td>'+esc(p.n)+'</td><td><span class="tag '+(depDe(p)==='prod'?'warn':'ok')+'">'+DEPS[depDe(p)]+'</span></td><td>'+(editable ? '<select data-prol="'+esc(k)+'">'+rp.map(r => '<option value="'+r+'"'+(r===p.r?' selected':'')+'>'+ROLES[r]+'</option>').join('')+'</select>' : '<span class="tag ok">'+ROLES[p.r]+'</span>')+'</td><td style="font-size:12.5px">'+esc(vs)+'</td><td>'+esc(p.maq ? maqName(p.maq) : '')+'</td><td>'+(p.a===false?'No':'Sí')+'</td><td style="white-space:nowrap">'+(editable ? '<button type="button" data-pedit="'+esc(k)+'">Editar</button> <button type="button" data-pact="'+esc(k)+'">'+(p.a===false?'Activar':'Desactivar')+'</button>' : '')+'</td></tr>';
   }).join('') + '</table>';
   $('maqList').innerHTML = '<table class="tbl"><tr><th>Código</th><th>Máquina</th><th>Categoría</th><th>Área</th><th>Estado actual</th><th></th></tr>' + Object.keys(S.maq).sort((a,b)=>maqName(a).localeCompare(maqName(b),'es')).map(k => { const m = S.maq[k], st = (S.est[k]||{}).st || 'ok'; return '<tr><td class="mono">'+esc(m.cod||k)+'</td><td>'+esc(m.n)+'</td><td>'+esc(m.cat||'')+'</td><td>'+esc(m.area||'')+'</td><td><span class="tag '+(st==='ok'?'ok':st==='falla'?'bad':'warn')+'">'+({ok:'En función',falla:'Falla',sinprod:'Sin producción'}[st])+'</span></td><td><button type="button" data-mact="'+esc(k)+'">'+(m.a===false?'Activar':'Ocultar')+'</button></td></tr>'; }).join('') + '</table>';
   $('panInact').value = String(S.cfg.inact); $('panMtto').value = S.cfg.mtto; $('panProc').value = S.cfg.procesos; $('panOper').value = S.cfg.operador;
-  $('devTipo').value = LS.get('tc_dev_tipo') || ''; $('devMaq').value = LS.get('tc_dev_maq') || lista()[0] || ''; $('devKiosk').value = LS.get('tc_kiosk') || '0';
+  $('devArea').value = devArea() || 'mtto'; $('devTipo').value = LS.get('tc_dev_tipo') || ''; $('devMaq').value = LS.get('tc_dev_maq') || lista()[0] || ''; $('devKiosk').value = LS.get('tc_kiosk') || '0';
 }
 function llenarMaquinas(){
   const ks = lista(), opts = ks.map(k => '<option value="'+esc(k)+'">'+esc(maqName(k))+'</option>').join('');
@@ -1073,22 +1101,31 @@ $('fPer').addEventListener('submit', async e => {
   if (ex && k !== S.admin.nomina && S.admin.r !== 'general' && ['general','admin'].includes(ex.r)) { msg.className='msg err'; msg.textContent='Solo un administrador general puede modificar a otro administrador.'; return; }
   if (k === S.admin.nomina) { msg.className='msg err'; msg.textContent='No puedes cambiar tu propio rol.'; return; }
   const vis = [...f.querySelectorAll('input[name=vis]:checked')].map(x => x.value);
-  const p = { n:f.n.value.trim().toUpperCase(), r:f.r.value, maq:f.maq.value, area:f.area.value.trim(), a:true, vis: vis.length ? vis : (VIS_DEF[f.r.value] || ['graf']).filter(v => v !== 'rep' && v !== 'cfg') };
+  const dep = f.dep.value;
+  const p = { n:f.n.value.trim().toUpperCase(), r:f.r.value, dep, maq:f.maq.value, area:f.area.value.trim(), a:true, vis: (vis.length ? vis : (VIS_DEF[f.r.value] || ['graf'])).filter(v => v !== 'rep' && v !== 'cfg' && !(dep === 'prod' && v === 'tab')) };
+  if (!p.vis.length) p.vis = ['op'];
   const pw = f.pw ? f.pw.value : '';
   if (pw && pw.length < 6) { msg.className='msg err'; msg.textContent='La contraseña debe tener al menos 6 caracteres.'; return; }
-  if (await upd('config/personal', { p: { [k]: p } }, 'Guardado: ' + k + ' · ' + p.n + ' · ' + ROLES[p.r])) {
+  if (await upd('config/personal', { p: { [k]: p } }, 'Guardado: ' + k + ' · ' + p.n + ' · ' + DEPS[dep] + ' · ' + ROLES[p.r])) {
     if (pw && window.LI) { try { const r = await LI.crearCuenta(k, pw); toast(r === 'existe' ? k + ' ya tenía cuenta: no se cambió su contraseña.' : 'Cuenta creada para ' + k + '.'); } catch(er) { msg.className='msg err'; msg.textContent='Persona guardada, pero no se pudo crear su cuenta: ' + er.message; } }
-    f.reset();
+    f.reset(); marcarDep();
   }
 });
+// producción: la casilla del tablero de mantenimiento queda bloqueada
+function marcarDep(){
+  const f = $('fPer'), cb = f.querySelector('input[name=vis][value=tab]'); if (!cb) return;
+  const prod = f.dep.value === 'prod'; cb.disabled = prod; if (prod) cb.checked = false;
+}
+$('perDep').addEventListener('change', marcarDep);
+$('perRol').addEventListener('change', () => { const f = $('fPer'); if (!f.nom.value.trim() || !S.per[f.nom.value.trim()]) { f.dep.value = ['operador','procesos'].includes(f.r.value) ? 'prod' : 'mtto'; marcarDep(); } });
 document.addEventListener('change', async e => {
   const s = e.target.closest('[data-prol]'); if (!s || !S.admin) return;
   await upd('config/personal', { p: { [s.dataset.prol]: { r:s.value } } }, 'Rol actualizado: ' + S.per[s.dataset.prol].n + ' → ' + ROLES[s.value]);
 });
 document.addEventListener('click', async e => {
   const ed = e.target.closest('[data-pedit]'); if (ed && S.admin) {
-    const k = ed.dataset.pedit, p = S.per[k], f = $('fPer'); f.nom.value = k; f.n.value = p.n; if ([...f.r.options].some(o => o.value === p.r)) f.r.value = p.r; f.maq.value = p.maq || ''; f.area.value = p.area || '';
-    const vs = vistasDe(p); f.querySelectorAll('input[name=vis]').forEach(x => x.checked = vs.includes(x.value)); f.scrollIntoView({ behavior:'smooth' }); return; }
+    const k = ed.dataset.pedit, p = S.per[k], f = $('fPer'); f.nom.value = k; f.n.value = p.n; if ([...f.r.options].some(o => o.value === p.r)) f.r.value = p.r; f.maq.value = p.maq || ''; f.area.value = p.area || ''; f.dep.value = depDe(p);
+    const vs = vistasDe(p); f.querySelectorAll('input[name=vis]').forEach(x => x.checked = vs.includes(x.value)); marcarDep(); f.scrollIntoView({ behavior:'smooth' }); return; }
   const b = e.target.closest('[data-pact]'); if (b && S.admin) { const k = b.dataset.pact; await upd('config/personal', { p: { [k]: { a: S.per[k].a === false } } }, (S.per[k].a === false ? 'Activado: ' : 'Desactivado: ') + S.per[k].n); return; }
   const m = e.target.closest('[data-mact]'); if (m && S.admin) { const k = m.dataset.mact; await upd('config/maquinas', { m: { [k]: { a: S.maq[k].a === false } } }, 'Máquina actualizada'); return; }
   const go = e.target.closest('[data-goop]'); if (go) { S.opMaq = go.dataset.goop; setView('op'); return; }
@@ -1107,7 +1144,9 @@ $('fPan').addEventListener('submit', async e => {
   e.preventDefault(); if (!S.admin) return;
   await upd('config/pantallas', { inact:Number($('panInact').value), mtto:$('panMtto').value, procesos:$('panProc').value, operador:$('panOper').value }, 'Pantallas guardadas para todos los equipos');
 });
-$('btnDev').addEventListener('click', () => {
+$('btnDev').addEventListener('click', async () => {
+  const ar = $('devArea').value; LS.set('tc_dev_area', ar);
+  if (ar === 'mtto') { await activarAvisos(); pantallaEncendida(); } else { S.sonido = false; beep(false); $('btnSonido').textContent = '🔕 Sonido'; }
   LS.set('tc_dev_tipo', $('devTipo').value || null); LS.set('tc_dev_maq', $('devMaq').value || null); LS.set('tc_kiosk', $('devKiosk').value);
   document.body.classList.toggle('kiosk', $('devKiosk').value === '1');
   toast('Este equipo quedó configurado.');
@@ -1126,8 +1165,56 @@ $('btnFull').addEventListener('click', () => { const d = document; if (!d.fullsc
 setInterval(() => {
   $('reloj').textContent = new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
   document.querySelectorAll('[data-since]').forEach(el => { const s = el.dataset.since; if (s) el.textContent = hms(ms(s)); });
-  if (S.view === 'tab' && $('alerta').hidden && S.evs.some(e => e.estado === 'espera') && Date.now() > S.hideAlert) renderAlerta();
+  if (alertaAqui() && $('alerta').hidden && S.evs.some(e => e.estado === 'espera') && Date.now() > S.hideAlert) renderAlerta();
 }, 1000);
+
+// ---------- avisos del sistema (Windows / Android) para equipos de mantenimiento
+let swReg = null;
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').then(r => { swReg = r; }).catch(() => {});
+const avisados = new Set();
+function mostrarAviso(titulo, cuerpo, tag){
+  const op = { body:cuerpo, tag, renotify:true, requireInteraction:true, vibrate:[400,150,400,150,400] };
+  if (swReg && swReg.showNotification) return swReg.showNotification(titulo, op);
+  const n = new Notification(titulo, op); n.onclick = () => { window.focus(); n.close(); };
+}
+function avisarSistema(esp){
+  if (devArea() !== 'mtto' || !('Notification' in window) || Notification.permission !== 'granted') return;
+  esp.forEach(ev => {
+    const key = ev.id + '|' + (ev.tAlerta || ev.t0); if (avisados.has(key)) return; avisados.add(key);
+    try { mostrarAviso('⚠ ' + (ev.reab ? 'LA FALLA CONTINÚA' : 'FALLA EN MÁQUINA') + ' · ' + ev.maqN, (ev.reab ? (ev.reabNota || '') : (ev.falla || '')) + '\nReporta: ' + ((ev.reab ? ev.reabOp?.n : ev.op?.n) || ''), 'paro-' + ev.id); } catch(e) {}
+  });
+}
+async function activarAvisos(){
+  try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); actx.resume(); } catch(e) {}
+  S.sonido = true; $('btnSonido').textContent = '🔔 Sonido';
+  if (!('Notification' in window)) return 'no';
+  if (Notification.permission === 'default') { try { await Notification.requestPermission(); } catch(e) {} }
+  return Notification.permission;
+}
+// pantalla siempre encendida en equipos de mantenimiento
+let wakeLock = null;
+async function pantallaEncendida(){ if (devArea() !== 'mtto' || !navigator.wakeLock || document.hidden) return; try { wakeLock = await navigator.wakeLock.request('screen'); } catch(e) {} }
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { pantallaEncendida(); renderAlerta(); } });
+// el navegador solo deja sonar después de un toque: el primero lo activa
+document.addEventListener('pointerdown', () => { if (devArea() === 'mtto') { try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); actx.resume(); } catch(e) {} } }, { once:true, capture:true });
+function elegirArea(){
+  abrirModal('<div class="mhead"><div><h2>¿De qué área es este equipo?</h2><p>Se pregunta una sola vez y se queda guardado en esta computadora o tableta. La administración lo puede cambiar en Configuración → Pantallas.</p></div></div>' +
+    '<div class="box" style="gap:12px"><button type="button" class="danger" data-area="mtto" style="padding:22px;font-size:21px;flex-direction:column">🧰 MANTENIMIENTO<small style="font-weight:500;font-size:14px">Tablero de mantenimiento · recibe las alertas de falla en grande, con sonido y aviso aunque estés en otra página</small></button>' +
+    '<button type="button" class="primary" data-area="prod" style="padding:22px;font-size:21px;flex-direction:column">🏭 PRODUCCIÓN<small style="font-weight:500;font-size:14px">Tablero de producción · pantalla de máquina para mandar alertas, sin tablero de mantenimiento</small></button></div>');
+}
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-area]'); if (!b) return;
+  LS.set('tc_dev_area', b.dataset.area); cerrarModal();
+  if (b.dataset.area === 'mtto') { const p = await activarAvisos(); pantallaEncendida(); toast(p === 'granted' ? 'Equipo de MANTENIMIENTO: alertas en grande, sonido y avisos activados.' : 'Equipo de MANTENIMIENTO. Para recibir avisos en otra página, permite las notificaciones del navegador.'); }
+  else { S.sonido = false; beep(false); $('btnSonido').textContent = '🔕 Sonido'; toast('Equipo de PRODUCCIÓN: tablero de producción.'); }
+  const d = pantallaDestino(); if (d.maq) S.opMaq = d.maq; setView(d.v);
+});
+$('btnProbarAviso').addEventListener('click', async () => {
+  const p = await activarAvisos(), m = $('mAviso');
+  beep(true); setTimeout(() => { if (!S.evs.some(e => e.estado === 'espera')) beep(false); }, 3000);
+  if (p === 'granted') { try { await mostrarAviso('⚠ PRUEBA · Control de paros', 'Así llega el aviso de falla a este equipo.', 'paro-prueba'); m.className = 'msg okm'; m.textContent = 'Avisos activados en este equipo.'; } catch(e) { m.className = 'msg err'; m.textContent = 'No se pudo mostrar el aviso: ' + e.message; } }
+  else { m.className = 'msg err'; m.textContent = p === 'no' ? 'Este navegador no maneja avisos.' : 'Las notificaciones están bloqueadas: da clic en el candado junto a la dirección → Notificaciones → Permitir.'; }
+});
 
 // ---------- eventos de UI
 document.querySelector('nav.nav').addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (b) setView(b.dataset.v); });
@@ -1145,6 +1232,10 @@ $('btnXlsx').addEventListener('click', excel);
 document.body.classList.toggle('kiosk', LS.get('tc_kiosk') === '1');
 $('logo').addEventListener('dblclick', () => setView('cfg'));
 $('logo').title = 'Doble clic: configuración';
-(() => { const d = pantallaDestino(); if (d.maq) S.opMaq = d.maq; setView(d.v); })();
+(() => {
+  if (devArea() === 'mtto') { S.sonido = true; $('btnSonido').textContent = '🔔 Sonido'; pantallaEncendida(); }
+  const d = pantallaDestino(); if (d.maq) S.opMaq = d.maq; setView(d.v);
+  if (!devArea()) elegirArea();
+})();
 </script>
 </body></html>
