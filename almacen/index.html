@@ -107,11 +107,11 @@ label.f{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--mu
 .bigloc .lb{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:18px;background:var(--accent-2);color:#0C1A0E;border-radius:6px;padding:3px 10px}
 .bigloc .pend{color:var(--hero-muted);font-size:13px}
 .photo{width:100%;max-width:100%;min-height:160px;border-radius:10px;background:#fff;border:1px dashed var(--line);display:grid;place-items:center;overflow:hidden;color:var(--muted);text-align:center;padding:8px;position:relative}
-.photo img{display:block;max-width:100%;max-height:62vh;width:auto;height:auto;object-fit:contain;cursor:zoom-in;margin:0 auto}
+.photo img{display:block;max-width:100%;max-height:240px;width:auto;height:auto;object-fit:contain;cursor:zoom-in;margin:0 auto}
 .photo .zoom{position:absolute;right:8px;bottom:8px;background:rgba(0,0,0,.6);color:#fff;border-radius:6px;padding:3px 8px;font-size:12px;pointer-events:none}
-.lb{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.92);display:grid;place-items:center;padding:16px;cursor:zoom-out}
-.lb img{max-width:100%;max-height:calc(100vh - 80px);object-fit:contain;background:#fff;border-radius:6px}
-.lb p{position:absolute;top:calc(env(safe-area-inset-top,0px) + 12px);left:16px;right:16px;margin:0;color:#fff;font-weight:600;text-align:center}
+.lbx{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.92);display:grid;place-items:center;padding:16px;cursor:zoom-out}
+.lbx img{max-width:100%;max-height:calc(100vh - 80px);object-fit:contain;background:#fff;border-radius:6px}
+.lbx p{position:absolute;top:calc(env(safe-area-inset-top,0px) + 12px);left:16px;right:16px;margin:0;color:#fff;font-weight:600;text-align:center}
 .limbox{border-radius:8px;padding:10px 12px;font-size:14px;display:flex;flex-direction:column;gap:2px}
 .limbox.ok{background:var(--ok-bg);color:var(--ok)}
 .limbox.warn{background:var(--warn-bg);color:var(--warn)}
@@ -1232,7 +1232,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && S.sel) clo
 $('dr').addEventListener('input', e => { if (e.target.id === 'mvQ' || e.target.id === 'mvNomina') pintarLimite(); });
 document.addEventListener('click', e => {
   const im = e.target.closest('[data-lb]');
-  if (im) { const d = document.createElement('div'); d.className = 'lb'; d.id = 'lbx'; d.innerHTML = '<p>' + esc(im.dataset.lbt || '') + ' · toca para cerrar</p><img alt="" src="' + esc(im.dataset.lb) + '">'; document.body.appendChild(d); return; }
+  if (im) { const d = document.createElement('div'); d.className = 'lbx'; d.id = 'lbx'; d.innerHTML = '<p>' + esc(im.dataset.lbt || '') + ' · toca para cerrar</p><img alt="" src="' + esc(im.dataset.lb) + '">'; document.body.appendChild(d); return; }
   const lb = e.target.closest('#lbx'); if (lb) lb.remove();
 });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('lbx')) $('lbx').remove(); });
