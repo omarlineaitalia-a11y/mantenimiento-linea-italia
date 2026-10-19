@@ -1,4 +1,4 @@
-<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>[hidden]{display:none!important}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}</style><script>window.LI_APP="paros";</script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script><script src="../firebase-config.js"></script><script src="../lib/li-firebase.js"></script></head><body><title>Control de Paros</title>
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>[hidden]{display:none!important}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}</style><link rel="manifest" href="manifest.json"><meta name="theme-color" content="#1E4A2A"><link rel="icon" href="icono-192.png"><link rel="apple-touch-icon" href="icono-192.png"><script>window.LI_APP="paros";</script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script><script src="../firebase-config.js"></script><script src="../lib/li-firebase.js"></script></head><body><title>Control de Paros</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600;700&display=swap">
 <style>
 :root{
@@ -176,6 +176,7 @@ body.kiosk .top nav.nav, body.kiosk .hide-kiosk{display:none}
   </nav>
   <div style="display:flex;gap:8px;align-items:center">
     <button type="button" id="btnSesion" style="background:var(--hero-fg);color:var(--hero);border-color:var(--hero-fg)">👤 Entrar</button>
+    <button type="button" id="btnInstalar" hidden style="background:var(--hero-fg);color:var(--hero);border-color:var(--hero-fg)">📲 Instalar en este equipo</button>
     <button type="button" id="btnSonido" style="background:transparent;color:var(--hero-fg);border-color:var(--hero-line)">🔕 Sonido</button>
     <button type="button" id="btnFull" style="background:transparent;color:var(--hero-fg);border-color:var(--hero-line)">⛶ Pantalla completa</button>
     <span class="clock" id="reloj">--:--:--</span>
@@ -1173,7 +1174,7 @@ let swReg = null;
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').then(r => { swReg = r; }).catch(() => {});
 const avisados = new Set();
 function mostrarAviso(titulo, cuerpo, tag){
-  const op = { body:cuerpo, tag, renotify:true, requireInteraction:true, vibrate:[400,150,400,150,400] };
+  const op = { body:cuerpo, tag, renotify:true, requireInteraction:true, vibrate:[400,150,400,150,400], icon:'icono-192.png', badge:'icono-192.png' };
   if (swReg && swReg.showNotification) return swReg.showNotification(titulo, op);
   const n = new Notification(titulo, op); n.onclick = () => { window.focus(); n.close(); };
 }
@@ -1191,6 +1192,11 @@ async function activarAvisos(){
   if (Notification.permission === 'default') { try { await Notification.requestPermission(); } catch(e) {} }
   return Notification.permission;
 }
+// instalar como aplicación (tableta Android / computadora): ícono propio y pantalla completa
+let pedirInstalar = null;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); pedirInstalar = e; $('btnInstalar').hidden = false; });
+window.addEventListener('appinstalled', () => { pedirInstalar = null; $('btnInstalar').hidden = true; toast('Listo: "Paros LI" quedó instalada con su ícono.'); });
+$('btnInstalar').addEventListener('click', async () => { if (!pedirInstalar) return; pedirInstalar.prompt(); try { await pedirInstalar.userChoice; } catch(e) {} pedirInstalar = null; $('btnInstalar').hidden = true; });
 // pantalla siempre encendida en equipos de mantenimiento
 let wakeLock = null;
 async function pantallaEncendida(){ if (devArea() !== 'mtto' || !navigator.wakeLock || document.hidden) return; try { wakeLock = await navigator.wakeLock.request('screen'); } catch(e) {} }
