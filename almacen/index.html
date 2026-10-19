@@ -447,6 +447,15 @@ label.f{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--mu
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="primary" type="submit">Guardar persona</button><p class="msg" id="mPers"></p></div>
     </form>
+    <div class="box" id="bAccesos">
+      <h3>🔑 Accesos a la página (cuentas)</h3>
+      <p class="foot">Cada persona entra con su <b>nómina y contraseña</b>. Aquí das cuenta a quien todavía no tiene: escribe una <b>contraseña inicial</b>, entrégasela a cada persona y que la cambie en el botón <b>"👤 nómina · cuenta"</b> (abajo a la izquierda). A quien ya tenía cuenta no se le cambia la contraseña.</p>
+      <div style="display:flex;gap:10px;align-items:end;flex-wrap:wrap">
+        <label class="f" style="min-width:240px">Contraseña inicial (mín. 6)<input id="accPw" type="password" autocomplete="new-password" placeholder="la que les vas a dar"></label>
+        <button type="button" class="primary" id="btnAccTodos">Dar acceso a todo el personal activo sin cuenta</button>
+      </div>
+      <p class="msg" id="mAcc"></p>
+    </div>
   </section>
 
 <div class="login" id="login" hidden>
@@ -454,6 +463,7 @@ label.f{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--mu
     <div class="lh"><img id="logoLogin" alt="Línea Italia" hidden><p>Línea Italia · Mantenimiento</p><h2>Almacén de refacciones</h2></div>
     <form id="fLogin" autocomplete="off">
       <label class="f">Usuario: tu número de nómina<input id="lNom" class="mono big" inputmode="numeric" placeholder="0000" required></label>
+      <label class="f">Contraseña<input id="lPw" type="password" class="big" autocomplete="current-password" placeholder="tu contraseña"></label>
       <button class="primary" type="submit" style="justify-content:center;padding:12px">Entrar</button>
       <p class="msg" id="mLogin"></p>
       <p class="foot">¿No tienes acceso? Pide a la administradora del almacén que te dé de alta.</p>
@@ -581,6 +591,21 @@ function salir(motivo){ S.yo = null; LS.set('alm_nomina', null); closeItem(); if
 function vencida(){ const m = Number(S.cfg.ses)||0; return m > 0 && Date.now() - S.last > m * 60000; }
 ['pointerdown','keydown','scroll','touchstart','mousemove'].forEach(ev => document.addEventListener(ev, () => { if (!S.yo) return; const n = Date.now(); if (n - S.last > 5000) LS.set('alm_last', String(n)); S.last = n; }, { passive:true }));
 setInterval(() => { if (S.yo && vencida()) salir('Tu sesión se cerró por inactividad. Vuelve a entrar con tu número de nómina.'); }, 10000);
+const conCuenta = k => !!(S.pers[k] && S.pers[k].cta) || (window.LI && String(LI.nomina()) === String(k));
+// crea la cuenta (nómina + contraseña inicial) y marca a la persona "con cuenta"
+async function darAcceso(ks){
+  const pw = $('accPw').value, m = $('mAcc');
+  if (pw.length < 6) { m.className = 'msg err'; m.textContent = 'Escribe primero la contraseña inicial (mínimo 6 caracteres) en la sección 🔑 Accesos.'; $('accPw').focus(); $('bAccesos').scrollIntoView({ behavior:'smooth' }); return; }
+  if (!ks.length) { m.className = 'msg okm'; m.textContent = 'Todo el personal activo ya tiene cuenta.'; return; }
+  let nuevas = 0, ya = 0; const err = [];
+  for (const k of ks) {
+    m.className = 'msg'; m.textContent = 'Dando acceso… ' + (nuevas + ya + err.length + 1) + ' de ' + ks.length;
+    try { const r = await LI.crearCuenta(k, pw); if (r === 'existe') ya++; else nuevas++; await db.doc('config/personal').update({ p: { [k]: { cta:true } } }); }
+    catch(e) { err.push(k + ' (' + e.message + ')'); }
+  }
+  m.className = err.length ? 'msg err' : 'msg okm';
+  m.textContent = 'Listo: ' + nuevas + ' cuenta(s) nueva(s) con la contraseña inicial' + (ya ? ' · ' + ya + ' ya tenía(n) cuenta (conservan su contraseña)' : '') + (err.length ? ' · no se pudo: ' + err.join(', ') : '') + '.';
+}
 function renderPers(){
   if (!S.pers) return;
   const ord = r => r==='general' ? 0 : r==='admin' ? 1 : 2;
@@ -590,7 +615,8 @@ function renderPers(){
     '<div class="ptab head"><span>Nómina</span><span>Nombre</span><span class="p-pu">Puesto</span><span>Rol</span><span class="p-ac">Activo</span><span></span></div>' +
     arr.map(([k,p]) => '<div class="ptab"><span class="mono">'+esc(k)+'</span><span>'+esc(p.n)+'</span><span class="p-pu desc">'+esc(p.puesto||'')+'</span><span>'+
       (p.r==='general' || k===S.yo?.nomina ? '<span class="st '+(p.r==='usuario'?'sin':'ok')+'">'+rolTxt(p.r)+'</span>' : '<select data-prol="'+esc(k)+'" aria-label="Rol"><option value="usuario"'+(p.r!=='admin'?' selected':'')+'>Usuario</option><option value="admin"'+(p.r==='admin'?' selected':'')+'>Administrador</option></select>')+
-      '</span><span class="p-ac">'+(p.a===false?'No':'Sí')+'</span><span>'+(k===S.yo?.nomina || p.r==='general' ? '<span class="foot">'+(k===S.yo?.nomina?'tú':'')+'</span>' : '<button type="button" data-pact="'+esc(k)+'">'+(p.a===false?'Activar':'Desactivar')+'</button>')+'</span></div>').join('');
+      '</span><span class="p-ac">'+(p.a===false?'No':'Sí')+'<br><span class="foot">'+(conCuenta(k) ? '🔑 con cuenta' : 'sin cuenta')+'</span></span><span style="display:flex;gap:6px;flex-wrap:wrap">'+(k===S.yo?.nomina || p.r==='general' ? '<span class="foot">'+(k===S.yo?.nomina?'tú':'')+'</span>' : '<button type="button" data-pact="'+esc(k)+'">'+(p.a===false?'Activar':'Desactivar')+'</button>')+
+      (S.isGeneral && !conCuenta(k) && p.a !== false ? '<button type="button" data-pacc="'+esc(k)+'">🔑 Dar acceso</button>' : '')+'</span></div>').join('');
 }
 let db = null, assets = null, downloads = null, user = null;
 const $ = id => document.getElementById(id);
@@ -1248,8 +1274,17 @@ $('fLogin').addEventListener('submit', e => {
   e.preventDefault();
   const k = $('lNom').value.trim();
   if (!S.pers) { $('mLogin').className = 'msg'; $('mLogin').textContent = 'Cargando lista de personal…'; return; }
-  if (!entrar(k)) { $('mLogin').className = 'msg err'; $('mLogin').textContent = 'Número de nómina no registrado o inactivo.'; }
-  else $('mLogin').textContent = '';
+  const p = S.pers[k];
+  if (!p || p.a === false) { $('mLogin').className = 'msg err'; $('mLogin').textContent = 'Número de nómina no registrado o inactivo.'; return; }
+  // otra persona en este equipo: entra con su propia cuenta (nómina + contraseña)
+  if (window.LI && LI.nomina() && k !== String(LI.nomina())) {
+    const pw = $('lPw').value;
+    if (!pw) { $('mLogin').className = 'msg err'; $('mLogin').textContent = 'Escribe tu contraseña.'; $('lPw').focus(); return; }
+    $('mLogin').className = 'msg'; $('mLogin').textContent = 'Entrando…';
+    LI.entrarComo(k, pw).catch(er => { $('mLogin').className = 'msg err'; $('mLogin').textContent = er.message; });
+    return;
+  }
+  entrar(k); $('lPw').value = ''; $('mLogin').textContent = '';
 });
 $('btnSalir').addEventListener('click', () => salir());
 $('btnCfg').addEventListener('click', abrirCfg);
@@ -1293,9 +1328,11 @@ $('fPers').addEventListener('submit', async e => {
   if (S.pers[k] && S.pers[k].r === 'general') { msg.className='msg err'; msg.textContent='La administración general no se puede modificar aquí.'; return; }
   const pw = String(fd.get('pw') || '');
   if (pw && pw.length < 6) { msg.className='msg err'; msg.textContent='La contraseña debe tener al menos 6 caracteres.'; return; }
-  try { await db.doc('config/personal').update({ p: { [k]: p } }); let extra = ''; if (pw && window.LI) { const r = await LI.crearCuenta(k, pw); extra = r === 'existe' ? ' · ya tenía cuenta (no se cambió su contraseña)' : ' · cuenta creada'; } e.target.reset(); msg.className='msg okm'; msg.textContent='Guardado: '+k+' · '+p.n+extra; }
+  try { await db.doc('config/personal').update({ p: { [k]: p } }); let extra = ''; if (pw && window.LI) { const r = await LI.crearCuenta(k, pw); extra = r === 'existe' ? ' · ya tenía cuenta (no se cambió su contraseña)' : ' · cuenta creada'; await db.doc('config/personal').update({ p: { [k]: { cta:true } } }); } e.target.reset(); msg.className='msg okm'; msg.textContent='Guardado: '+k+' · '+p.n+extra; }
   catch(err) { msg.className='msg err'; msg.textContent='No se pudo guardar ('+(err.code||err.message||'error')+').'; }
 });
+$('btnAccTodos').addEventListener('click', () => { if (!S.isGeneral || !window.LI) return; darAcceso(Object.keys(S.pers).filter(k => S.pers[k].a !== false && !conCuenta(k))); });
+document.addEventListener('click', e => { const b = e.target.closest('[data-pacc]'); if (b && S.isGeneral && window.LI) darAcceso([b.dataset.pacc]); });
 document.addEventListener('click', async e => {
   const b = e.target.closest('[data-pact]'); if (!b || !S.isGeneral) return;
   const k = b.dataset.pact, p = S.pers[k];
