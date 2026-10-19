@@ -1,0 +1,728 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Organigrama y Desempeño</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<script>window.LI_APP="organigrama";</script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="../firebase-config.js"></script>
+<script src="../lib/li-firebase.js"></script>
+<style>
+:root{--navy:#1b2a4a;--verde:#2e7d4f;--verde2:#eef7f1;--ambar:#c77c0e;--rojo:#b3261e;--azul:#1f6fb2;--gris:#5a6675;--linea:#d5dbe3;--fondo:#f4f6f9;--tx:#1d2733;--card:#fff}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--fondo:#11161e;--card:#1a212c;--tx:#e6ebf2;--gris:#9aa6b6;--linea:#2c3747;--verde2:#183225}}
+:root[data-theme="dark"]{--fondo:#11161e;--card:#1a212c;--tx:#e6ebf2;--gris:#9aa6b6;--linea:#2c3747;--verde2:#183225}
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--fondo);color:var(--tx);font-size:14px}
+header{background:var(--navy);color:#fff;padding:14px 20px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+header h1{margin:0;font-size:20px}header p{margin:3px 0 0;font-size:12px;color:#cfd8e6}
+.tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.tools label{font-size:12px;color:#cfd8e6}
+input,select,textarea,button{font-family:inherit;font-size:13px}
+.tools input[type=month]{padding:6px;border-radius:5px;border:0}
+button{border:0;border-radius:6px;padding:8px 12px;cursor:pointer;font-weight:bold}
+.b-verde{background:var(--verde);color:#fff}.b-blanco{background:#fff;color:var(--navy)}.b-gris{background:#e3e7ed;color:#1d2733}.b-rojo{background:var(--rojo);color:#fff}
+nav{display:flex;flex-wrap:wrap;gap:4px;padding:10px 20px 0;background:var(--fondo);border-bottom:2px solid var(--verde)}
+nav button{background:transparent;color:var(--gris);border-radius:6px 6px 0 0;padding:10px 14px}
+nav button.on{background:var(--verde);color:#fff}
+main{padding:16px 20px 40px;max-width:1400px;margin:0 auto}
+section{display:none}section.on{display:block}
+h2{color:var(--tx);font-size:18px;margin:4px 0 4px}.sub{color:var(--gris);font-size:12.5px;margin:0 0 12px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 14px}
+.chip{background:var(--card);border:1px solid var(--linea);border-left:4px solid var(--navy);border-radius:6px;padding:6px 10px;font-size:12.5px}.chip b{font-size:16px}
+.chip.v{border-left-color:var(--verde)}.chip.a{border-left-color:var(--ambar)}
+/* organigrama */
+.org{display:flex;flex-direction:column;align-items:center}
+.vl{width:2px;height:22px;background:var(--navy)}
+.card{background:var(--card);border:1px solid var(--linea);border-top:5px solid var(--navy);border-radius:8px;padding:9px 11px;width:230px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.card.gerente{border-top-color:#0f1a30;width:270px}.card.jefe{border-top-color:var(--verde);width:270px}.card.apoyo{border-top-color:var(--ambar);border-style:dashed;border-top-style:solid}
+.card .pu{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--gris);font-weight:bold}
+.card .no{font-size:14px;font-weight:bold;margin:3px 0}
+.card .ar{display:inline-block;background:var(--verde2);color:var(--verde);border-radius:4px;padding:2px 6px;font-size:11.5px;font-weight:bold;margin-top:2px}
+.card.apoyo .ar{background:#fff3df;color:var(--ambar)}
+.card .nm{font-size:11px;color:var(--gris);margin-top:3px}
+.mid{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;width:100%;max-width:1000px}
+.side{display:flex;flex-direction:column;gap:8px;align-items:center;position:relative}
+.side.l{padding-right:26px}.side.r{padding-left:26px;align-self:start}
+.side.r::before{top:62px!important}
+.side:empty::after,.side:empty::before{display:none}
+.rama{display:flex;flex-direction:column;align-items:center}
+.vd{width:0;height:18px;border-left:2px dashed var(--ambar)}
+.card.supervisor{border-top-color:var(--azul);width:270px}
+.card.ext{background:var(--card)}
+.mid{align-items:start}
+.mid>div:nth-child(2){padding-top:24px}
+.side.l::after,.side.r::before{content:"";position:absolute;top:50%;width:26px;border-top:2px dashed var(--ambar)}
+.side.l::after{right:0}.side.r::before{left:0}
+.side .tag{font-size:10.5px;color:var(--ambar);font-weight:bold;text-transform:uppercase}
+.grp{border:2px solid var(--navy);border-radius:10px;padding:10px;background:rgba(27,42,74,.03);width:100%;max-width:1020px}
+.grp .gt{text-align:center;font-weight:bold;color:var(--navy);margin-bottom:8px}
+:root[data-theme="dark"] .grp .gt{color:#cfd8e6}
+.gr{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;justify-items:center}
+/* evaluación */
+.rate{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:7px;text-align:left}
+.opt{display:flex;align-items:center;gap:5px;font-size:11.5px;cursor:pointer;border:1px solid var(--linea);border-radius:5px;padding:3px 5px}
+.opt .box{width:15px;height:15px;border:2px solid var(--c);border-radius:3px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;color:#fff;flex:none}
+.opt.on{border-color:var(--c);font-weight:bold}.opt.on .box{background:var(--c)}
+.com{width:100%;margin-top:6px;min-height:34px;border:1px solid var(--linea);border-radius:5px;padding:4px;font-size:11.5px;background:var(--card);color:var(--tx);resize:vertical}
+.leyenda{display:flex;flex-wrap:wrap;gap:10px;font-size:12px;margin:6px 0 10px}
+.leyenda span{display:inline-flex;align-items:center;gap:5px}.leyenda i{width:12px;height:12px;border-radius:3px;display:inline-block}
+.firmas{display:none;grid-template-columns:1fr 1fr;gap:60px;margin-top:40px;text-align:center;font-size:12px}
+.firmas div{border-top:1px solid #333;padding-top:5px}
+/* tablas */
+.tw{overflow-x:auto;background:var(--card);border:1px solid var(--linea);border-radius:8px}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{background:var(--navy);color:#fff;padding:8px;text-align:center;font-size:12px}
+td{padding:6px 8px;border-bottom:1px solid var(--linea);text-align:center}
+td.l{text-align:left}
+tr.tot td{font-weight:bold;background:var(--verde2)}
+td input{width:80px;padding:5px;border:1px solid var(--linea);border-radius:5px;text-align:center;background:var(--card);color:var(--tx)}
+td input.w{width:100%;text-align:left}
+.badge{display:inline-block;border-radius:12px;padding:3px 9px;font-size:11.5px;font-weight:bold;color:#fff}
+.k-exc{background:var(--verde)}.k-sat{background:var(--azul)}.k-min{background:var(--ambar)}.k-no{background:var(--rojo)}.k-na{background:#8a94a3}
+.pend{background:#fde8e6}.pend input{border-color:var(--rojo)}
+.form{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px;background:var(--card);border:1px solid var(--linea);border-radius:8px;padding:12px;margin-bottom:12px}
+.form label{font-size:11.5px;color:var(--gris);display:flex;flex-direction:column;gap:3px}
+.form input,.form select{padding:7px;border:1px solid var(--linea);border-radius:5px;background:var(--card);color:var(--tx)}
+.form .ancho{grid-column:span 2}
+.nota{font-size:12px;color:var(--gris);margin:8px 0}
+.kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:14px}
+.kpi{background:var(--card);border:1px solid var(--linea);border-left:5px solid var(--navy);border-radius:8px;padding:10px 12px}
+.kpi .t{font-size:12px;color:var(--gris)}.kpi .v{font-size:24px;font-weight:bold;margin-top:4px}.kpi.v1{border-left-color:var(--verde)}.kpi.v1 .v{color:var(--verde)}.kpi.a1{border-left-color:var(--ambar)}.kpi.r1{border-left-color:var(--rojo)}.kpi.r1 .v{color:var(--rojo)}
+.graf{display:grid;grid-template-columns:repeat(auto-fill,minmax(460px,1fr));gap:12px}
+.gc{background:var(--card);border:1px solid var(--linea);border-radius:8px;padding:10px}
+.gc h3{margin:0 0 6px;font-size:14px}.gc .cv{position:relative;height:290px}
+.banner{display:none;background:#fff3df;color:#7a4b00;border:1px solid var(--ambar);border-radius:6px;padding:8px 12px;margin-bottom:10px;font-size:13px}
+.pr-head{display:none}
+.opt.fijo{cursor:default}
+.esc{position:relative;display:grid;grid-template-columns:repeat(4,1fr);border-radius:8px;overflow:visible;margin:28px 0 12px;max-width:900px}
+.esc>div{color:#fff;padding:8px;text-align:center;font-size:12px}.esc>div:first-child{border-radius:8px 0 0 8px}.esc>div:nth-child(4){border-radius:0 8px 8px 0}
+.esc>div b{display:block;font-size:13px}.esc>div span{opacity:.9}
+.esc i{position:absolute;top:-8px;bottom:-8px;width:4px;margin-left:-2px;background:#1d2733;border-radius:2px}
+.esc i em{position:absolute;top:-22px;left:50%;transform:translateX(-50%);white-space:nowrap;font-style:normal;font-weight:bold;font-size:12px;color:var(--tx)}
+#tProy select{max-width:150px;font-size:12px}#tProy td{font-size:12px}#tProy textarea{min-width:220px}
+td textarea{width:100%;min-height:44px;border:1px solid var(--linea);border-radius:5px;padding:4px;font-size:12px;background:var(--card);color:var(--tx)}
+td select{padding:4px;border:1px solid var(--linea);border-radius:5px;background:var(--card);color:var(--tx)}
+.bar-av{height:8px;background:#e3e7ed;border-radius:4px;overflow:hidden;margin-top:3px}.bar-av i{display:block;height:100%;background:var(--verde)}
+/* reporte individual */
+.pag-tec{background:#fff;color:#1d2733;padding:18px;border:1px solid var(--linea);border-radius:8px;margin-bottom:16px;page:tec}
+.pag-tec .enc{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:3px solid #2e7d4f;padding-bottom:6px;margin-bottom:10px}
+.pag-tec .enc h1{margin:0;font-size:18px;color:#1b2a4a}.pag-tec .enc div{font-size:11px;color:#555;text-align:right}
+.pag-tec .dat{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;font-size:12px;margin-bottom:10px}
+.pag-tec .dat div{background:#f4f6f9;border-radius:5px;padding:5px 8px}.pag-tec .dat b{display:block;font-size:13px}
+.pag-tec .kp{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px}
+.pag-tec .kp div{border:1px solid #d5dbe3;border-left:5px solid #1b2a4a;border-radius:6px;padding:6px 9px;font-size:11px;color:#5a6675}
+.pag-tec .kp b{display:block;font-size:20px;color:#1d2733;margin-top:2px}
+.pag-tec h3{font-size:13px;color:#1b2a4a;margin:10px 0 5px;border-bottom:1px solid #2e7d4f;padding-bottom:2px}
+.pag-tec table{font-size:11.5px}.pag-tec th{padding:5px}.pag-tec td{padding:4px 6px}
+.pag-tec .graf2{display:grid;grid-template-columns:1fr 1fr;gap:10px}.pag-tec .graf2 img{width:100%;border:1px solid #e3e7ed;border-radius:5px}
+.pag-tec .niv{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.pag-tec .niv span{border:1.5px solid var(--c);border-radius:5px;padding:5px;font-size:12px;display:flex;gap:6px;align-items:center}
+.pag-tec .niv i{width:14px;height:14px;border:2px solid var(--c);border-radius:3px;display:inline-flex;align-items:center;justify-content:center;font-style:normal;font-size:10px;color:#fff}
+.pag-tec .niv span.on{font-weight:bold}.pag-tec .niv span.on i{background:var(--c)}
+.pag-tec .fir{display:grid;grid-template-columns:1fr 1fr 1fr;gap:30px;margin-top:34px;text-align:center;font-size:11px}.pag-tec .fir div{border-top:1px solid #333;padding-top:4px}
+@page tec{size:letter portrait;margin:10mm}
+@media (max-width:700px){main{padding:12px}.graf{grid-template-columns:1fr}.mid{grid-template-columns:1fr}.side.l,.side.r{padding:0}.side.l::after,.side.r::before{display:none}.card{width:100%}}
+@media print{
+ @page{size:letter landscape;margin:9mm}
+ body{background:#fff;color:#000;font-size:11px}
+ header,nav,.noprint,.banner{display:none!important}
+ section{display:none!important}section.on{display:block!important}
+ main{padding:0;max-width:none}
+ .pr-head{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:3px solid #2e7d4f;padding-bottom:5px;margin-bottom:8px}
+ .pr-head h1{margin:0;font-size:17px;color:#1b2a4a}.pr-head div{font-size:11px;color:#444}
+ .card{box-shadow:none;width:205px;padding:6px 8px}.gr{grid-template-columns:repeat(4,1fr)}
+ .com{border:1px solid #bbb;min-height:26px}
+ .firmas{display:grid}
+ .gc .cv{height:240px}.graf{grid-template-columns:1fr 1fr}
+ .opt,.card,.tw,.gc{break-inside:avoid}
+ .pag-tec{border:0;padding:0;margin:0;break-after:page}.pag-tec:last-child{break-after:auto}
+ td textarea,td select{border:0;resize:none}
+}
+</style>
+</head>
+<body>
+<header>
+ <div><h1>Mantenimiento · Organigrama y desempeño</h1><p>Línea Italia · Creaciones Industriales, S.A. de C.V. · Elaboró: Jefatura de Mantenimiento</p></div>
+ <div class="tools">
+  <label>Periodo <input type="month" id="mes"></label>
+  <button class="b-verde" id="bXls">⬇ Descargar Excel</button>
+  <button class="b-blanco" id="bPrint">🖨 Imprimir / PDF</button>
+  <button class="b-gris" id="bResp">Respaldo</button>
+  <button class="b-gris" id="bCarga">Cargar respaldo</button>
+  <input type="file" id="fCarga" accept=".json" hidden>
+  <span id="nube" style="font-size:12.5px;opacity:.85">Conectando…</span>
+ </div>
+</header>
+<nav id="tabs">
+ <button data-t="org" class="on">Organigrama</button>
+ <button data-t="ev">Evaluación de desempeño</button>
+ <button data-t="cum">Cumplimiento plan mensual</button>
+ <button data-t="cal">Calificación y paros</button>
+ <button data-t="graf">Gráficas</button>
+ <button data-t="proy">Nuevos proyectos</button>
+ <button data-t="cfg">Personal y criterios</button>
+</nav>
+<main>
+ <div class="banner" id="banner">Este periodo tiene <b>datos de ejemplo</b>. Bórralos antes de capturar los reales (pestaña Personal y criterios → Borrar datos del periodo).</div>
+
+ <section id="s-org" class="on">
+  <div class="pr-head"><h1>Organigrama del departamento de Mantenimiento</h1><div class="ph"></div></div>
+  <h2 class="noprint">Organigrama del departamento de Mantenimiento</h2>
+  <p class="sub noprint">Gerencia → Jefatura → técnicos responsables por categoría de equipo. A los costados, el personal de apoyo.</p>
+  <div class="chips" id="cuenta"></div>
+  <div id="orgA"></div>
+  <div class="noprint" style="margin-top:18px">
+   <h2>Reasignar categorías</h2>
+   <p class="sub">Elige quién es responsable de cada categoría de equipo. El organigrama, el cumplimiento y el Excel se actualizan solos.</p>
+   <div class="tw" style="max-width:720px"><table id="cats"></table></div>
+  </div>
+ </section>
+
+ <section id="s-ev">
+  <div class="pr-head"><h1>Evaluación de desempeño · Mantenimiento</h1><div class="ph"></div></div>
+  <h2 class="noprint">Evaluación de desempeño</h2>
+  <p class="sub noprint">El nivel de cada técnico se toma <b>automáticamente</b> de su calificación en Calificación y paros (60 % preventivo + 40 % paros). Al Jefe de Mantenimiento (no tiene plan mensual) se le marca a mano. Anota un comentario o plan de mejora. Se guarda por periodo. Usa "Imprimir / PDF" para entregarlo a dirección.</p>
+  <div class="leyenda" id="leyEv"></div>
+  <div id="orgB"></div>
+  <div class="firmas"><div>Evaluó: Edgar Adrián Martínez Martínez<br>Gerente</div><div>Amílcar Omar Andraca Herrera<br>Jefe de Mantenimiento</div></div>
+ </section>
+
+ <section id="s-cum">
+  <div class="pr-head"><h1>Cumplimiento del plan mensual de mantenimiento</h1><div class="ph"></div></div>
+  <h2 class="noprint">Cumplimiento del plan mensual</h2>
+  <p class="sub">Órdenes programadas contra órdenes cumplidas de cada técnico. <b>97 % o más: Excelente · 95 %: Satisfactorio · 90 %: Mínimo aceptable · menos de 90 %: No aceptable.</b></p>
+  <div class="tw"><table id="tCum"></table></div>
+  <p class="nota">El % total del equipo = suma de órdenes cumplidas / suma de órdenes programadas. El promedio simple es el promedio de los % individuales.</p>
+ </section>
+
+ <section id="s-cal">
+  <div class="pr-head"><h1>Calificación integral del personal y registro de paros</h1><div class="ph"></div></div>
+  <h2 class="noprint">Calificación integral: 60 % preventivo + 40 % paros</h2>
+  <p class="sub">Paros: <b>0 a 10 min Excelente · más de 10 y menos de 45 min Satisfactorio · 45 min o más No aceptable → se genera contramedida</b> para evitar la falla recurrente.</p>
+  <p class="sub">Calificación final = 60 % del cumplimiento del preventivo + 40 % del puntaje de paros. <b>97 o más: Excelente · 95: Satisfactorio · 90: Mínimo aceptable · menos de 90: Bajo desempeño.</b> Este nivel pasa automáticamente a la Evaluación de desempeño de cada técnico.</p>
+  <div class="form noprint" style="grid-template-columns:2fr 1fr;align-items:end"><label>Imprimir reporte individual (calificación, cumplimiento, paros, desempeño y gráfica)<select id="impTec"></select></label><label>&nbsp;<button class="b-verde" id="bImpTec">🖨 Imprimir por técnico</button></label></div>
+  <div class="tw" style="margin-bottom:8px"><table id="tCal"></table></div>
+  <h2 style="margin-top:14px">Promedio total por nivel de desempeño</h2>
+  <p class="sub">Calificación de 0 a 100: el 60 % viene del cumplimiento del preventivo y el 40 % de los paros. El promedio de cada técnico define su nivel; el promedio de todos define el nivel del equipo.</p>
+  <div id="escala"></div>
+  <div class="tw" style="margin-bottom:14px"><table id="tProm"></table></div>
+  <h2>Registro de paros de máquina</h2>
+  <div class="form noprint" id="fParo">
+   <label>Fecha<input type="date" id="pFecha"></label>
+   <label>Máquina<input list="lMaq" id="pMaq" placeholder="Ej. Selexx"></label>
+   <label>Técnico que atendió<select id="pTec"></select></label>
+   <label>Minutos de paro<input type="number" id="pMin" min="0" step="1"></label>
+   <label class="ancho">Falla<input id="pFalla" placeholder="Qué falló"></label>
+   <label class="ancho">Contramedida (obligatoria si es de 45 min o más)<input id="pContra" placeholder="Acción para que no se repita"></label>
+   <label>&nbsp;<button class="b-verde" id="bAddParo">Agregar paro</button></label>
+  </div>
+  <datalist id="lMaq"></datalist>
+  <div class="tw"><table id="tParos"></table></div>
+ </section>
+
+ <section id="s-graf">
+  <div class="pr-head"><h1>Estadísticas de mantenimiento</h1><div class="ph"></div></div>
+  <h2 class="noprint">Gráficas de cumplimiento y paros</h2>
+  <p class="sub noprint">Se actualizan con lo capturado en el periodo seleccionado; la tendencia usa todos los periodos guardados.</p>
+  <div class="kpis" id="kpis"></div>
+  <div class="graf">
+   <div class="gc"><h3>Cumplimiento del plan mensual por técnico</h3><div class="cv"><canvas id="g1"></canvas></div></div>
+   <div class="gc"><h3>Calificación integral por técnico (60 % preventivo + 40 % paros)</h3><div class="cv"><canvas id="g2"></canvas></div></div>
+   <div class="gc"><h3>Minutos de paro y número de paros por técnico</h3><div class="cv"><canvas id="g3"></canvas></div></div>
+   <div class="gc"><h3>Paros por clasificación</h3><div class="cv"><canvas id="g4"></canvas></div></div>
+   <div class="gc"><h3>Minutos de paro por máquina (top 10)</h3><div class="cv"><canvas id="g5"></canvas></div></div>
+   <div class="gc"><h3>Tendencia mensual: cumplimiento del equipo y minutos de paro</h3><div class="cv"><canvas id="g6"></canvas></div></div>
+  </div>
+ </section>
+
+ <section id="s-proy">
+  <div class="pr-head"><h1>Nuevos proyectos · tareas asignadas y beneficio para la empresa</h1><div class="ph"></div></div>
+  <h2 class="noprint">Nuevos proyectos</h2>
+  <p class="sub">Proyectos a cargo de <b>Humberto Rubalcaba y su auxiliar Antonio Marín</b>, cada uno con <b>fecha compromiso</b> y una reseña de cómo será un beneficio para la empresa. Se ordenan por fecha compromiso; el seguimiento marca en rojo los vencidos y en ámbar los que vencen en 7 días.</p>
+  <div class="chips" id="proyRes"></div>
+  <div class="form noprint">
+   <label class="ancho">Proyecto / tarea<input id="yTit" placeholder="Ej. Tanque pulmón 3000 L para compresores"></label>
+   <label>Responsable<select id="yResp"></select></label>
+   <label>Auxiliar<select id="yApo"></select></label>
+   <label>Fecha de inicio<input type="date" id="yIni"></label>
+   <label>Fecha compromiso<input type="date" id="yFin"></label>
+   <label>Prioridad<select id="yPri"><option>Alta</option><option selected>Media</option><option>Baja</option></select></label>
+   <label class="ancho" style="grid-column:1/-1">Beneficio para la empresa (reseña)<textarea id="yBen" rows="2" style="padding:7px;border:1px solid var(--linea);border-radius:5px;background:var(--card);color:var(--tx)" placeholder="Ej. Evita paros por caída de presión, ahorra energía y protege los compresores"></textarea></label>
+   <label>&nbsp;<button class="b-verde" id="bAddProy">Agregar proyecto</button></label>
+  </div>
+  <div class="tw"><table id="tProy"></table></div>
+ </section>
+
+ <section id="s-imp"><div id="impCont"></div></section>
+
+ <section id="s-cfg">
+  <h2>Personal</h2>
+  <p class="sub">Cambia nombres, áreas o tipo de puesto. "Plan mensual" = se le mide cumplimiento y paros. Los cambios se guardan solos en la nube (Firebase); "Respaldo" descarga una copia.</p>
+  <div class="tw"><table id="tPer"></table></div>
+  <p><button class="b-verde" id="bAddPer">+ Agregar persona</button> <button class="b-gris" id="bResetPer">Restaurar personal original</button></p>
+  <h2>🔑 Quién puede entrar a esta página</h2>
+  <p class="sub">La evaluación de desempeño es información confidencial. Solo entran las personas marcadas aquí, con su nómina y su contraseña (la misma de Almacén y Control de Paros). Si alguien todavía no tiene cuenta, escribe una contraseña inicial antes de marcarlo.</p>
+  <p><label>Contraseña inicial para quien no tenga cuenta (mín. 6) <input type="password" id="accPw" autocomplete="new-password" style="max-width:220px"></label></p>
+  <div class="tw"><table id="tAcc"></table></div>
+  <p class="sub" id="mAcc"></p>
+  <h2>Criterios</h2>
+  <div class="tw"><table id="tCrit"></table></div>
+  <h2 style="margin-top:16px">Datos del periodo</h2>
+  <p><button class="b-gris" id="bEjemplo">Cargar datos de ejemplo en este periodo</button> <button class="b-rojo" id="bBorrar">Borrar datos del periodo</button></p>
+ </section>
+</main>
+
+<script>
+const KEY = 'li_mtto_organigrama_desempeno_v2', KEY_V1 = 'li_mtto_organigrama_desempeno_v1';
+const PERSONAL_DEF = [
+ { id: 'gte', nombre: 'Edgar Adrián Martínez Martínez', nomina: '', puesto: 'Gerente', area: '', tipo: 'gerente', plan: false, externo: false, reporta: '' },
+ { id: 'jefe', nombre: 'Amílcar Omar Andraca Herrera', nomina: '4781', puesto: 'Jefe de Mantenimiento', area: '', tipo: 'jefe', plan: false, externo: false, reporta: 'gte' },
+ { id: 'car', nombre: 'Carlos Alberto Martínez Jasso', nomina: '1162', puesto: 'Supervisor de Mantenimiento', area: '', tipo: 'supervisor', plan: true, externo: false, reporta: 'jefe' },
+ { id: 'hum', nombre: 'Humberto Rubalcaba', nomina: '', puesto: 'Nuevos proyectos', area: 'Remodelaciones', tipo: 'apoyo', plan: false, externo: true, reporta: 'jefe' },
+ { id: 'amar', nombre: 'Antonio Marín', nomina: '', puesto: 'Nuevos proyectos', area: 'Nuevos diseños', tipo: 'apoyo', plan: false, externo: true, reporta: 'hum' },
+ { id: 'jai', nombre: 'Jaime Pacheco Lobatos', nomina: '4573', puesto: 'Técnico de mantenimiento', area: '', tipo: 'tecnico', plan: true, externo: false, reporta: 'car' },
+ { id: 'ale', nombre: 'Alejandro Chávez Galicia', nomina: '4695', puesto: 'Técnico de mantenimiento', area: '', tipo: 'tecnico', plan: true, externo: false, reporta: 'car' },
+ { id: 'osc', nombre: 'Óscar David Cortez Lara', nomina: '4643', puesto: 'Técnico de mantenimiento', area: '', tipo: 'tecnico', plan: true, externo: false, reporta: 'car' },
+ { id: 'gio', nombre: 'Giovanni Loera Martínez', nomina: '4647', puesto: 'Técnico de mantenimiento', area: '', tipo: 'tecnico', plan: true, externo: false, reporta: 'car' },
+ { id: 'jac', nombre: 'Jacobo Daniel Esparza de Luna', nomina: '4767', puesto: 'Técnico de mantenimiento', area: '', tipo: 'tecnico', plan: true, externo: false, reporta: 'car' },
+ { id: 'ant', nombre: 'José Antonio Torres López', nomina: '4237', puesto: 'Técnico de mantenimiento', area: '', tipo: 'tecnico', plan: true, externo: false, reporta: 'car' },
+ { id: 'jor', nombre: 'Jorge Luis Arriaga Encarnación', nomina: '4698', puesto: 'Técnico de mantenimiento', area: '', tipo: 'tecnico', plan: true, externo: false, reporta: 'car' },
+ { id: 'pab', nombre: 'Pablo Emmanuel Castañeda Esparza', nomina: '4768', puesto: 'Técnico de mantenimiento', area: '', tipo: 'tecnico', plan: true, externo: false, reporta: 'car' }
+];
+const CATS_DEF = [
+ { k: 'MTA', t: 'Maquinaria tipo A', resp: 'osc' }, { k: 'MTB', t: 'Maquinaria tipo B', resp: 'gio' }, { k: 'MTC', t: 'Maquinaria tipo C', resp: 'jac' },
+ { k: 'AG', t: 'Áreas generales', resp: 'jai' }, { k: 'AA', t: 'Aires acondicionados', resp: 'ant' }, { k: 'IL', t: 'Iluminación', resp: 'ant' },
+ { k: 'EBT', t: 'Eléctrico baja tensión', resp: 'ale' }, { k: 'EMT', t: 'Eléctrico media tensión', resp: 'car' },
+ { k: 'EM', t: 'Equipo móvil', resp: 'jor' }, { k: 'EA', t: 'Equipo auxiliar', resp: 'pab' }
+];
+const CRIT_DEF = { t_exc: 97, t_sat: 95, t_min: 90, w_cum: 60, w_par: 40, m_exc: 10, m_sat: 45, p_exc: 100, p_sat: 95, p_no: 80 };
+const NIVELES = [
+ { k: 'exc', t: 'Excelente', c: '#2e7d4f' }, { k: 'med', t: 'Satisfactorio', c: '#1f6fb2' },
+ { k: 'min', t: 'Mínimo aceptable', c: '#c77c0e' }, { k: 'rec', t: 'Bajo desempeño', c: '#b3261e' }
+];
+const MAQUINAS = ['Selexx', 'Gabbiani', 'Homag', 'Enchapadora Blue', 'CNC Blue Elephant', 'Láser Gweike 1', 'Láser Gweike 2', 'Láser cama', 'Láser Bimex', 'Prensa 60 ton', 'Prensa 90 ton', 'Prensa fluídica', 'Dobladora Newton 1', 'Dobladora Newton 2', 'Túnel de lavado', 'Horno de secado', 'Horno de curado', 'Cabina Nordson', 'Drive conveyor', 'Flejadora 2', 'Máquina de cajas', 'Cortadora CNC de tela', 'Compresor 50 HP', 'Compresor 100 HP', 'Montacargas', 'Subestación', 'Aire acondicionado'];
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const f1 = v => v == null ? '—' : (Math.round(v * 10) / 10).toLocaleString('es-MX', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+const nomMes = k => { const [a, m] = k.split('-'); return MESES[+m - 1] + ' ' + a; };
+
+function nuevo() { return { personal: JSON.parse(JSON.stringify(PERSONAL_DEF)), cats: JSON.parse(JSON.stringify(CATS_DEF)), crit: { ...CRIT_DEF }, meses: {}, proyectos: [] }; }
+function cargar() {
+ try { const x = JSON.parse(localStorage.getItem(KEY)); if (x && x.personal) { const d = nuevo(); d.personal = x.personal; d.cats = x.cats || d.cats; d.crit = { ...CRIT_DEF, ...(x.crit || {}) }; d.meses = x.meses || {}; d.proyectos = x.proyectos || []; return d; } } catch (e) { }
+ const d = nuevo();
+ try { const v1 = JSON.parse(localStorage.getItem(KEY_V1)); if (v1 && v1.meses) { d.meses = v1.meses; d.crit = { ...CRIT_DEF, ...(v1.crit || {}) }; } } catch (e) { }
+ return d;
+}
+function migrar(d) { d.personal.forEach(p => { if ((p.id === 'hum' && p.puesto === 'Apoyo') || (p.id === 'amar' && p.puesto === 'Personal de apoyo')) p.puesto = 'Nuevos proyectos'; }); return d; }
+function areaDe(p) { const c = (S.cats || []).filter(x => x.resp === p.id).map(x => x.k + ' · ' + x.t); if (p.area) c.unshift(p.area); return c.join(' / '); }
+// ---------- datos en Firebase (antes: solo en esta computadora)
+// apps/organigrama/config/general = personal, categorías, criterios y proyectos; apps/organigrama/meses/<AAAA-MM> = cada periodo
+let S = migrar(nuevo()), db = null, CACHE = {}, tGuardar = null, cargado = false;
+const piezas = () => { const o = { 'config/general': { personal: S.personal, cats: S.cats, crit: S.crit, proyectos: S.proyectos } }; Object.keys(S.meses).forEach(k => { o['meses/' + k] = S.meses[k]; }); return o; };
+function guardar() { if (!db || !cargado) return; clearTimeout(tGuardar); tGuardar = setTimeout(guardarYa, 700); estadoNube('Guardando…'); }
+async function guardarYa() {
+ const P = piezas(); const tareas = [];
+ Object.entries(P).forEach(([ruta, d]) => { const j = JSON.stringify(d); if (CACHE[ruta] !== j) { CACHE[ruta] = j; tareas.push(db.doc(ruta).set(JSON.parse(j))); } });
+ Object.keys(CACHE).filter(r => !P[r]).forEach(r => { delete CACHE[r]; tareas.push(db.doc(r).delete()); });
+ try { await Promise.all(tareas); estadoNube('✔ Guardado en la nube'); } catch (e) { estadoNube('⚠ No se pudo guardar (' + (e.code || e.message) + ')', true); }
+}
+function estadoNube(t, err) { const el = $('#nube'); if (el) { el.textContent = t; el.style.color = err ? '#ffb4ab' : ''; } }
+async function cargarNube() {
+ db = await window.claude.use('db'); if (!db) { estadoNube('⚠ Sin conexión a la base de datos', true); return; }
+ try {
+  const g = await db.doc('config/general').get(), ms = await db.collection('meses').get();
+  if (g.exists) { const x = g.data(); S.personal = x.personal || S.personal; S.cats = x.cats || S.cats; S.crit = { ...CRIT_DEF, ...(x.crit || {}) }; S.proyectos = x.proyectos || []; }
+  S.meses = {}; ms.docs.forEach(d => { S.meses[d.id] = d.data(); });
+  S = migrar(S); Object.entries(piezas()).forEach(([r, d]) => { if (r !== 'config/general' || g.exists) CACHE[r] = JSON.stringify(d); });
+  cargado = true; estadoNube(g.exists ? '✔ Datos en la nube' : 'Primera vez en la nube: carga tu respaldo con "Cargar respaldo"'); render(); renderAccesos();
+  if (!g.exists) guardar();
+ } catch (e) { estadoNube('⚠ No se pudieron leer los datos (' + (e.code || e.message) + ')', true); }
+}
+function mesKey() { return $('#mes').value; }
+function M(k) { k = k || mesKey(); if (!S.meses[k]) S.meses[k] = { ord: {}, ev: {}, paros: [], ejemplo: false }; return S.meses[k]; }
+const C = () => S.crit;
+const plan = () => S.personal.filter(p => p.plan);
+const persona = id => S.personal.find(p => p.id === id);
+
+function clasPct(v) { const c = C(); if (v == null) return { k: 'na', t: 'Sin datos' }; if (v >= c.t_exc) return { k: 'exc', t: 'Excelente' }; if (v >= c.t_sat) return { k: 'sat', t: 'Satisfactorio' }; if (v >= c.t_min) return { k: 'min', t: 'Mínimo aceptable' }; return { k: 'no', t: 'No aceptable' }; }
+const MAPK = { exc: 'exc', med: 'sat', min: 'min', rec: 'no' };
+function nivelFin(v) { const c = C(); if (v == null) return ''; return v >= c.t_exc ? 'exc' : v >= c.t_sat ? 'med' : v >= c.t_min ? 'min' : 'rec'; }
+function clasFin(v) { const n = nivelFin(v); if (!n) return { k: 'na', t: 'Sin datos' }; return { k: MAPK[n], t: NIVELES.find(x => x.k === n).t }; }
+function nivelEf(p, m) { m = m || M(); const e = m.ev[p.id] || {}; if (!p.plan) return { n: e.nivel || '', auto: false }; const n = nivelFin(calc(p, m).fin); return { n, auto: !!n }; }
+function promedio4(m) {
+ m = m || M(); const c = C(), wc = c.w_cum / (c.w_cum + c.w_par), wp = c.w_par / (c.w_cum + c.w_par);
+ const G = { exc: [], med: [], min: [], rec: [] }; plan().forEach(p => { const r = calc(p, m); const n = nivelFin(r.fin); if (n) G[n].push({ p, r }); });
+ const avg = (a, f) => a.length ? a.reduce((s, x) => s + f(x), 0) / a.length : null;
+ const rango = { exc: `${c.t_exc} a 100`, med: `${c.t_sat} a ${(c.t_exc - 0.1).toFixed(1)}`, min: `${c.t_min} a ${(c.t_sat - 0.1).toFixed(1)}`, rec: `0 a ${(c.t_min - 0.1).toFixed(1)}` };
+ const crit = { exc: `Cumple el ${c.w_cum} % del preventivo y el ${c.w_par} % de paros`, med: 'Depende del promedio: arriba del mínimo, abajo de Excelente', min: `Depende del promedio: el mínimo es ${c.t_min}`, rec: `Por debajo del mínimo (${c.t_min})` };
+ const filas = NIVELES.map(n => { const a = G[n.k]; return { k: n.k, t: n.t, rango: rango[n.k], crit: crit[n.k], n: a.length, nombres: a.map(x => x.p.nombre).join(', '), prev: avg(a, x => x.r.pct * wc), par: avg(a, x => x.r.pts * wp), cal: avg(a, x => x.r.fin) }; });
+ const todos = [].concat(G.exc, G.med, G.min, G.rec);
+ return { filas, tot: { n: todos.length, prev: avg(todos, x => x.r.pct * wc), par: avg(todos, x => x.r.pts * wp), cal: avg(todos, x => x.r.fin) } };
+}
+const txtNivel = ef => ef.n ? NIVELES.find(x => x.k === ef.n).t + (ef.auto ? ' (automático por calificación)' : '') : 'Sin evaluar';
+function clasParo(min) { const c = C(); min = +min || 0; if (min <= c.m_exc) return { k: 'exc', t: 'Excelente' }; if (min < c.m_sat) return { k: 'sat', t: 'Satisfactorio' }; return { k: 'no', t: 'No aceptable' }; }
+function ptsParo(min) { const k = clasParo(min).k, c = C(); return k === 'exc' ? c.p_exc : k === 'sat' ? c.p_sat : c.p_no; }
+function calc(p, m) {
+ m = m || M(); const o = m.ord[p.id] || {}; const prog = +o.prog || 0, cump = +o.cump || 0;
+ const pct = prog > 0 ? Math.min(cump / prog * 100, 100) : null;
+ const ps = m.paros.filter(x => x.tec === p.id); const mins = ps.reduce((a, x) => a + (+x.min || 0), 0);
+ const pts = ps.length ? ps.reduce((a, x) => a + ptsParo(x.min), 0) / ps.length : C().p_exc;
+ const fin = pct == null ? null : (pct * C().w_cum + pts * C().w_par) / (C().w_cum + C().w_par);
+ const pendientes = ps.filter(x => clasParo(x.min).k === 'no' && !String(x.contra || '').trim()).length;
+ return { prog, cump, pct, n: ps.length, mins, prom: ps.length ? mins / ps.length : 0, pts, fin, pendientes };
+}
+function equipo(m) {
+ m = m || M(); const L = plan().map(p => calc(p, m)); const sp = L.reduce((a, x) => a + x.prog, 0), sc = L.reduce((a, x) => a + Math.min(x.cump, x.prog), 0);
+ const conPct = L.filter(x => x.pct != null), conFin = L.filter(x => x.fin != null);
+ return { prog: sp, cump: sc, pctTot: sp ? sc / sp * 100 : null, prom: conPct.length ? conPct.reduce((a, x) => a + x.pct, 0) / conPct.length : null, finProm: conFin.length ? conFin.reduce((a, x) => a + x.fin, 0) / conFin.length : null, paros: m.paros.length, mins: m.paros.reduce((a, x) => a + (+x.min || 0), 0), pend: m.paros.filter(x => clasParo(x.min).k === 'no' && !String(x.contra || '').trim()).length };
+}
+const badge = c => `<span class="badge k-${c.k}">${c.t}</span>`;
+
+/* ---------- organigrama ---------- */
+function card(p, modo) {
+ let h = `<div class="card ${p.tipo}${p.externo ? ' ext' : ''}"><div class="pu">${esc(p.puesto)}</div><div class="no">${esc(p.nombre)}</div>`;
+ const ar = areaDe(p); if (ar) h += ar.split(' / ').map(a => `<div class="ar">${esc(a)}</div>`).join(' ');
+ if (p.nomina) h += `<div class="nm">Nómina ${esc(p.nomina)}</div>`;
+ if (modo === 'ev' && p.externo) { h += '<div class="nm" style="margin-top:6px">Nuevos proyectos</div>'; }
+ else if (modo === 'ev' && p.tipo !== 'gerente') {
+  const e = M().ev[p.id] || {}; const ef = nivelEf(p);
+  if (p.plan) { const r = calc(p); h += `<div class="nm" style="margin-top:5px">Calificación del mes: <b>${r.fin == null ? 'sin datos' : f1(r.fin)}</b> · ${r.fin == null ? 'captura cumplimiento para calificar' : 'nivel automático'}</div>`; }
+  h += '<div class="rate">' + NIVELES.map(n => { const on = ef.n === n.k; return `<label class="opt ${on ? 'on' : ''} ${p.plan ? 'fijo' : ''}" style="--c:${n.c}" data-id="${p.id}" data-n="${n.k}"><span class="box">${on ? '✔' : ''}</span>${n.t}</label>`; }).join('') + '</div>';
+  h += `<textarea class="com" data-id="${p.id}" placeholder="Comentario / plan de mejora">${esc(e.com || '')}</textarea>`;
+ } else if (modo === 'ev') { h += '<div class="nm" style="margin-top:6px"><b>Evalúa</b></div>'; }
+ return h + '</div>';
+}
+function rama(p, modo, todos) {
+ const hijos = todos.filter(x => x.reporta === p.id);
+ return `<div class="rama">${card(p, modo)}${hijos.map(h => `<div class="vd"></div>${rama(h, modo, todos)}`).join('')}</div>`;
+}
+function org(modo) {
+ const P = S.personal; const g = P.filter(p => p.tipo === 'gerente'), j = P.filter(p => p.tipo === 'jefe'), sv = P.filter(p => p.tipo === 'supervisor'), t = P.filter(p => p.tipo === 'tecnico');
+ const ap = P.filter(p => p.tipo === 'apoyo'), apTop = ap.filter(p => !ap.some(x => x.id === p.reporta));
+ const centro = sv.length ? sv : j;
+ return `<div class="org"><div>${g.map(p => card(p, modo)).join('')}</div><div class="vl"></div>
+ ${sv.length ? `<div>${j.map(p => card(p, modo)).join('')}</div><div class="vl"></div>` : ''}
+ <div class="mid"><div class="side l"></div><div>${centro.map(p => card(p, modo)).join('')}</div><div class="side r">${apTop.map(p => `<div><div class="tag">Nuevos proyectos</div>${rama(p, modo, ap)}</div>`).join('')}</div></div>
+ <div class="vl"></div><div class="grp"><div class="gt">Técnicos responsables de área · ${t.length} personas</div><div class="gr">${t.map(p => card(p, modo)).join('')}</div></div></div>`;
+}
+function renderOrg() {
+ const P = S.personal; const n = t => P.filter(p => p.tipo === t && !p.externo).length; const ext = P.filter(p => p.externo).length, mt = P.filter(p => !p.externo).length;
+ $('#cuenta').innerHTML = `<div class="chip">Gerencia <b>${n('gerente')}</b></div><div class="chip v">Jefatura <b>${n('jefe')}</b></div><div class="chip v">Supervisión <b>${n('supervisor')}</b></div><div class="chip">Técnicos <b>${n('tecnico')}</b></div><div class="chip v">Personal de mantenimiento <b>${mt}</b></div><div class="chip a">Nuevos proyectos <b>${ext}</b></div>`;
+ $('#orgA').innerHTML = org('org');
+ const cand = P.filter(p => !p.externo && p.tipo !== 'gerente');
+ $('#cats').innerHTML = '<tr><th>Categoría</th><th>Responsable</th></tr>' + S.cats.map((c, i) => `<tr><td class="l"><b>${esc(c.k)}</b> · ${esc(c.t)}</td><td><select data-cat="${i}"><option value="">— Sin asignar —</option>${cand.map(p => `<option value="${p.id}" ${c.resp === p.id ? 'selected' : ''}>${esc(p.nombre)}</option>`).join('')}</select></td></tr>`).join('');
+}
+function renderEv() {
+ $('#leyEv').innerHTML = NIVELES.map(n => `<span><i style="background:${n.c}"></i>${n.t}</span>`).join('');
+ $('#orgB').innerHTML = org('ev');
+}
+
+/* ---------- cumplimiento ---------- */
+function renderCum() {
+ const m = M(); let h = '<tr><th>Nómina</th><th>Nombre</th><th>Área</th><th>Órdenes programadas</th><th>Órdenes cumplidas</th><th>% cumplimiento</th><th>Clasificación</th></tr>';
+ plan().forEach(p => { const o = m.ord[p.id] || {}; const r = calc(p, m);
+  h += `<tr><td>${esc(p.nomina)}</td><td class="l">${esc(p.nombre)}</td><td class="l">${esc(areaDe(p))}</td><td><input type="number" min="0" data-ord="${p.id}" data-c="prog" value="${o.prog ?? ''}"></td><td><input type="number" min="0" data-ord="${p.id}" data-c="cump" value="${o.cump ?? ''}"></td><td><b>${r.pct == null ? '—' : f1(r.pct) + ' %'}</b></td><td>${badge(clasPct(r.pct))}</td></tr>`; });
+ const e = equipo(m);
+ h += `<tr class="tot"><td></td><td class="l">TOTAL DEL EQUIPO</td><td></td><td>${e.prog}</td><td>${e.cump}</td><td>${e.pctTot == null ? '—' : f1(e.pctTot) + ' %'}</td><td>${badge(clasPct(e.pctTot))}</td></tr>`;
+ h += `<tr class="tot"><td></td><td class="l">Promedio de cumplimiento del personal</td><td></td><td></td><td></td><td>${e.prom == null ? '—' : f1(e.prom) + ' %'}</td><td>${badge(clasPct(e.prom))}</td></tr>`;
+ $('#tCum').innerHTML = h;
+}
+
+/* ---------- calificación y paros ---------- */
+function renderCal() {
+ const m = M(), c = C();
+ let h = `<tr><th>Nombre</th><th>Área</th><th>% cumplimiento preventivo</th><th>Peso ${c.w_cum} %</th><th>Paros</th><th>Minutos de paro</th><th>Promedio min/paro</th><th>Puntaje paros</th><th>Peso ${c.w_par} %</th><th>Calificación final</th><th>Desempeño</th><th>Contramedidas pendientes</th></tr>`;
+ plan().forEach(p => { const r = calc(p, m); const wc = c.w_cum / (c.w_cum + c.w_par), wp = c.w_par / (c.w_cum + c.w_par);
+  h += `<tr><td class="l">${esc(p.nombre)}</td><td class="l">${esc(areaDe(p))}</td><td>${r.pct == null ? '—' : f1(r.pct) + ' %'}</td><td>${r.pct == null ? '—' : f1(r.pct * wc)}</td><td>${r.n}</td><td>${r.mins}</td><td>${r.n ? f1(r.prom) : '—'}</td><td>${f1(r.pts)}</td><td>${f1(r.pts * wp)}</td><td><b>${r.fin == null ? '—' : f1(r.fin)}</b></td><td>${badge(clasFin(r.fin))}</td><td>${r.pendientes ? `<span class="badge k-no">${r.pendientes}</span>` : '0'}</td></tr>`; });
+ const e = equipo(m);
+ h += `<tr class="tot"><td class="l">PROMEDIO TOTAL DEL EQUIPO</td><td></td><td>${e.prom == null ? '—' : f1(e.prom) + ' %'}</td><td></td><td>${e.paros}</td><td>${e.mins}</td><td>${e.paros ? f1(e.mins / e.paros) : '—'}</td><td></td><td></td><td style="font-size:15px">${e.finProm == null ? '—' : f1(e.finProm)}</td><td>${badge(clasFin(e.finProm))}</td><td>${e.pend}</td></tr>`;
+ $('#tCal').innerHTML = h;
+ const P4 = promedio4(m);
+ let t2 = `<tr><th>Nivel de desempeño</th><th>Rango de calificación</th><th>Criterio</th><th>Técnicos</th><th>Nombres</th><th>Promedio preventivo (de ${c.w_cum})</th><th>Promedio paros (de ${c.w_par})</th><th>Promedio calificación</th></tr>`;
+ P4.filas.forEach(f => { t2 += `<tr><td class="l"><span class="badge k-${MAPK[f.k]}">${f.t}</span></td><td>${f.rango}</td><td class="l">${f.crit}</td><td>${f.n}</td><td class="l" style="font-size:11.5px">${esc(f.nombres)}</td><td>${f1(f.prev)}</td><td>${f1(f.par)}</td><td><b>${f1(f.cal)}</b></td></tr>`; });
+ t2 += `<tr class="tot"><td class="l">PROMEDIO TOTAL DEL EQUIPO</td><td colspan="2" class="l">Promedio de todos los técnicos calificados</td><td>${P4.tot.n}</td><td></td><td>${f1(P4.tot.prev)}</td><td>${f1(P4.tot.par)}</td><td style="font-size:15px">${f1(P4.tot.cal)} ${badge(clasFin(P4.tot.cal))}</td></tr>`;
+ $('#tProm').innerHTML = t2;
+ // escala: 4 tramos iguales; el marcador se ubica dentro de su tramo
+ const tr = [[0, c.t_min, 'rec'], [c.t_min, c.t_sat, 'min'], [c.t_sat, c.t_exc, 'med'], [c.t_exc, 100, 'exc']];
+ let pos = null; if (P4.tot.cal != null) { const v = Math.max(0, Math.min(100, P4.tot.cal)); tr.forEach((x, i) => { if (v >= x[0] && (v < x[1] || (i === 3 && v <= 100))) pos = i * 25 + (x[1] > x[0] ? (v - x[0]) / (x[1] - x[0]) : 1) * 25; }); }
+ $('#escala').innerHTML = `<div class="esc">${tr.map(x => { const n = NIVELES.find(y => y.k === x[2]); return `<div style="background:${n.c}"><b>${n.t}</b><span>${x[0]} – ${x[2] === 'exc' ? 100 : (x[1] - 0.1).toFixed(1)}</span></div>`; }).join('')}${pos == null ? '' : `<i style="left:${pos}%"><em>Equipo ${f1(P4.tot.cal)}</em></i>`}</div>`;
+ $('#impTec').innerHTML = '<option value="*">Todos los técnicos (una hoja cada uno)</option>' + plan().map(p => `<option value="${p.id}">${esc(p.nombre)}</option>`).join('');
+ $('#pTec').innerHTML = plan().map(p => `<option value="${p.id}">${esc(p.nombre)}</option>`).join('');
+ let t = '<tr><th>Fecha</th><th>Máquina</th><th>Técnico</th><th>Minutos</th><th>Clasificación</th><th>Falla</th><th>Contramedida</th><th class="noprint"></th></tr>';
+ const L = m.paros.map((x, i) => ({ ...x, i })).sort((a, b) => String(a.fecha).localeCompare(String(b.fecha)));
+ if (!L.length) t += '<tr><td colspan="8" class="nota">Sin paros registrados en este periodo.</td></tr>';
+ L.forEach(x => { const cl = clasParo(x.min); const pend = cl.k === 'no' && !String(x.contra || '').trim(); const p = persona(x.tec);
+  t += `<tr class="${pend ? 'pend' : ''}"><td>${esc(x.fecha)}</td><td class="l">${esc(x.maq)}</td><td class="l">${esc(p ? p.nombre : x.tec)}</td><td>${esc(x.min)}</td><td>${badge(cl)}</td><td class="l">${esc(x.falla)}</td><td class="l"><input class="w" data-contra="${x.i}" value="${esc(x.contra || '')}" placeholder="${cl.k === 'no' ? 'PENDIENTE: escribir contramedida' : ''}"></td><td class="noprint"><button class="b-gris" data-del="${x.i}">Borrar</button></td></tr>`; });
+ $('#tParos').innerHTML = t;
+}
+
+/* ---------- gráficas ---------- */
+Chart.defaults.animation = false; Chart.defaults.font.family = 'Arial';
+const CH = {};
+function chart(id, cfg) { if (CH[id]) CH[id].destroy(); CH[id] = new Chart(document.getElementById(id), cfg); }
+const corto = n => { const w = n.split(' '); return w[0] + ' ' + (w[w.length > 3 ? 2 : 1] || ''); };
+const colK = k => ({ exc: '#2e7d4f', sat: '#1f6fb2', min: '#c77c0e', no: '#b3261e', na: '#8a94a3' }[k]);
+function renderGraf() {
+ const m = M(), c = C(), P = plan(), R = P.map(p => calc(p, m)), e = equipo(m), lab = P.map(p => corto(p.nombre));
+ const tx = getComputedStyle(document.body).color; Chart.defaults.color = tx;
+ $('#kpis').innerHTML = `<div class="kpi v1"><div class="t">Cumplimiento total del equipo</div><div class="v">${e.pctTot == null ? '—' : f1(e.pctTot) + ' %'}</div></div>
+ <div class="kpi"><div class="t">Promedio de cumplimiento del personal</div><div class="v">${e.prom == null ? '—' : f1(e.prom) + ' %'}</div></div>
+ <div class="kpi"><div class="t">Calificación integral promedio</div><div class="v">${e.finProm == null ? '—' : f1(e.finProm)}</div></div>
+ <div class="kpi a1"><div class="t">Paros registrados · minutos</div><div class="v">${e.paros} · ${e.mins}</div></div>
+ <div class="kpi ${e.pend ? 'r1' : 'v1'}"><div class="t">Paros ≥ ${c.m_sat} min sin contramedida</div><div class="v">${e.pend}</div></div>`;
+ const lin = (v, t, col) => ({ type: 'line', label: t, data: P.map(() => v), borderColor: col, borderDash: [6, 4], pointRadius: 0, borderWidth: 1.5 });
+ chart('g1', { type: 'bar', data: { labels: lab, datasets: [{ label: '% cumplimiento', data: R.map(r => r.pct), backgroundColor: R.map(r => colK(clasPct(r.pct).k)) }, lin(c.t_exc, 'Excelente ' + c.t_exc + ' %', '#2e7d4f'), lin(c.t_sat, 'Satisfactorio ' + c.t_sat + ' %', '#1f6fb2'), lin(c.t_min, 'Mínimo ' + c.t_min + ' %', '#b3261e')] }, options: { maintainAspectRatio: false, scales: { y: { suggestedMin: 70, max: 100 } } } });
+ chart('g2', { type: 'bar', data: { labels: lab, datasets: [{ label: 'Calificación final', data: R.map(r => r.fin), backgroundColor: R.map(r => colK(clasFin(r.fin).k)) }] }, options: { indexAxis: 'y', maintainAspectRatio: false, scales: { x: { suggestedMin: 70, max: 100 } }, plugins: { legend: { display: false } } } });
+ chart('g3', { type: 'bar', data: { labels: lab, datasets: [{ label: 'Minutos de paro', data: R.map(r => r.mins), backgroundColor: '#c77c0e', yAxisID: 'y' }, { type: 'line', label: 'Número de paros', data: R.map(r => r.n), borderColor: '#1b2a4a', backgroundColor: '#1b2a4a', yAxisID: 'y1' }] }, options: { maintainAspectRatio: false, scales: { y: { beginAtZero: true, title: { display: true, text: 'min' } }, y1: { beginAtZero: true, position: 'right', grid: { drawOnChartArea: false }, ticks: { precision: 0 } } } } });
+ const cnt = { exc: 0, sat: 0, no: 0 }; m.paros.forEach(x => cnt[clasParo(x.min).k]++);
+ chart('g4', { type: 'doughnut', data: { labels: [`Excelente (0–${c.m_exc} min)`, `Satisfactorio (${c.m_exc}–${c.m_sat} min)`, `No aceptable (≥ ${c.m_sat} min)`], datasets: [{ data: [cnt.exc, cnt.sat, cnt.no], backgroundColor: ['#2e7d4f', '#1f6fb2', '#b3261e'] }] }, options: { maintainAspectRatio: false } });
+ const pm = {}; m.paros.forEach(x => { pm[x.maq || 'Sin máquina'] = (pm[x.maq || 'Sin máquina'] || 0) + (+x.min || 0); });
+ const top = Object.entries(pm).sort((a, b) => b[1] - a[1]).slice(0, 10);
+ chart('g5', { type: 'bar', data: { labels: top.map(x => x[0]), datasets: [{ label: 'Minutos', data: top.map(x => x[1]), backgroundColor: '#1b2a4a' }] }, options: { indexAxis: 'y', maintainAspectRatio: false, plugins: { legend: { display: false } } } });
+ const ks = Object.keys(S.meses).filter(k => S.meses[k].paros.length || Object.keys(S.meses[k].ord).length).sort();
+ const T = ks.map(k => equipo(S.meses[k]));
+ chart('g6', { type: 'bar', data: { labels: ks.map(nomMes), datasets: [{ type: 'line', label: '% cumplimiento del equipo', data: T.map(t => t.pctTot), borderColor: '#2e7d4f', backgroundColor: '#2e7d4f', yAxisID: 'y' }, { label: 'Minutos de paro', data: T.map(t => t.mins), backgroundColor: 'rgba(199,124,14,.6)', yAxisID: 'y1', maxBarThickness: 70 }] }, options: { maintainAspectRatio: false, scales: { y: { suggestedMin: 70, max: 100, title: { display: true, text: '%' } }, y1: { beginAtZero: true, position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'min' } } } } });
+}
+
+/* ---------- nuevos proyectos ---------- */
+const ESTADOS = ['Pendiente', 'En proceso', 'Terminado', 'Detenido'];
+const colEst = { 'Pendiente': '#8a94a3', 'En proceso': '#1f6fb2', 'Terminado': '#2e7d4f', 'Detenido': '#b3261e' };
+const equipoProy = () => { const L = S.personal.filter(p => p.externo || p.tipo === 'apoyo'); return L.length ? L : S.personal.filter(p => p.tipo !== 'gerente'); };
+function optsPer(sel, vacio) { return (vacio ? '<option value="">—</option>' : '') + equipoProy().map(p => `<option value="${p.id}" ${sel === p.id ? 'selected' : ''}>${esc(p.nombre)}</option>`).join(''); }
+const hoyISO = () => new Date().toISOString().slice(0, 10);
+function diasA(fin) { if (!fin) return null; return Math.round((new Date(fin + 'T00:00:00') - new Date(hoyISO() + 'T00:00:00')) / 86400000); }
+function semaforo(x) { if (x.estado === 'Terminado') return { t: 'Terminado', c: '#2e7d4f' }; const d = diasA(x.fin); if (d == null) return { t: 'Sin fecha', c: '#8a94a3' }; if (d < 0) return { t: `Vencido hace ${-d} día${d === -1 ? '' : 's'}`, c: '#b3261e' }; if (d <= 7) return { t: d === 0 ? 'Vence hoy' : `Vence en ${d} día${d === 1 ? '' : 's'}`, c: '#c77c0e' }; return { t: `A tiempo · ${d} días`, c: '#2e7d4f' }; }
+function renderProy() {
+ const L = S.proyectos.map((x, i) => ({ x, i })).sort((a, b) => (a.x.estado === 'Terminado') - (b.x.estado === 'Terminado') || String(a.x.fin || '9999').localeCompare(String(b.x.fin || '9999')));
+ const P = S.proyectos, eq = equipoProy();
+ const venc = P.filter(x => x.estado !== 'Terminado' && diasA(x.fin) != null && diasA(x.fin) < 0).length, porV = P.filter(x => x.estado !== 'Terminado' && diasA(x.fin) != null && diasA(x.fin) >= 0 && diasA(x.fin) <= 7).length;
+ $('#proyRes').innerHTML = `<div class="chip">Proyectos <b>${P.length}</b></div>` + ESTADOS.map(e => `<div class="chip" style="border-left-color:${colEst[e]}">${e} <b>${P.filter(x => x.estado === e).length}</b></div>`).join('') + `<div class="chip" style="border-left-color:#b3261e">Vencidos <b>${venc}</b></div><div class="chip a">Vencen en 7 días <b>${porV}</b></div><div class="chip v">Avance promedio <b>${P.length ? Math.round(P.reduce((a, x) => a + (+x.avance || 0), 0) / P.length) : 0} %</b></div>`
+  + eq.map(p => { const mios = P.filter(x => x.resp === p.id || x.apo === p.id); return `<div class="chip" style="border-left-color:var(--ambar)">${esc(p.nombre)} · ${esc(p.puesto)}: <b>${mios.length}</b> (${mios.filter(x => x.estado === 'Terminado').length} terminados)</div>`; }).join('');
+ if (!$('#yResp').options.length) { const hum = eq.find(p => !p.reporta || !eq.some(q => q.id === p.reporta)) || eq[0], aux = eq.find(p => hum && p.reporta === hum.id); $('#yResp').innerHTML = optsPer(hum ? hum.id : ''); $('#yApo').innerHTML = optsPer(aux ? aux.id : '', true); $('#yIni').value = hoyISO(); }
+ let h = '<tr><th>#</th><th style="width:18%">Proyecto / tarea</th><th>Responsable</th><th>Auxiliar</th><th>Inicio</th><th>Fecha compromiso</th><th>Seguimiento</th><th>Prioridad</th><th>Estado</th><th>Avance</th><th style="width:26%">Beneficio para la empresa</th><th class="noprint"></th></tr>';
+ if (!L.length) h += '<tr><td colspan="12" class="nota">Sin proyectos. Agrega el primero con el formulario de arriba.</td></tr>';
+ L.forEach(({ x, i }, n) => {
+  const sm = semaforo(x);
+  h += `<tr><td>${n + 1}</td><td class="l"><b>${esc(x.tit)}</b></td><td><select data-py="${i}" data-c="resp">${optsPer(x.resp)}</select></td><td><select data-py="${i}" data-c="apo">${optsPer(x.apo, true)}</select></td><td>${esc(x.ini)}</td><td><input type="date" data-py="${i}" data-c="fin" value="${esc(x.fin)}" style="width:135px"></td><td><span class="badge" style="background:${sm.c}">${sm.t}</span></td><td>${esc(x.pri)}</td><td><select data-py="${i}" data-c="estado" style="border-left:4px solid ${colEst[x.estado]}">${ESTADOS.map(e => `<option ${x.estado === e ? 'selected' : ''}>${e}</option>`).join('')}</select></td><td><input type="number" min="0" max="100" step="5" data-py="${i}" data-c="avance" value="${+x.avance || 0}" style="width:60px"> %<div class="bar-av"><i style="width:${Math.min(100, +x.avance || 0)}%"></i></div></td><td class="l"><textarea data-py="${i}" data-c="ben">${esc(x.ben)}</textarea></td><td class="noprint"><button class="b-gris" data-delpy="${i}">Borrar</button></td></tr>`;
+ });
+ $('#tProy').innerHTML = h;
+}
+$('#bAddProy').addEventListener('click', () => {
+ const tit = $('#yTit').value.trim(); if (!tit) { alert('Escribe el nombre del proyecto o tarea.'); return; }
+ if (!$('#yFin').value) { alert('La fecha compromiso es obligatoria.'); return; }
+ if (!$('#yBen').value.trim() && !confirm('No escribiste el beneficio para la empresa. ¿Agregar de todos modos?')) return;
+ S.proyectos.push({ id: 'y' + Date.now(), tit, resp: $('#yResp').value, apo: $('#yApo').value, ini: $('#yIni').value, fin: $('#yFin').value, pri: $('#yPri').value, estado: 'Pendiente', avance: 0, ben: $('#yBen').value.trim() });
+ guardar(); ['#yTit', '#yBen', '#yFin'].forEach(s => $(s).value = ''); renderProy();
+});
+
+/* ---------- impresión por técnico ---------- */
+function graficaImg(cfg, w, h) {
+ const cv = document.createElement('canvas'); cv.width = w * 2; cv.height = h * 2; cv.style.width = w + 'px'; cv.style.height = h + 'px';
+ const box = document.createElement('div'); box.style.cssText = `position:fixed;left:-3000px;top:0;width:${w}px;height:${h}px`; box.appendChild(cv); document.body.appendChild(box);
+ cfg.options = Object.assign({ responsive: false, devicePixelRatio: 2, animation: false }, cfg.options || {});
+ const g = new Chart(cv, cfg); const url = g.toBase64Image('image/png', 1); g.destroy(); box.remove(); return url;
+}
+function hojaTec(p) {
+ const m = M(), c = C(), r = calc(p, m), ef = nivelEf(p, m), ev = m.ev[p.id] || {}, cf = clasFin(r.fin), cp = clasPct(r.pct);
+ const ps = m.paros.filter(x => x.tec === p.id).sort((a, b) => String(a.fecha).localeCompare(String(b.fecha)));
+ const sup = persona(p.reporta), jefe = S.personal.find(x => x.tipo === 'jefe');
+ Chart.defaults.color = '#1d2733';
+ const g1 = graficaImg({ type: 'bar', data: { labels: ['Cumplimiento preventivo', 'Puntaje de paros', 'Calificación final'], datasets: [{ label: 'Resultado', data: [r.pct, r.pts, r.fin], backgroundColor: [colK(cp.k), '#c77c0e', colK(cf.k)] }, { type: 'line', label: 'Excelente ' + c.t_exc, data: [c.t_exc, c.t_exc, c.t_exc], borderColor: '#2e7d4f', borderDash: [5, 4], pointRadius: 0 }, { type: 'line', label: 'Mínimo ' + c.t_min, data: [c.t_min, c.t_min, c.t_min], borderColor: '#b3261e', borderDash: [5, 4], pointRadius: 0 }] }, options: { plugins: { legend: { labels: { boxWidth: 10, font: { size: 10 } } } }, scales: { y: { suggestedMin: 70, max: 100 } } } }, 340, 200);
+ const ks = Object.keys(S.meses).sort().slice(-6); const hist = ks.map(k => calc(p, S.meses[k]));
+ const g2 = graficaImg({ type: 'line', data: { labels: ks.map(nomMes), datasets: [{ label: 'Calificación final', data: hist.map(x => x.fin), borderColor: '#1b2a4a', backgroundColor: '#1b2a4a', tension: .2 }, { label: '% cumplimiento', data: hist.map(x => x.pct), borderColor: '#2e7d4f', backgroundColor: '#2e7d4f', borderDash: [4, 3], tension: .2 }] }, options: { plugins: { legend: { labels: { boxWidth: 10, font: { size: 10 } } } }, scales: { y: { suggestedMin: 70, max: 100 } } } }, 340, 200);
+ const proy = S.proyectos.filter(x => x.resp === p.id || x.apo === p.id);
+ return `<div class="pag-tec">
+ <div class="enc"><h1>Reporte individual de desempeño · Mantenimiento</h1><div>Línea Italia · Creaciones Industriales, S.A. de C.V.<br>Periodo: <b>${nomMes(mesKey())}</b> · Impreso: ${new Date().toLocaleDateString('es-MX')}${m.ejemplo ? '<br><b style="color:#b3261e">DATOS DE EJEMPLO</b>' : ''}</div></div>
+ <div class="dat"><div>Nombre<b>${esc(p.nombre)}</b></div><div>Nómina<b>${esc(p.nomina || '—')}</b></div><div>Puesto<b>${esc(p.puesto)}</b></div><div>Reporta a<b>${esc(sup ? sup.nombre : '—')}</b></div><div style="grid-column:1/-1">Área / categorías a cargo<b>${esc(areaDe(p) || '—')}</b></div></div>
+ <div class="kp"><div style="border-left-color:${colK(cp.k)}">Cumplimiento del plan mensual<b>${r.pct == null ? '—' : f1(r.pct) + ' %'}</b>${cp.t}</div><div style="border-left-color:#c77c0e">Puntaje de paros<b>${f1(r.pts)}</b>${r.n} paros · ${r.mins} min</div><div style="border-left-color:${colK(cf.k)}">Calificación final (${c.w_cum}/${c.w_par})<b>${r.fin == null ? '—' : f1(r.fin)}</b>${cf.t}</div><div style="border-left-color:${ef.n ? colK(MAPK[ef.n]) : '#8a94a3'}">Desempeño<b style="font-size:15px">${ef.n ? NIVELES.find(x => x.k === ef.n).t : 'Sin evaluar'}</b>${ef.auto ? 'automático por calificación' : ef.n ? 'asignado por el evaluador' : ''}</div></div>
+ <h3>Cumplimiento del plan mensual</h3>
+ <table><tr><th>Órdenes programadas</th><th>Órdenes cumplidas</th><th>Órdenes no cumplidas</th><th>% cumplimiento</th><th>Clasificación</th><th>Aporta a la calificación (${c.w_cum} %)</th></tr>
+ <tr><td>${r.prog}</td><td>${r.cump}</td><td>${Math.max(0, r.prog - r.cump)}</td><td><b>${r.pct == null ? '—' : f1(r.pct) + ' %'}</b></td><td>${badge(cp)}</td><td>${r.pct == null ? '—' : f1(r.pct * c.w_cum / (c.w_cum + c.w_par))}</td></tr></table>
+ <h3>Paros de máquina atendidos · calificación de paros</h3>
+ <table><tr><th>Fecha</th><th>Máquina</th><th>Minutos</th><th>Clasificación</th><th>Puntos</th><th>Falla</th><th>Contramedida</th></tr>
+ ${ps.length ? ps.map(x => { const cl = clasParo(x.min); return `<tr><td>${esc(x.fecha)}</td><td class="l">${esc(x.maq)}</td><td>${esc(x.min)}</td><td>${badge(cl)}</td><td>${ptsParo(x.min)}</td><td class="l">${esc(x.falla)}</td><td class="l">${esc(x.contra || (cl.k === 'no' ? 'PENDIENTE' : ''))}</td></tr>`; }).join('') : `<tr><td colspan="7">Sin paros en el periodo · puntaje ${c.p_exc}</td></tr>`}
+ <tr class="tot"><td colspan="2" class="l">Puntaje de paros (promedio)</td><td>${r.mins}</td><td></td><td>${f1(r.pts)}</td><td colspan="2" class="l">Aporta a la calificación (${c.w_par} %): ${f1(r.pts * c.w_par / (c.w_cum + c.w_par))}</td></tr></table>
+ <h3>Gráficas</h3>
+ <div class="graf2"><img src="${g1}" alt="Resultados del mes"><img src="${g2}" alt="Tendencia"></div>
+ <h3>Evaluación de desempeño</h3>
+ <div class="niv">${NIVELES.map(n => `<span class="${ef.n === n.k ? 'on' : ''}" style="--c:${n.c}"><i>${ef.n === n.k ? '✔' : ''}</i>${n.t}</span>`).join('')}</div>
+ <p style="font-size:11px;margin:6px 0"><b>Comentario / plan de mejora:</b> ${esc(ev.com || '________________________________________________________________________________')}</p>
+ ${proy.length ? `<h3>Nuevos proyectos asignados</h3><table><tr><th>Proyecto</th><th>Estado</th><th>Avance</th><th>Compromiso</th><th>Beneficio para la empresa</th></tr>${proy.map(x => `<tr><td class="l">${esc(x.tit)}</td><td>${esc(x.estado)}</td><td>${+x.avance || 0} %</td><td>${esc(x.fin)}</td><td class="l">${esc(x.ben)}</td></tr>`).join('')}</table>` : ''}
+ <div class="fir"><div>${esc(p.nombre)}<br>Técnico</div><div>${esc(sup ? sup.nombre : '')}<br>${esc(sup ? sup.puesto : 'Supervisor')}</div><div>${esc(jefe ? jefe.nombre : '')}<br>Jefe de Mantenimiento</div></div>
+ </div>`;
+}
+let tabPrevio = 'cal';
+$('#bImpTec').addEventListener('click', () => {
+ const sel = $('#impTec').value; const L = sel === '*' ? plan() : plan().filter(p => p.id === sel);
+ if (!L.length) return;
+ tabPrevio = tab; $('#impCont').innerHTML = L.map(hojaTec).join('');
+ Chart.defaults.color = getComputedStyle(document.body).color;
+ tab = 'imp'; document.querySelectorAll('section').forEach(s => s.classList.toggle('on', s.id === 's-imp'));
+ setTimeout(() => { window.print(); }, 300);
+});
+window.addEventListener('afterprint', () => { if (tab === 'imp') verTab(tabPrevio); });
+
+/* ---------- personal y criterios ---------- */
+function renderCfg() {
+ let h = '<tr><th>Nombre</th><th>Nómina</th><th>Puesto</th><th>Área de apoyo (texto libre)</th><th>Tipo</th><th>Reporta a</th><th>Nuevos proyectos (no se evalúa)</th><th>Plan mensual</th><th></th></tr>';
+ S.personal.forEach((p, i) => { h += `<tr><td><input class="w" data-per="${i}" data-c="nombre" value="${esc(p.nombre)}"></td><td><input data-per="${i}" data-c="nomina" value="${esc(p.nomina)}"></td><td><input class="w" data-per="${i}" data-c="puesto" value="${esc(p.puesto)}"></td><td><input class="w" data-per="${i}" data-c="area" value="${esc(p.area)}"></td><td><select data-per="${i}" data-c="tipo">${['gerente', 'jefe', 'supervisor', 'apoyo', 'tecnico'].map(t => `<option ${p.tipo === t ? 'selected' : ''}>${t}</option>`).join('')}</select></td><td><select data-per="${i}" data-c="reporta"><option value="">—</option>${S.personal.filter(x => x.id !== p.id).map(x => `<option value="${x.id}" ${p.reporta === x.id ? 'selected' : ''}>${esc(x.nombre)}</option>`).join('')}</select></td><td><input type="checkbox" data-per="${i}" data-c="externo" ${p.externo ? 'checked' : ''}></td><td><input type="checkbox" data-per="${i}" data-c="plan" ${p.plan ? 'checked' : ''}></td><td><button class="b-gris" data-delper="${i}">Quitar</button></td></tr>`; });
+ $('#tPer').innerHTML = h;
+ const c = C(); const fila = (k, t) => `<tr><td class="l">${t}</td><td><input type="number" data-crit="${k}" value="${c[k]}"></td></tr>`;
+ $('#tCrit').innerHTML = '<tr><th>Criterio</th><th>Valor</th></tr>' + fila('t_exc', 'Cumplimiento Excelente desde (%)') + fila('t_sat', 'Cumplimiento Satisfactorio desde (%)') + fila('t_min', 'Cumplimiento Mínimo aceptable desde (%)') + fila('w_cum', 'Peso del cumplimiento preventivo (%)') + fila('w_par', 'Peso de los paros (%)') + fila('m_exc', 'Paro Excelente hasta (min)') + fila('m_sat', 'Paro No aceptable desde (min)') + fila('p_exc', 'Puntos por paro Excelente (y sin paros)') + fila('p_sat', 'Puntos por paro Satisfactorio') + fila('p_no', 'Puntos por paro No aceptable');
+}
+
+/* ---------- general ---------- */
+let tab = 'org';
+function render() {
+ const ph = `Periodo: <b>${nomMes(mesKey())}</b> · Impreso: ${new Date().toLocaleDateString('es-MX')}`; document.querySelectorAll('.ph').forEach(x => x.innerHTML = ph);
+ $('#banner').style.display = M().ejemplo ? 'block' : 'none';
+ if (tab === 'org') renderOrg(); if (tab === 'ev') renderEv(); if (tab === 'cum') renderCum(); if (tab === 'cal') renderCal(); if (tab === 'graf') renderGraf(); if (tab === 'cfg') renderCfg(); if (tab === 'proy') renderProy();
+}
+function verTab(t) { tab = t; document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.t === t)); document.querySelectorAll('section').forEach(s => s.classList.toggle('on', s.id === 's-' + t)); render(); }
+$('#tabs').addEventListener('click', e => { const b = e.target.closest('button'); if (b) verTab(b.dataset.t); });
+const hoy = new Date(); $('#mes').value = hoy.getFullYear() + '-' + String(hoy.getMonth() + 1).padStart(2, '0');
+$('#mes').addEventListener('change', render);
+$('#lMaq').innerHTML = MAQUINAS.map(x => `<option value="${esc(x)}">`).join('');
+$('#pFecha').value = hoy.toISOString().slice(0, 10);
+
+document.addEventListener('click', e => {
+ const o = e.target.closest('.opt'); if (o && o.classList.contains('fijo')) return; if (o) { const ev = M().ev; ev[o.dataset.id] = ev[o.dataset.id] || {}; ev[o.dataset.id].nivel = ev[o.dataset.id].nivel === o.dataset.n ? '' : o.dataset.n; guardar(); renderEv(); return; }
+ const d = e.target.closest('[data-del]'); if (d) { if (confirm('¿Borrar este paro?')) { M().paros.splice(+d.dataset.del, 1); guardar(); renderCal(); } return; }
+ const dy = e.target.closest('[data-delpy]'); if (dy) { const x = S.proyectos[+dy.dataset.delpy]; if (confirm('¿Borrar el proyecto "' + x.tit + '"?')) { S.proyectos.splice(+dy.dataset.delpy, 1); guardar(); renderProy(); } return; }
+ const dp = e.target.closest('[data-delper]'); if (dp) { const p = S.personal[+dp.dataset.delper]; if (confirm('¿Quitar a ' + p.nombre + ' del organigrama?')) { S.personal.splice(+dp.dataset.delper, 1); guardar(); renderCfg(); } }
+});
+document.addEventListener('input', e => {
+ const t = e.target;
+ if (t.classList.contains('com')) { const ev = M().ev; ev[t.dataset.id] = ev[t.dataset.id] || {}; ev[t.dataset.id].com = t.value; guardar(); }
+ if (t.dataset.contra != null) { M().paros[+t.dataset.contra].contra = t.value; guardar(); }
+ if (t.dataset.py != null && t.tagName === 'TEXTAREA') { S.proyectos[+t.dataset.py][t.dataset.c] = t.value; guardar(); }
+});
+document.addEventListener('change', e => {
+ const t = e.target;
+ if (t.dataset.ord) { const m = M(); m.ord[t.dataset.ord] = m.ord[t.dataset.ord] || {}; m.ord[t.dataset.ord][t.dataset.c] = t.value === '' ? '' : Math.max(0, +t.value); guardar(); renderCum(); }
+ if (t.dataset.contra != null) renderCal();
+ if (t.dataset.per != null) { const p = S.personal[+t.dataset.per]; p[t.dataset.c] = t.type === 'checkbox' ? t.checked : t.value; guardar(); }
+ if (t.dataset.cat != null) { S.cats[+t.dataset.cat].resp = t.value; guardar(); renderOrg(); }
+ if (t.dataset.crit) { S.crit[t.dataset.crit] = +t.value; guardar(); }
+ if (t.dataset.py != null && t.tagName !== 'TEXTAREA') { const x = S.proyectos[+t.dataset.py]; x[t.dataset.c] = t.dataset.c === 'avance' ? Math.max(0, Math.min(100, +t.value || 0)) : t.value; if (t.dataset.c === 'avance' && x.avance >= 100) x.estado = 'Terminado'; guardar(); renderProy(); }
+});
+$('#bAddParo').addEventListener('click', () => {
+ const min = $('#pMin').value, maq = $('#pMaq').value.trim(), contra = $('#pContra').value.trim();
+ if (min === '' || !maq) { alert('Captura la máquina y los minutos de paro.'); return; }
+ if (+min >= C().m_sat && !contra && !confirm(`El paro es de ${C().m_sat} min o más (No aceptable) y requiere contramedida. ¿Guardarlo como PENDIENTE de contramedida?`)) return;
+ M().paros.push({ fecha: $('#pFecha').value, maq, tec: $('#pTec').value, min: +min, falla: $('#pFalla').value.trim(), contra });
+ guardar(); ['#pMin', '#pFalla', '#pContra'].forEach(s => $(s).value = ''); renderCal();
+});
+$('#bAddPer').addEventListener('click', () => { S.personal.push({ id: 'p' + Date.now(), nombre: 'Nuevo', nomina: '', puesto: 'Técnico de mantenimiento', area: '', tipo: 'tecnico', plan: true, externo: false, reporta: 'car' }); guardar(); renderCfg(); });
+$('#bResetPer').addEventListener('click', () => { if (confirm('¿Restaurar el personal original? Las evaluaciones capturadas se conservan.')) { S.personal = JSON.parse(JSON.stringify(PERSONAL_DEF)); S.cats = JSON.parse(JSON.stringify(CATS_DEF)); guardar(); renderCfg(); } });
+$('#bBorrar').addEventListener('click', () => { if (confirm('¿Borrar órdenes, evaluaciones y paros de ' + nomMes(mesKey()) + '?')) { delete S.meses[mesKey()]; guardar(); render(); } });
+$('#bEjemplo').addEventListener('click', () => {
+ if (!confirm('Se cargarán datos de EJEMPLO en ' + nomMes(mesKey()) + ' (reemplaza lo capturado en este periodo). ¿Continuar?')) return;
+ const k = mesKey(), m = { ord: {}, ev: {}, paros: [], ejemplo: true }; const pr = [40, 38, 22, 44, 36, 30, 26, 35, 18];
+ plan().forEach((p, i) => { const prog = pr[i % pr.length]; const falt = [0, 1, 0, 2, 1, 4, 0, 1, 1][i % 9]; m.ord[p.id] = { prog, cump: prog - falt }; m.ev[p.id] = { nivel: ['exc', 'med', 'exc', 'min', 'med', 'rec', 'exc', 'med', 'exc'][i % 9], com: '' }; });
+ const mq = ['Selexx', 'Láser Gweike 1', 'Homag', 'Prensa 90 ton', 'Túnel de lavado', 'Gabbiani', 'Compresor 50 HP', 'Montacargas'], mn = [8, 25, 60, 5, 15, 50, 9, 30, 12, 7];
+ for (let i = 0; i < 10; i++) { const p = plan()[i % plan().length]; m.paros.push({ fecha: k + '-' + String(2 + i * 2).padStart(2, '0'), maq: mq[i % mq.length], tec: p.id, min: mn[i], falla: 'Ejemplo', contra: mn[i] >= 45 && i % 2 ? 'Ejemplo de contramedida' : '' }); }
+ S.meses[k] = m; guardar(); render();
+});
+$('#bPrint').addEventListener('click', () => { if (tab === 'graf') renderGraf(); setTimeout(() => window.print(), 150); });
+$('#bResp').addEventListener('click', () => { const b = new Blob([JSON.stringify(S, null, 1)], { type: 'application/json' }); bajar(b, 'Respaldo organigrama y desempeno mantenimiento ' + new Date().toISOString().slice(0, 10) + '.json'); });
+$('#bCarga').addEventListener('click', () => $('#fCarga').click());
+$('#fCarga').addEventListener('change', e => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => { try { const x = JSON.parse(r.result); if (!x.personal) throw 0; S = { personal: x.personal, cats: x.cats || JSON.parse(JSON.stringify(CATS_DEF)), crit: { ...CRIT_DEF, ...(x.crit || {}) }, meses: x.meses || {}, proyectos: x.proyectos || [] }; guardar(); render(); alert('Respaldo cargado.'); } catch (er) { alert('El archivo no es un respaldo válido.'); } }; r.readAsText(f); e.target.value = ''; });
+function bajar(blob, nombre) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = nombre; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500); }
+
+/* ---------- Excel ---------- */
+$('#bXls').addEventListener('click', async () => {
+ if (typeof ExcelJS === 'undefined') { alert('No se pudo cargar la librería de Excel (se necesita internet).'); return; }
+ const antes = tab; verTab('graf'); await new Promise(r => setTimeout(r, 400));
+ const img = {}; ['g1', 'g2', 'g3', 'g4', 'g5', 'g6'].forEach(id => { if (CH[id]) img[id] = CH[id].toBase64Image('image/png', 1); });
+ verTab(antes);
+ const k = mesKey(), m = M(), c = C(), wb = new ExcelJS.Workbook(); wb.creator = 'Mantenimiento Línea Italia';
+ const NAVY = 'FF1B2A4A', VERDE = 'FF2E7D4F';
+ const fillK = { exc: 'FFD8EFE0', sat: 'FFDCE9F7', min: 'FFFFF0D6', no: 'FFF9D9D6', na: 'FFEEEEEE' };
+ function hoja(nombre, titulo, cols) {
+  const ws = wb.addWorksheet(nombre, { pageSetup: { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0, paperSize: 1 } });
+  ws.mergeCells(1, 1, 1, Math.max(cols.length, 4)); ws.getCell(1, 1).value = titulo; ws.getCell(1, 1).font = { bold: true, size: 14, color: { argb: 'FFFFFFFF' } }; ws.getCell(1, 1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAVY } }; ws.getRow(1).height = 24;
+  ws.getCell(2, 1).value = 'Línea Italia · Mantenimiento · Periodo: ' + nomMes(k) + (m.ejemplo ? ' · DATOS DE EJEMPLO' : ''); ws.getCell(2, 1).font = { italic: true, size: 10 };
+  if (cols.length) { const r = ws.getRow(4); cols.forEach((t, i) => { const cc = r.getCell(i + 1); cc.value = t[0]; cc.font = { bold: true, color: { argb: 'FFFFFFFF' } }; cc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: VERDE } }; cc.alignment = { wrapText: true, vertical: 'middle', horizontal: 'center' }; ws.getColumn(i + 1).width = t[1]; }); r.height = 32; }
+  return ws;
+ }
+ function filas(ws, datos, desde) { datos.forEach((d, i) => { const r = ws.getRow(desde + i); d.forEach((v, j) => { r.getCell(j + 1).value = v; r.getCell(j + 1).border = { bottom: { style: 'thin', color: { argb: 'FFD5DBE3' } } }; r.getCell(j + 1).alignment = { vertical: 'middle', wrapText: true }; }); }); }
+ const pintar = (ws, fila, col, kk) => { ws.getCell(fila, col).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: fillK[kk] } }; ws.getCell(fila, col).font = { bold: true }; };
+ const e = equipo(m), R = plan().map(p => [p, calc(p, m)]);
+ // Resumen
+ let ws = hoja('Resumen', 'RESUMEN DE DESEMPEÑO DE MANTENIMIENTO', [['Indicador', 48], ['Valor', 22], ['Clasificación', 22]]);
+ filas(ws, [['Cumplimiento total del plan mensual (equipo)', e.pctTot == null ? '—' : +e.pctTot.toFixed(1) + ' %', clasPct(e.pctTot).t], ['Promedio de cumplimiento del personal', e.prom == null ? '—' : +e.prom.toFixed(1) + ' %', clasPct(e.prom).t], ['Calificación integral promedio (60 % preventivo + 40 % paros)', e.finProm == null ? '—' : +e.finProm.toFixed(1), clasFin(e.finProm).t], ['Proyectos nuevos (en proceso / terminados / total)', S.proyectos.filter(x => x.estado === 'En proceso').length + ' / ' + S.proyectos.filter(x => x.estado === 'Terminado').length + ' / ' + S.proyectos.length, ''], ['Órdenes programadas / cumplidas', e.prog + ' / ' + e.cump, ''], ['Paros registrados', e.paros, ''], ['Minutos de paro', e.mins, ''], ['Paros de ' + c.m_sat + ' min o más sin contramedida', e.pend, e.pend ? 'Atender' : 'OK'], ['Criterio de cumplimiento', `${c.t_exc} % Excelente · ${c.t_sat} % Satisfactorio · ${c.t_min} % Mínimo`, ''], ['Criterio de paros', `0–${c.m_exc} min Excelente · hasta ${c.m_sat} min Satisfactorio · ${c.m_sat}+ No aceptable`, '']], 5);
+ // Personal y evaluación
+ ws = hoja('Organigrama y evaluación', 'ORGANIGRAMA Y EVALUACIÓN DE DESEMPEÑO', [['Puesto', 26], ['Nombre', 34], ['Nómina', 10], ['Área / categoría', 40], ['Reporta a', 30], ['Evaluación', 20], ['Comentario / plan de mejora', 50]]);
+ const jefe = S.personal.find(p => p.tipo === 'jefe'), gte = S.personal.find(p => p.tipo === 'gerente');
+ filas(ws, S.personal.map(p => { const ev = m.ev[p.id] || {}; const n = NIVELES.find(x => x.k === ev.nivel); return [p.puesto, p.nombre, p.nomina, areaDe(p), (persona(p.reporta) || {}).nombre || (p.tipo === 'gerente' ? 'Dirección' : ''), p.tipo === 'gerente' ? 'Evalúa' : p.externo ? 'Nuevos proyectos' : txtNivel(nivelEf(p, m)), ev.com || '']; }), 5);
+ S.personal.forEach((p, i) => { const ef = nivelEf(p, m); if (ef.n && !p.externo) pintar(ws, 5 + i, 6, MAPK[ef.n]); });
+ // Cumplimiento
+ ws = hoja('Cumplimiento plan mensual', 'CUMPLIMIENTO DEL PLAN MENSUAL', [['Nómina', 10], ['Nombre', 34], ['Área', 40], ['Órdenes programadas', 14], ['Órdenes cumplidas', 14], ['% cumplimiento', 14], ['Clasificación', 20]]);
+ filas(ws, R.map(([p, r]) => [p.nomina, p.nombre, areaDe(p), r.prog, r.cump, r.pct == null ? null : +r.pct.toFixed(1), clasPct(r.pct).t]).concat([['', 'TOTAL DEL EQUIPO', '', e.prog, e.cump, e.pctTot == null ? null : +e.pctTot.toFixed(1), clasPct(e.pctTot).t], ['', 'PROMEDIO DEL PERSONAL', '', '', '', e.prom == null ? null : +e.prom.toFixed(1), clasPct(e.prom).t]]), 5);
+ R.forEach(([p, r], i) => pintar(ws, 5 + i, 7, clasPct(r.pct).k)); ws.getRow(5 + R.length).font = { bold: true }; ws.getRow(6 + R.length).font = { bold: true };
+ // Calificación
+ ws = hoja('Calificación integral', 'CALIFICACIÓN INTEGRAL · ' + c.w_cum + ' % PREVENTIVO + ' + c.w_par + ' % PAROS', [['Nombre', 34], ['Área', 36], ['% cumplimiento', 13], ['Paros', 9], ['Minutos de paro', 12], ['Promedio min/paro', 12], ['Puntaje paros', 12], ['Calificación final', 13], ['Desempeño', 20], ['Contramedidas pendientes', 14]]);
+ filas(ws, R.map(([p, r]) => [p.nombre, areaDe(p), r.pct == null ? null : +r.pct.toFixed(1), r.n, r.mins, r.n ? +r.prom.toFixed(1) : null, +r.pts.toFixed(1), r.fin == null ? null : +r.fin.toFixed(1), clasFin(r.fin).t, r.pendientes]).concat([['PROMEDIO TOTAL DEL EQUIPO', '', e.prom == null ? null : +e.prom.toFixed(1), e.paros, e.mins, e.paros ? +(e.mins / e.paros).toFixed(1) : null, '', e.finProm == null ? null : +e.finProm.toFixed(1), clasFin(e.finProm).t, e.pend]]), 5);
+ R.forEach(([p, r], i) => pintar(ws, 5 + i, 9, clasFin(r.fin).k)); pintar(ws, 5 + R.length, 9, clasFin(e.finProm).k); ws.getRow(5 + R.length).font = { bold: true };
+ { const P4 = promedio4(m), r0 = 8 + R.length; ws.getCell(r0, 1).value = 'PROMEDIO TOTAL POR NIVEL DE DESEMPEÑO'; ws.getCell(r0, 1).font = { bold: true, size: 12 };
+  ['Nivel', 'Rango de calificación', 'Técnicos', 'Nombres', 'Promedio preventivo (de ' + c.w_cum + ')', 'Promedio paros (de ' + c.w_par + ')', 'Promedio calificación', 'Criterio'].forEach((h, j) => { const cc = ws.getCell(r0 + 1, j + 1); cc.value = h; cc.font = { bold: true, color: { argb: 'FFFFFFFF' } }; cc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: VERDE } }; cc.alignment = { wrapText: true, horizontal: 'center' }; });
+  const rnd = v => v == null ? null : +v.toFixed(1);
+  filas(ws, P4.filas.map(f => [f.t, f.rango, f.n, f.nombres, rnd(f.prev), rnd(f.par), rnd(f.cal), f.crit]).concat([['PROMEDIO TOTAL DEL EQUIPO', clasFin(P4.tot.cal).t, P4.tot.n, '', rnd(P4.tot.prev), rnd(P4.tot.par), rnd(P4.tot.cal), '']]), r0 + 2);
+  P4.filas.forEach((f, i) => pintar(ws, r0 + 2 + i, 1, MAPK[f.k])); pintar(ws, r0 + 6, 2, clasFin(P4.tot.cal).k); ws.getRow(r0 + 6).font = { bold: true }; }
+ // Paros
+ ws = hoja('Registro de paros', 'REGISTRO DE PAROS DE MÁQUINA', [['Fecha', 12], ['Máquina', 24], ['Técnico', 32], ['Minutos', 10], ['Clasificación', 16], ['Falla', 40], ['Contramedida', 50]]);
+ const LP = m.paros.slice().sort((a, b) => String(a.fecha).localeCompare(String(b.fecha)));
+ filas(ws, LP.map(x => [x.fecha, x.maq, (persona(x.tec) || {}).nombre || x.tec, +x.min, clasParo(x.min).t, x.falla, x.contra || (clasParo(x.min).k === 'no' ? 'PENDIENTE' : '')]), 5);
+ LP.forEach((x, i) => { pintar(ws, 5 + i, 5, clasParo(x.min).k); if (clasParo(x.min).k === 'no' && !x.contra) pintar(ws, 5 + i, 7, 'no'); });
+ // Histórico
+ ws = hoja('Histórico mensual', 'HISTÓRICO MENSUAL POR PERSONA', [['Periodo', 16], ['Nombre', 34], ['% cumplimiento', 14], ['Paros', 9], ['Minutos de paro', 12], ['Calificación final', 14], ['Desempeño', 20]]);
+ const H = []; Object.keys(S.meses).sort().forEach(kk => { const mm = S.meses[kk]; plan().forEach(p => { const r = calc(p, mm); if (r.prog || r.n) H.push([nomMes(kk), p.nombre, r.pct == null ? null : +r.pct.toFixed(1), r.n, r.mins, r.fin == null ? null : +r.fin.toFixed(1), clasFin(r.fin).t]); }); });
+ filas(ws, H, 5);
+ // Nuevos proyectos
+ ws = hoja('Nuevos proyectos', 'NUEVOS PROYECTOS · TAREAS ASIGNADAS Y BENEFICIO PARA LA EMPRESA', [['#', 5], ['Proyecto / tarea', 34], ['Responsable', 30], ['Auxiliar', 26], ['Inicio', 12], ['Fecha compromiso', 13], ['Seguimiento', 22], ['Prioridad', 10], ['Estado', 13], ['Avance %', 10], ['Beneficio para la empresa', 60]]);
+ const LPy = S.proyectos.slice().sort((a, b) => (a.estado === 'Terminado') - (b.estado === 'Terminado') || String(a.fin || '9999').localeCompare(String(b.fin || '9999')));
+ filas(ws, LPy.map((x, i) => [i + 1, x.tit, (persona(x.resp) || {}).nombre || '', (persona(x.apo) || {}).nombre || '', x.ini, x.fin, semaforo(x).t, x.pri, x.estado, +x.avance || 0, x.ben]), 5);
+ LPy.forEach((x, i) => { pintar(ws, 5 + i, 9, { 'Terminado': 'exc', 'En proceso': 'sat', 'Pendiente': 'na', 'Detenido': 'no' }[x.estado] || 'na'); const d = diasA(x.fin); if (x.estado !== 'Terminado' && d != null) pintar(ws, 5 + i, 7, d < 0 ? 'no' : d <= 7 ? 'min' : 'exc'); });
+ // Gráficas
+ ws = hoja('Gráficas', 'GRÁFICAS DE CUMPLIMIENTO Y PAROS', []);
+ const tit = { g1: 'Cumplimiento por técnico', g2: 'Calificación integral', g3: 'Minutos y número de paros por técnico', g4: 'Paros por clasificación', g5: 'Minutos de paro por máquina', g6: 'Tendencia mensual' };
+ Object.keys(img).forEach((id, i) => { const col = (i % 2) * 10, row = 3 + Math.floor(i / 2) * 22; ws.getCell(row + 1, col + 1).value = tit[id]; ws.getCell(row + 1, col + 1).font = { bold: true }; const imId = wb.addImage({ base64: img[id], extension: 'png' }); ws.addImage(imId, { tl: { col: col, row: row + 1 }, ext: { width: 620, height: 360 } }); });
+ const buf = await wb.xlsx.writeBuffer();
+ bajar(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), 'Desempeno mantenimiento ' + nomMes(k) + '.xlsx');
+});
+
+// ---------- accesos a esta página (apps/organigrama/config/personal)
+let ACC = {};
+async function renderAccesos() {
+ if (!db) return; const t = $('#tAcc'); if (!t) return;
+ try { const s = await db.doc('config/personal').get(); ACC = (s.exists && s.data().p) || {}; } catch (e) { }
+ const yo = window.LI ? String(LI.nomina()) : '';
+ const gente = S.personal.filter(p => String(p.nomina || '').trim());
+ const extra = Object.keys(ACC).filter(k => !gente.some(p => String(p.nomina).trim() === k)).map(k => ({ nombre: ACC[k].n, nomina: k, puesto: '(fuera del organigrama)' }));
+ t.innerHTML = '<tr><th>Nómina</th><th>Nombre</th><th>Puesto</th><th>Puede entrar</th></tr>' + gente.concat(extra).map(p => { const k = String(p.nomina).trim(), a = ACC[k], si = !!a && a.a !== false;
+  return '<tr><td>' + esc(k) + '</td><td>' + esc(p.nombre) + '</td><td>' + esc(p.puesto) + '</td><td>' + (k === yo || (a && a.r === 'general') ? '✔ Sí (administración general)' : '<label><input type="checkbox" data-acc="' + esc(k) + '" data-n="' + esc(p.nombre) + '"' + (si ? ' checked' : '') + '> ' + (si ? 'Sí' : 'No') + '</label>' + (si && window.LI ? ' <button type="button" class="b-gris" data-rst="' + esc(k) + '" data-n="' + esc(p.nombre) + '">🔁 Contraseña</button>' : '')) + '</td></tr>'; }).join('');
+}
+document.addEventListener('change', async e => {
+ const c = e.target.closest('[data-acc]'); if (!c || !db) return;
+ const k = c.dataset.acc, n = String(c.dataset.n || '').toUpperCase(), m = $('#mAcc');
+ try {
+  if (c.checked && window.LI) { const pw = $('#accPw').value; if (pw) { if (pw.length < 6) { c.checked = false; m.textContent = 'La contraseña inicial debe tener al menos 6 caracteres.'; return; } const r = await LI.crearCuenta(k, pw); m.textContent = r === 'existe' ? n + ' ya tenía cuenta: entra con su contraseña de siempre.' : 'Cuenta creada para ' + n + ' con la contraseña inicial.'; } else m.textContent = n + ' podrá entrar con su contraseña de Almacén / Paros (si no tiene cuenta, escribe una contraseña inicial y vuelve a marcarlo).'; }
+  await db.doc('config/personal').update({ p: { [k]: c.checked ? { n, r: 'admin', a: true } : { a: false } } });
+  if (!c.checked) m.textContent = n + ' ya no puede entrar a esta página.';
+ } catch (er) { m.textContent = 'No se pudo guardar el acceso (' + (er.code || er.message) + ').'; c.checked = !c.checked; }
+ renderAccesos();
+});
+document.addEventListener('click', e => { const b = e.target.closest('[data-rst]'); if (b && window.LI) LI.dialogoRestablecer(b.dataset.rst, b.dataset.n); });
+
+render();
+cargarNube();
+</script>
+</body>
+</html>
