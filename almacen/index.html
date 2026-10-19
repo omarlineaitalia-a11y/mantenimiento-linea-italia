@@ -616,7 +616,8 @@ function renderPers(){
     arr.map(([k,p]) => '<div class="ptab"><span class="mono">'+esc(k)+'</span><span>'+esc(p.n)+'</span><span class="p-pu desc">'+esc(p.puesto||'')+'</span><span>'+
       (p.r==='general' || k===S.yo?.nomina ? '<span class="st '+(p.r==='usuario'?'sin':'ok')+'">'+rolTxt(p.r)+'</span>' : '<select data-prol="'+esc(k)+'" aria-label="Rol"><option value="usuario"'+(p.r!=='admin'?' selected':'')+'>Usuario</option><option value="admin"'+(p.r==='admin'?' selected':'')+'>Administrador</option></select>')+
       '</span><span class="p-ac">'+(p.a===false?'No':'Sí')+'<br><span class="foot">'+(conCuenta(k) ? '🔑 con cuenta' : 'sin cuenta')+'</span></span><span style="display:flex;gap:6px;flex-wrap:wrap">'+(k===S.yo?.nomina || p.r==='general' ? '<span class="foot">'+(k===S.yo?.nomina?'tú':'')+'</span>' : '<button type="button" data-pact="'+esc(k)+'">'+(p.a===false?'Activar':'Desactivar')+'</button>')+
-      (S.isGeneral && !conCuenta(k) && p.a !== false ? '<button type="button" data-pacc="'+esc(k)+'">🔑 Dar acceso</button>' : '')+'</span></div>').join('');
+      (S.isGeneral && !conCuenta(k) && p.a !== false ? '<button type="button" data-pacc="'+esc(k)+'">🔑 Dar acceso</button>' : '')+
+      (S.isGeneral && conCuenta(k) && k !== S.yo?.nomina ? '<button type="button" data-preset="'+esc(k)+'">🔁 Restablecer contraseña</button>' : '')+'</span></div>').join('');
 }
 let db = null, assets = null, downloads = null, user = null;
 const $ = id => document.getElementById(id);
@@ -1333,6 +1334,7 @@ $('fPers').addEventListener('submit', async e => {
 });
 $('btnAccTodos').addEventListener('click', () => { if (!S.isGeneral || !window.LI) return; darAcceso(Object.keys(S.pers).filter(k => S.pers[k].a !== false && !conCuenta(k))); });
 document.addEventListener('click', e => { const b = e.target.closest('[data-pacc]'); if (b && S.isGeneral && window.LI) darAcceso([b.dataset.pacc]); });
+document.addEventListener('click', e => { const b = e.target.closest('[data-preset]'); if (b && S.isGeneral && window.LI) LI.dialogoRestablecer(b.dataset.preset, S.pers[b.dataset.preset]?.n); });
 document.addEventListener('click', async e => {
   const b = e.target.closest('[data-pact]'); if (!b || !S.isGeneral) return;
   const k = b.dataset.pact, p = S.pers[k];

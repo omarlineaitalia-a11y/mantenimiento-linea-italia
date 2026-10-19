@@ -3,10 +3,25 @@ rules_version = '2';
 // - Solo entra quien tiene cuenta (nómina + contraseña) Y está dado de alta y activo en el personal de esa aplicación.
 // - La configuración (personal, máquinas, pantallas, apariencia) solo la cambian administradores.
 // - Mientras no exista la lista de personal (primera carga), se permite crearla.
+// - Contraseña restablecida por un administrador: la cuenta vigente es <nómina>.<versión>@...;
+//   acceso/privado guarda la versión vigente por nómina y las cuentas anteriores dejan de servir.
 service cloud.firestore {
   match /databases/{database}/documents {
-    function nomina() {
+    function correoLocal() {
       return request.auth.token.email.split('@')[0];
+    }
+    function nomina() {
+      return correoLocal().split('[.]')[0];
+    }
+    function rutaPriv() {
+      return /databases/$(database)/documents/acceso/privado;
+    }
+    function version() {
+      return exists(rutaPriv()) ? get(rutaPriv()).data.get('m', {}).get(nomina(), 0) : 0;
+    }
+    function versionOk() {
+      return (version() == 0 && correoLocal() == nomina())
+          || (version() != 0 && correoLocal() == nomina() + '.' + string(version()));
     }
     function rutaPersonal(app) {
       return /databases/$(database)/documents/apps/$(app)/config/personal;
@@ -18,7 +33,7 @@ service cloud.firestore {
       return get(rutaPersonal(app)).data.p[nomina()];
     }
     function enPersonal(app) {
-      return request.auth != null && hayPersonal(app)
+      return request.auth != null && versionOk() && hayPersonal(app)
         && nomina() in get(rutaPersonal(app)).data.p
         && persona(app).get('a', true) != false;
     }
@@ -29,6 +44,15 @@ service cloud.firestore {
       allow read: if enPersonal(app);
       allow write: if (enPersonal(app) && (col != 'config' || esAdmin(app)))
                    || (request.auth != null && !hayPersonal(app));
+    }
+    // versión vigente de cada cuenta: la pública (por huella) sirve para entrar; la privada la revisan estas reglas
+    match /acceso/publico {
+      allow read: if true;
+      allow write: if esAdmin('almacen') || esAdmin('paros');
+    }
+    match /acceso/privado {
+      allow read: if request.auth != null;
+      allow write: if esAdmin('almacen') || esAdmin('paros');
     }
   }
 }
