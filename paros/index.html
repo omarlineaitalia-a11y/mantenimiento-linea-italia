@@ -1,4 +1,4 @@
-<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>[hidden]{display:none!important}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}</style><link rel="manifest" href="manifest.json"><meta name="theme-color" content="#1E4A2A"><link rel="icon" href="icono-192.png"><link rel="apple-touch-icon" href="icono-192.png"><script>window.LI_APP="paros";</script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script><script src="../firebase-config.js"></script><script src="../lib/li-firebase.js"></script></head><body><title>Control de Paros</title>
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>[hidden]{display:none!important}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}</style><link rel="manifest" href="manifest.json"><meta name="theme-color" content="#1E4A2A"><link rel="icon" href="icono-192.png"><link rel="apple-touch-icon" href="icono-192.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Paros LI"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><script>window.LI_APP="paros";</script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script><script src="../firebase-config.js"></script><script src="../lib/li-firebase.js"></script></head><body><title>Control de Paros</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600;700&display=swap">
 <style>
 :root{
@@ -163,6 +163,9 @@ label.f{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--mu
 .tpmb{display:inline-block;background:#fff;color:#5E4600;border-radius:99px;font-size:11px;font-weight:700;padding:1px 7px;margin-top:2px;border:1px solid var(--warn)}
 .toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 20px);transform:translateX(-50%);background:var(--hero);color:var(--hero-fg);padding:10px 18px;border-radius:8px;z-index:60;font-weight:600;max-width:calc(100% - 32px);box-shadow:0 6px 20px rgba(0,0,0,.25)}
 body.kiosk .top nav.nav, body.kiosk .hide-kiosk{display:none}
+/* iPhone / iPad: letra de 16 px en campos para que Safari no haga zoom; sin botón de pantalla completa */
+@supports (-webkit-touch-callout:none){ input,select,textarea{font-size:16px} }
+.solo-no-ios{display:none!important}
 @media (max-width:1000px){ .board{grid-template-columns:minmax(0,1fr)} .charts{grid-template-columns:minmax(0,1fr)} .kpis,.rep-kpis{grid-template-columns:repeat(2,minmax(0,1fr))} }
 @media (max-width:640px){ .bigbtns{grid-template-columns:minmax(0,1fr)} .steps,.times{grid-template-columns:repeat(2,minmax(0,1fr))} .g3{grid-template-columns:minmax(0,1fr)} .hbar{grid-template-columns:minmax(70px,120px) minmax(0,1fr) 70px} }
 </style>
@@ -187,6 +190,7 @@ body.kiosk .top nav.nav, body.kiosk .hide-kiosk{display:none}
 </header>
 
 <div class="wrap">
+  <div id="iosTip" class="banner" hidden style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between"><span>📲 <b>Para usarla como app en iPhone:</b> toca <b>Compartir</b> (cuadro con flecha ↑) → <b>Agregar a pantalla de inicio</b> y ábrela desde el ícono. Para que la alarma suene con el iPhone bloqueado, instala la app <b>ntfy</b> (guía de instalación).</span><button type="button" id="iosTipX">Entendido</button></div>
   <div id="dbBanner" class="banner" hidden>La base de datos no está disponible en esta vista. Abre la página desde claude.ai con tu cuenta de Línea Italia.</div>
 
   <!-- INICIO (sin sesión) -->
@@ -1291,6 +1295,15 @@ let pedirInstalar = null;
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); pedirInstalar = e; $('btnInstalar').hidden = false; });
 window.addEventListener('appinstalled', () => { pedirInstalar = null; $('btnInstalar').hidden = true; toast('Listo: "Paros LI" quedó instalada con su ícono.'); });
 $('btnInstalar').addEventListener('click', async () => { if (!pedirInstalar) return; pedirInstalar.prompt(); try { await pedirInstalar.userChoice; } catch(e) {} pedirInstalar = null; $('btnInstalar').hidden = true; });
+// iPhone / iPad: Safari no tiene botón de instalar ni pantalla completa → instrucciones; el sonido se activa con el primer toque
+const esIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const enApp = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+if (esIOS) {
+  $('btnFull').classList.add('solo-no-ios');
+  if (!enApp && LS.get('tc_ios_tip') !== '1') $('iosTip').hidden = false;
+  document.addEventListener('touchend', () => { if (devArea() === 'mtto') { try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); actx.resume(); } catch(e) {} } }, { once:true, capture:true });
+}
+$('iosTipX').addEventListener('click', () => { $('iosTip').hidden = true; LS.set('tc_ios_tip', '1'); });
 // pantalla siempre encendida en equipos de mantenimiento
 let wakeLock = null;
 async function pantallaEncendida(){ if (devArea() !== 'mtto' || !navigator.wakeLock || document.hidden) return; try { wakeLock = await navigator.wakeLock.request('screen'); } catch(e) {} }
@@ -1314,7 +1327,7 @@ $('btnProbarAviso').addEventListener('click', async () => {
   beep(true); setTimeout(() => { if (!enEspera().length) beep(false); }, 2000);
   // el aviso de prueba sale en 10 s: da tiempo de ir a otra aplicación o apagar la pantalla (prueba de MacroDroid)
   if (p === 'granted') { m.className = 'msg okm'; m.textContent = 'Avisos activados. El aviso de prueba llega en 10 segundos: sal a otra aplicación o apaga la pantalla.'; setTimeout(() => { try { mostrarAviso('⚠ FALLA · PRUEBA', 'Aviso de prueba de Control de Paros. No es una falla real.', 'paro-prueba'); } catch(e) { m.className = 'msg err'; m.textContent = 'No se pudo mostrar el aviso: ' + e.message; } }, 10000); }
-  else { m.className = 'msg err'; m.textContent = p === 'no' ? 'Este navegador no maneja avisos.' : 'Las notificaciones están bloqueadas: da clic en el candado junto a la dirección → Notificaciones → Permitir.'; }
+  else { m.className = 'msg err'; m.textContent = p === 'no' ? (esIOS ? 'En iPhone primero agrégala a la pantalla de inicio (Compartir → Agregar a pantalla de inicio), ábrela desde el ícono y vuelve a tocar este botón.' : 'Este navegador no maneja avisos.') : 'Las notificaciones están bloqueadas: da clic en el candado junto a la dirección → Notificaciones → Permitir.'; }
 });
 
 // ---------- eventos de UI
