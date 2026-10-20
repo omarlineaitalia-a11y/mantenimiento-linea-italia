@@ -30,6 +30,7 @@ class MainActivity : Activity() {
     private lateinit var msg: TextView
     private lateinit var nom: EditText
     private lateinit var pw: EditText
+    private lateinit var actualizar: Button
 
     private val rcv = object : BroadcastReceiver() {
         override fun onReceive(c: Context?, i: Intent?) { refrescar() }
@@ -45,7 +46,9 @@ class MainActivity : Activity() {
         fun boton(s: String, f: () -> Unit) = Button(this).apply { text = s; setOnClickListener { f() } }
 
         col.addView(t("Alarmas Paros LI", 26f, true, Color.rgb(30, 74, 42)))
-        col.addView(t("Mantenimiento Línea Italia · versión de prueba. Vigila las fallas de Control de Paros y abre la alarma a pantalla completa aunque el navegador esté cerrado."))
+        col.addView(t("Mantenimiento Línea Italia · versión " + BuildConfig.VERSION_NAME + ". Vigila las fallas de Control de Paros y abre la alarma a pantalla completa aunque el navegador esté cerrado."))
+        actualizar = boton("") { Actualizacion.descargar(this) }.apply { visibility = android.view.View.GONE; setBackgroundColor(Color.rgb(201, 151, 0)) }
+        col.addView(actualizar)
         estado = t("", 17f, true); col.addView(estado)
 
         col.addView(t("1 · Entra con tu cuenta (personal de mantenimiento)", 16f, true))
@@ -87,6 +90,10 @@ class MainActivity : Activity() {
         super.onResume()
         ContextCompat.registerReceiver(this, rcv, IntentFilter(Cfg.ACCION_ESTADO), ContextCompat.RECEIVER_NOT_EXPORTED)
         refrescar()
+        Actualizacion.buscar { v ->
+            actualizar.visibility = if (v == null) android.view.View.GONE else android.view.View.VISIBLE
+            if (v != null) actualizar.text = "⬆ ACTUALIZAR A LA VERSIÓN 1.$v (se instala encima, sin borrar nada)"
+        }
     }
 
     override fun onPause() { try { unregisterReceiver(rcv) } catch (_: Exception) { }; super.onPause() }

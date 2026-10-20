@@ -41,6 +41,7 @@ class VigiaService : Service() {
             h.postDelayed({ alarmar("prueba-local-" + System.currentTimeMillis(), "PRUEBA DE ESTA TABLETA", "Prueba local de la alarma (no es una falla real)", true) }, 10_000)
         }
         escuchar()
+        Actualizacion.avisarSiHay(this)
         return START_STICKY
     }
 

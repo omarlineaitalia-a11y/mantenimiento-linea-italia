@@ -22,15 +22,31 @@ jobs:
       - uses: gradle/actions/setup-gradle@v3
         with:
           gradle-version: '8.9'
-      - name: Compilar APK
-        run: gradle -p android :app:assembleDebug --no-daemon --stacktrace
+      - name: Preparar firma fija (secretos del repositorio)
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+          KS_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          if [ -z "$KS_B64" ] || [ -z "$KS_PASSWORD" ]; then
+            echo "::error::Faltan los secretos ANDROID_KEYSTORE_B64 y ANDROID_KEYSTORE_PASSWORD (ver 'Datos para GitHub (secretos).txt')."
+            exit 1
+          fi
+          echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/firma.p12"
+          ALIAS=$(keytool -list -keystore "$RUNNER_TEMP/firma.p12" -storetype pkcs12 -storepass "$KS_PASSWORD" | grep -i 'PrivateKeyEntry' | head -1 | cut -d, -f1)
+          if [ -z "$ALIAS" ]; then echo "::error::No se pudo leer la firma (revisa la contraseña)."; exit 1; fi
+          echo "KS_FILE=$RUNNER_TEMP/firma.p12" >> "$GITHUB_ENV"
+          echo "KS_ALIAS=$ALIAS" >> "$GITHUB_ENV"
+      - name: Compilar APK firmado
+        env:
+          KS_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: gradle -p android :app:assembleRelease -Pvc=${{ github.run_number }} --no-daemon --stacktrace
       - name: Nombrar APK
-        run: cp android/app/build/outputs/apk/debug/app-debug.apk AlarmasParosLI.apk
-      - name: Publicar para descargar en la tableta
+        run: cp android/app/build/outputs/apk/release/app-release.apk AlarmasParosLI.apk
+      - name: Publicar para descargar en las tabletas
         uses: softprops/action-gh-release@v2
         with:
           tag_name: alarmas-paros-${{ github.run_number }}
-          name: Alarmas Paros LI · prueba ${{ github.run_number }}
-          body: Aplicación Android de prueba que vigila las fallas de Control de Paros y abre la alarma a pantalla completa.
+          name: Alarmas Paros LI · versión 1.${{ github.run_number }}
+          body: Aplicación Android que vigila las fallas de Control de Paros y abre la alarma a pantalla completa. Se instala encima de la versión anterior.
           files: AlarmasParosLI.apk
           make_latest: true

@@ -345,6 +345,12 @@ body.kiosk .top nav.nav, body.kiosk .hide-kiosk{display:none}
         <div class="box"><h3>Máquinas</h3><div class="scroll" id="maqList"></div></div>
       </div>
       <div id="ct-pan" hidden style="display:flex;flex-direction:column;gap:12px">
+        <form class="box" id="fNtfy">
+          <h3>📱 Avisos a celulares (iPhone y Android) · app ntfy</h3>
+          <p class="foot">Cada falla también llega como notificación a los celulares con la app gratuita <b>ntfy</b> suscrita a este tema: suena aunque el celular esté bloqueado y al tocarla abre Control de Paros. El aviso solo lleva la máquina y la falla (sin nombres). Déjalo vacío para apagarlo.</p>
+          <div class="g2"><label class="f">Tema de ntfy<input id="ntfyTema" class="mono" placeholder="li-paros-…"></label><div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap"><button type="button" id="btnNtfyNuevo">Generar tema nuevo</button><button type="button" id="btnNtfyProbar">Mandar aviso de prueba</button></div></div>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="primary" type="submit">Guardar para todos</button><p class="msg" id="mNtfy"></p></div>
+        </form>
         <form class="box" id="fPan">
           <h3>Regreso automático de pantallas</h3>
           <label class="f">Después de este tiempo sin usar la página, cada equipo regresa a su pantalla
@@ -445,6 +451,7 @@ function ejemploX(){ $('aXEj').textContent = ($('aXNom').value.trim() || DEF_A.x
   db.doc('config/personal').onSnapshot(s => { S.per = (s.exists && (s.data()||{}).p) || {}; if (S.view==='cfg') renderCfg(); }, () => {});
   db.doc('config/maquinas').onSnapshot(s => { S.maq = (s.exists && (s.data()||{}).m) || {}; llenarMaquinas(); render(); }, () => {});
   db.doc('config/pantallas').onSnapshot(s => { if (s.exists) Object.assign(S.cfg, s.data()); }, () => {});
+  db.doc('config/avisos').onSnapshot(s => { S.ntfy = (s.exists && (s.data()||{}).ntfy) || ''; if (S.view==='cfg') renderCfg(); }, () => {});
   db.doc('config/apariencia').onSnapshot(s => { S.apa = Object.assign({}, DEF_A, (s.exists && s.data()) || {}); if (!S.apaDraft) applyApa(S.apa); }, () => {});
   db.doc('estado/maquinas').onSnapshot(s => { S.est = (s.exists && (s.data()||{}).e) || {}; render(); }, () => {});
   // las pruebas de alarma (prueba:true) van aparte: no cuentan como paro real
@@ -570,7 +577,7 @@ async function accionAlerta(k){
     try {
       const ref = await db.collection('eventos').add({ maq:k, maqN:maqName(k), t0:nowIso(), estado:'espera', tipo:$('ffTipo').value, falla:desc, op:{ n:p.n, nom:p.nomina } });
       await cambiarEstado(k, 'falla', ref.id, p);
-      cerrarModal(); toast('Alerta enviada a mantenimiento. El tiempo empezó a correr.');
+      avisarCelulares(maqName(k), desc, false); cerrarModal(); toast('Alerta enviada a mantenimiento. El tiempo empezó a correr.');
     } catch(err) { $('ffMsg').className='msg err'; $('ffMsg').textContent='No se pudo enviar ('+(err.code||'error')+'). Intenta de nuevo.'; if (btn) btn.disabled = false; }
   });
 }
@@ -619,7 +626,7 @@ async function accionReabrir(ev){
     const ant = { tAlerta: ev.tAlerta || ev.t0, tLleg: ev.tLleg || null, tRep: ev.tRep || null, tec: ev.tec || null, tecRep: ev.tecRep || null, causa: ev.causa || '', solucion: ev.solucion || '', refac: ev.refac || '', reabPor: { n:p.n, nom:p.nomina }, reabNota: nota, reabT: nowIso() };
     try {
       await db.doc('eventos/'+ev.id).update({ ciclos: [...(ev.ciclos || []), ant], estado:'espera', tAlerta: nowIso(), tLleg:null, tRep:null, tec:null, tecRep:null, causa:'', solucion:'', refac:'', reab:(ev.reab || 0) + 1, reabNota: nota, reabOp:{ n:p.n, nom:p.nomina } });
-      cerrarModal(); toast('Se volvió a avisar a mantenimiento: la falla continúa en ' + ev.maqN + '.');
+      avisarCelulares(ev.maqN, 'La falla continúa: ' + nota, false); cerrarModal(); toast('Se volvió a avisar a mantenimiento: la falla continúa en ' + ev.maqN + '.');
     } catch(err) { $('frbMsg').className='msg err'; $('frbMsg').textContent='No se pudo enviar ('+(err.code||'error')+').'; }
   });
 }
@@ -637,6 +644,12 @@ async function accionLiberar(ev){
     } catch(err) { $('flMsg').className='msg err'; $('flMsg').textContent='No se pudo liberar ('+(err.code||'error')+').'; }
   });
 }
+// ---------- aviso a celulares (iPhone y Android) con la app gratuita ntfy · el tema se guarda en config/avisos
+// el aviso solo lleva la máquina y la falla, sin nombres ni nóminas
+function avisarCelulares(maq, texto, prueba){
+  if (!S.ntfy) return;
+  fetch('https://ntfy.sh/', { method:'POST', body: JSON.stringify({ topic:S.ntfy, title:(prueba ? '🧪 PRUEBA · ' : '⚠ FALLA · ') + maq, message: String(texto || '').slice(0, 300) || 'Falla en máquina', priority:5, tags:['rotating_light'], click: location.origin + location.pathname }) }).catch(() => {});
+}
 // ---------- pruebas de alarma (solo administradores)
 async function accionPrueba(k){
   if (S.pru.some(x => x.estado === 'espera')) { toast('Ya hay una prueba de alarma en curso.'); return; }
@@ -646,7 +659,7 @@ async function accionPrueba(k){
     '<button type="submit" style="padding:16px;font-size:18px;background:#5B2C83;border-color:#5B2C83;color:#fff">🧪 Lanzar prueba de alarma</button></form>');
   $('fPru').addEventListener('submit', async e => {
     e.preventDefault(); const btn = e.submitter; if (btn) btn.disabled = true;
-    try { await db.collection('eventos').add({ prueba:true, maq:k, maqN:maqName(k), t0:nowIso(), estado:'espera', tipo:'Prueba de alarma', falla:'PRUEBA DE ALARMA (no es falla real)', nota:$('fpNota').value.trim(), op:{ n:p.n, nom:p.nomina } }); cerrarModal(); toast('Prueba de alarma lanzada. Corre el tiempo de respuesta.'); }
+    try { await db.collection('eventos').add({ prueba:true, maq:k, maqN:maqName(k), t0:nowIso(), estado:'espera', tipo:'Prueba de alarma', falla:'PRUEBA DE ALARMA (no es falla real)', nota:$('fpNota').value.trim(), op:{ n:p.n, nom:p.nomina } }); avisarCelulares(maqName(k), 'Prueba de alarma (no es falla real)', true); cerrarModal(); toast('Prueba de alarma lanzada. Corre el tiempo de respuesta.'); }
     catch(err) { $('fpMsg').className='msg err'; $('fpMsg').textContent='No se pudo lanzar ('+(err.code||'error')+').'; if (btn) btn.disabled = false; }
   });
 }
@@ -1146,7 +1159,7 @@ function renderCfg(){
     return '<tr><td class="mono">'+esc(k)+'</td><td>'+esc(p.n)+'</td><td><span class="tag '+(depDe(p)==='prod'?'warn':'ok')+'">'+DEPS[depDe(p)]+'</span></td><td>'+(editable ? '<select data-prol="'+esc(k)+'">'+rp.map(r => '<option value="'+r+'"'+(r===p.r?' selected':'')+'>'+ROLES[r]+'</option>').join('')+'</select>' : '<span class="tag ok">'+ROLES[p.r]+'</span>')+'</td><td style="font-size:12.5px">'+esc(vs)+'</td><td>'+esc(p.maq ? maqName(p.maq) : '')+'</td><td>'+(p.a===false?'No':'Sí')+'</td><td style="white-space:nowrap">'+(editable ? '<button type="button" data-pedit="'+esc(k)+'">Editar</button> <button type="button" data-pact="'+esc(k)+'">'+(p.a===false?'Activar':'Desactivar')+'</button> <button type="button" data-preset="'+esc(k)+'">🔁 Contraseña</button>' : '')+'</td></tr>';
   }).join('') + '</table>';
   $('maqList').innerHTML = '<table class="tbl"><tr><th>Código</th><th>Máquina</th><th>Categoría</th><th>Área</th><th>Estado actual</th><th></th></tr>' + Object.keys(S.maq).sort((a,b)=>maqName(a).localeCompare(maqName(b),'es')).map(k => { const m = S.maq[k], st = (S.est[k]||{}).st || 'ok'; return '<tr><td class="mono">'+esc(m.cod||k)+'</td><td>'+esc(m.n)+'</td><td>'+esc(m.cat||'')+'</td><td>'+esc(m.area||'')+'</td><td><span class="tag '+(st==='ok'?'ok':st==='falla'?'bad':'warn')+'">'+({ok:'En función',falla:'Falla',sinprod:'Sin producción'}[st])+'</span></td><td><button type="button" data-mact="'+esc(k)+'">'+(m.a===false?'Activar':'Ocultar')+'</button></td></tr>'; }).join('') + '</table>';
-  $('panInact').value = String(S.cfg.inact); $('panMtto').value = S.cfg.mtto; $('panProc').value = S.cfg.procesos; $('panOper').value = S.cfg.operador;
+  if (document.activeElement !== $('ntfyTema')) $('ntfyTema').value = S.ntfy || ''; $('panInact').value = String(S.cfg.inact); $('panMtto').value = S.cfg.mtto; $('panProc').value = S.cfg.procesos; $('panOper').value = S.cfg.operador;
   $('devArea').value = devArea() || 'mtto'; $('devTipo').value = LS.get('tc_dev_tipo') || ''; $('devMaq').value = LS.get('tc_dev_maq') || lista()[0] || ''; $('devKiosk').value = LS.get('tc_kiosk') || '0';
 }
 function llenarMaquinas(){
@@ -1219,6 +1232,9 @@ $('fMaq').addEventListener('submit', async e => {
     f.reset();
   }
 });
+$('fNtfy').addEventListener('submit', async e => { e.preventDefault(); if (!S.admin) return; const t = $('ntfyTema').value.trim(); if (t && !/^[A-Za-z0-9_-]{8,64}$/.test(t)) { $('mNtfy').className='msg err'; $('mNtfy').textContent='El tema solo lleva letras, números, - y _ (8 a 64).'; return; } if (await upd('config/avisos', { ntfy:t }, t ? 'Avisos a celulares activados' : 'Avisos a celulares apagados')) { $('mNtfy').className='msg okm'; $('mNtfy').textContent='Guardado.'; } });
+$('btnNtfyNuevo').addEventListener('click', () => { const a = new Uint8Array(8); crypto.getRandomValues(a); $('ntfyTema').value = 'li-paros-' + [...a].map(x => x.toString(16).padStart(2,'0')).join(''); $('mNtfy').className='msg'; $('mNtfy').textContent='Tema nuevo generado: da «Guardar para todos» y suscribe los celulares a este tema.'; });
+$('btnNtfyProbar').addEventListener('click', () => { if (!S.ntfy) { toast('Primero guarda un tema.'); return; } avisarCelulares('PRUEBA', 'Aviso de prueba de Control de Paros (no es falla real)', true); toast('Aviso de prueba enviado a los celulares.'); });
 $('fPan').addEventListener('submit', async e => {
   e.preventDefault(); if (!S.admin) return;
   await upd('config/pantallas', { inact:Number($('panInact').value), mtto:$('panMtto').value, procesos:$('panProc').value, operador:$('panOper').value }, 'Pantallas guardadas para todos los equipos');

@@ -3,6 +3,9 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+// número de versión = número de compilación de GitHub (cada versión nueva se instala encima de la anterior)
+val vc = (project.findProperty("vc") as String?)?.toIntOrNull() ?: 1
+
 android {
     namespace = "mx.lineaitalia.alarmasparos"
     compileSdk = 34
@@ -10,8 +13,27 @@ android {
         applicationId = "mx.lineaitalia.alarmasparos"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0-prueba"
+        versionCode = vc
+        versionName = "1.$vc"
+    }
+    buildFeatures { buildConfig = true }
+    // firma fija de Línea Italia: la pone GitHub desde sus "secretos" (nunca está en el repositorio)
+    signingConfigs {
+        create("lineaitalia") {
+            System.getenv("KS_FILE")?.let { f ->
+                storeFile = file(f)
+                storePassword = System.getenv("KS_PASSWORD")
+                keyAlias = System.getenv("KS_ALIAS")
+                keyPassword = System.getenv("KS_PASSWORD")
+                storeType = "pkcs12"
+            }
+        }
+    }
+    buildTypes {
+        getByName("release") {
+            isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("lineaitalia")
+        }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
