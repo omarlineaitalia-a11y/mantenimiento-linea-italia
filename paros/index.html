@@ -809,6 +809,12 @@ function avisoSinProd(){
   });
 }
 document.addEventListener('click', e => { if (e.target.closest('[data-spok]')) { lista().forEach(k => { const x = S.est[k]; if (x && x.st === 'sinprod') sinProdVisto.add(k + '|' + x.desde); }); avisoSinProd(); } });
+// silenciar la alarma: apaga el sonido (también el del vigilante de Windows) y la alarma sigue visible;
+// una falla nueva vuelve a sonar
+const silenciados = new Set();
+const claveEv = e => e.id + '|' + (e.tAlerta || e.t0);
+const silenciada = esp => esp.length > 0 && esp.every(e => silenciados.has(claveEv(e)));
+document.addEventListener('click', e => { if (e.target.id === 'btnSilenciar') { enEspera().forEach(x => silenciados.add(claveEv(x))); beep(false); renderAlerta(); } });
 function avisoPeq(esp, grande){
   const el = $('avisoPeq'); if (!el) return;
   if (!esp.length || grande) { el.hidden = true; return; }
@@ -823,7 +829,7 @@ function avisoPeq(esp, grande){
 function renderAlerta(){
   const esp = enEspera();
   avisarSistema(esp);
-  document.title = esp.length && devArea() === 'mtto' ? '⚠ FALLA · ' + (esp[0].prueba ? '🧪 PRUEBA · ' : '') + esp[0].maqN : TITULO;
+  document.title = esp.length && devArea() === 'mtto' ? (silenciada(esp) ? '🔕 Alarma silenciada · ' : '⚠ FALLA · ') + (esp[0].prueba ? '🧪 PRUEBA · ' : '') + esp[0].maqN : TITULO;
   const show = alertaAqui() && esp.length && Date.now() > S.hideAlert;
   $('alerta').hidden = !show;
   avisoPeq(esp, show);
@@ -834,15 +840,15 @@ function renderAlerta(){
     $('alerta').innerHTML = '<div class="a1">🧪 PRUEBA DE ALARMA</div><div class="a2">' + esc(ev.maqN) + '</div><div class="at" data-since="'+esc(ev.t0)+'">' + hms(ms(ev.t0)) + '</div>' +
       '<div class="a3">No es una falla real. Lanzó la prueba: <b>' + esc(ev.op?.n || '') + '</b>' + (ev.nota ? '<br>' + esc(ev.nota) : '') + '</div>' +
       '<div class="a3" style="font-size:clamp(16px,2vw,24px)">🧰 Atiéndela igual que una falla: el técnico va a la máquina y registra <b>"Técnico en sitio (prueba)"</b> con su nómina. Se mide el tiempo de respuesta.</div>' +
-      '<div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center"><button type="button" id="btnOcultar" style="background:transparent;color:#fff;border-color:#fff">Ver tablero 1 min</button></div>';
-    beep(true); return;
+      '<div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">' + (silenciada(esp) ? '<span style="font-size:18px;font-weight:700;align-self:center">🔕 Silenciada</span>' : '<button type="button" id="btnSilenciar" style="background:#fff;color:#7A1212;border-color:#fff">🔕 Silenciar</button>') + '<button type="button" id="btnOcultar" style="background:transparent;color:#fff;border-color:#fff">Ver tablero 1 min</button></div>';
+    beep(!silenciada(esp)); return;
   }
   $('alerta').innerHTML = '<div class="a1">⚠ ' + (ev.reab ? 'LA FALLA CONTINÚA' : 'FALLA EN MÁQUINA') + '</div><div class="a2">' + esc(ev.maqN) + '</div><div class="at" data-since="'+esc(ev.tAlerta||ev.t0)+'">' + hms(ms(ev.tAlerta||ev.t0)) + '</div>' +
     '<div class="a3">Operador: <b>' + esc((ev.reab ? ev.reabOp?.n : ev.op?.n) || '') + '</b><br>' + (ev.reab ? 'Sigue fallando: <b>' + esc(ev.reabNota || '') + '</b> · ' + (ev.reab + 1) + 'ª intervención<br>Falla original: ' + esc(ev.falla) : 'Posible falla: <b>' + esc(ev.falla) + '</b> (' + esc(ev.tipo||'') + ')') + '</div>' +
     (esp.length > 1 ? '<div class="a3">+ ' + (esp.length-1) + ' máquina(s) más esperando técnico: ' + esc(esp.slice(1).map(e => e.maqN).join(', ')) + '</div>' : '') +
     '<div class="a3" style="font-size:clamp(16px,2vw,24px)">🧰 El técnico registra <b>"Técnico en sitio"</b> con su nómina <b>en la pantalla de la máquina</b>.</div>' +
-    '<div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center"><button type="button" id="btnOcultar" style="background:transparent;color:#fff;border-color:#fff">Ver tablero 1 min</button></div>';
-  beep(true);
+    '<div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">' + (silenciada(esp) ? '<span style="font-size:18px;font-weight:700;align-self:center">🔕 Silenciada</span>' : '<button type="button" id="btnSilenciar" style="background:#fff;color:#7A1212;border-color:#fff">🔕 Silenciar</button>') + '<button type="button" id="btnOcultar" style="background:transparent;color:#fff;border-color:#fff">Ver tablero 1 min</button></div>';
+  beep(!silenciada(esp));
 }
 function renderOp(){
   const k = S.opMaq || lista()[0]; if (!k) { $('opCard').innerHTML = '<p class="foot">Cargando…</p>'; return; }
