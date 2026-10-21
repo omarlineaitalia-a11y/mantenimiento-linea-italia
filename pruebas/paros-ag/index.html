@@ -299,8 +299,8 @@ body.kiosk .top nav.nav, body.kiosk .hide-kiosk{display:none}
   <!-- ÁREAS GENERALES (prueba) -->
   <section id="v-ag" hidden style="display:flex;flex-direction:column;gap:14px">
     <div class="ctabs" id="agTabs" role="tablist">
-      <button data-agt="tab" aria-selected="true">🏢 Tablero áreas generales</button>
-      <button data-agt="nueva" aria-selected="false">➕ Nueva solicitud</button>
+      <button data-agt="usr" aria-selected="true">👤 Tablero de usuario</button>
+      <button data-agt="tab" aria-selected="false">🧰 Tablero de mantenimiento</button>
       <button data-agt="pend" aria-selected="false">⏳ Pendientes y materiales</button>
       <button data-agt="hist" aria-selected="false">📚 Historial de soluciones</button>
       <button data-agt="graf" aria-selected="false">📊 Gráficas</button>
@@ -496,7 +496,7 @@ function ejemploX(){ $('aXEj').textContent = ($('aXNom').value.trim() || DEF_A.x
 
 // ---------- pantallas
 // permisos por pantalla
-const VIS = { tab:'Paros de máquina (tablero de mantenimiento)', ag:'Áreas generales', graf:'Gráficas', op:'Tablero producción (pantalla de máquina)', kb:'Fallas y soluciones', rep:'Reportes y Excel', cfg:'Configuración' };
+const VIS = { tab:'Paros de máquina (tablero de mantenimiento)', ag:'Áreas generales', agmat:'Áreas generales · lista de materiales (compras)', graf:'Gráficas', op:'Tablero producción (pantalla de máquina)', kb:'Fallas y soluciones', rep:'Reportes y Excel', cfg:'Configuración' };
 const VIS_DEF = { general:Object.keys(VIS), admin:Object.keys(VIS), mtto:['tab','graf','kb','ag'], procesos:['op','graf'], operador:['op','graf'], oficina:['ag'] };
 const DEPS = { mtto:'Mantenimiento', prod:'Producción' };
 const esAdm = p => !!p && ['admin','general'].includes(p.r);
@@ -504,7 +504,8 @@ const esAdm = p => !!p && ['admin','general'].includes(p.r);
 const depDe = p => !p ? '' : (p.dep || (['operador','procesos'].includes(p.r) ? 'prod' : p.r === 'oficina' ? 'ag' : 'mtto'));
 // el personal de producción nunca ve el tablero de mantenimiento (salvo el administrador general)
 const sinTabMtto = p => (depDe(p) === 'prod' || depDe(p) === 'ag') && !esAdm(p);
-const vistasDe = p => !p ? [] : (esAdm(p) ? Object.keys(VIS) : (Array.isArray(p.vis) ? p.vis : (VIS_DEF[p.r] || ['graf'])).filter(v => v !== 'rep' && v !== 'cfg')).filter(v => !(v === 'tab' && sinTabMtto(p)));
+// todos los usuarios pueden reportar en Áreas generales (tablero de usuario)
+const vistasDe = p => !p ? [] : [...new Set([...(esAdm(p) ? Object.keys(VIS) : (Array.isArray(p.vis) ? p.vis : (VIS_DEF[p.r] || ['graf'])).filter(v => v !== 'rep' && v !== 'cfg')).filter(v => !(v === 'tab' && sinTabMtto(p))), 'ag'])];
 // área de este equipo (computadora / tableta): se elige al abrir la página la primera vez y se queda guardada
 const devArea = () => LS.get('tc_dev_area') || '';
 function devScreen(){
@@ -1226,7 +1227,7 @@ function renderCfg(){
   const rp = rolesPermitidos(); const cur = $('perRol').value;
   $('perRol').innerHTML = rp.map(r => '<option value="'+r+'">'+ROLES[r]+'</option>').join(''); if (rp.includes(cur)) $('perRol').value = cur;
   const ord = r => Object.keys(ROLES).indexOf(r);
-  if (!$('perVis').childElementCount) $('perVis').innerHTML = ['tab','op','graf','kb','ag'].map(v => '<label style="display:flex;gap:6px;align-items:center;font-size:14px"><input type="checkbox" name="vis" value="'+v+'" style="width:auto">'+VIS[v]+'</label>').join('');
+  if (!$('perVis').childElementCount) $('perVis').innerHTML = ['tab','op','graf','kb','ag','agmat'].map(v => '<label style="display:flex;gap:6px;align-items:center;font-size:14px"><input type="checkbox" name="vis" value="'+v+'" style="width:auto">'+VIS[v]+'</label>').join('');
   marcarDep();
   $('perList').innerHTML = '<table class="tbl"><tr><th>Nómina</th><th>Nombre</th><th>Departamento</th><th>Rol</th><th>Pantallas que puede ver</th><th>Máquina</th><th>Activo</th><th></th></tr>' + Object.entries(S.per).sort((a,b) => ord(a[1].r)-ord(b[1].r) || a[1].n.localeCompare(b[1].n,'es')).map(([k,p]) => {
     const editable = k !== S.admin.nomina && (S.admin.r === 'general' || !['general','admin'].includes(p.r));
