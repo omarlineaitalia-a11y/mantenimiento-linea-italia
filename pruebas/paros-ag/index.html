@@ -387,6 +387,7 @@ body.kiosk .top nav.nav, body.kiosk .hide-kiosk{display:none}
             <label class="f">Personal de mantenimiento<select id="panMtto"><option value="tab">Tablero mantenimiento</option><option value="op">Pantalla de máquina</option></select></label>
             <label class="f">Personal de procesos<select id="panProc"><option value="tab">Tablero mantenimiento</option><option value="op">Pantalla de máquina</option></select></label>
             <label class="f">Operadores de máquina<select id="panOper"><option value="op">Pantalla de su máquina</option><option value="tab">Tablero mantenimiento</option></select></label>
+            <label class="f">Personal de áreas generales<select id="panAG"><option value="ag">Áreas generales · tablero de usuario</option></select></label>
           </div>
           <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="primary" type="submit">Guardar para todos</button><p class="msg" id="mPan"></p></div>
         </form>
@@ -395,7 +396,7 @@ body.kiosk .top nav.nav, body.kiosk .hide-kiosk{display:none}
           <p class="foot">Define qué muestra <b>este</b> equipo siempre, por ejemplo la TV del taller como tablero o la tableta de la Selexx como pantalla de máquina. Se guarda solo en este equipo.</p>
           <div class="g3">
             <label class="f">Área de este equipo<select id="devArea"><option value="mtto">🧰 Mantenimiento (recibe las alertas en grande)</option><option value="prod">🏭 Producción (solo tablero de producción)</option><option value="ag">🏢 Áreas generales (solicitudes de oficina y áreas generales)</option></select></label>
-            <label class="f">Pantalla de este equipo<select id="devTipo"><option value="">Automático (según el último usuario)</option><option value="tab">Siempre tablero de mantenimiento</option><option value="op">Siempre pantalla de una máquina</option></select></label>
+            <label class="f">Pantalla de este equipo<select id="devTipo"><option value="">Automático (según el último usuario)</option><option value="tab">Siempre tablero de mantenimiento</option><option value="op">Siempre pantalla de una máquina</option><option value="ag">Siempre áreas generales (tablero de usuario)</option></select></label>
             <label class="f">Máquina de este equipo<select id="devMaq"></select></label>
             <label class="f">Modo quiosco<select id="devKiosk"><option value="0">No (se ve el menú)</option><option value="1">Sí (oculta el menú)</option></select></label>
           </div>
@@ -433,7 +434,7 @@ const PUEDE = {
   agmat:['mtto','admin','general','oficina']
 };
 const TPM_TIPOS = ['Limpieza','Lubricación','Apriete / ajuste','Fuga (aire, aceite, agua)','Ruido o vibración','Desgaste o pieza dañada','Seguridad (guardas, paro de emergencia)','Fuente de suciedad','Otra'];
-const S = { per:{}, maq:{}, est:{}, evs:[], pru:[], bit:[], cfg:{ inact:5, mtto:'tab', procesos:'tab', operador:'op' }, view:'tab', opMaq:'', last:Date.now(), lastUser:null, admin:null, sonido:false, hideAlert:0, rep:{ p:'7' }, ct:'per', tpm:[], gr:{ per:'sem' }, repOk:false };
+const S = { per:{}, maq:{}, est:{}, evs:[], pru:[], bit:[], cfg:{ inact:5, mtto:'tab', procesos:'tab', operador:'op', oficina:'ag' }, view:'tab', opMaq:'', last:Date.now(), lastUser:null, admin:null, sonido:false, hideAlert:0, rep:{ p:'7' }, ct:'per', tpm:[], gr:{ per:'sem' }, repOk:false };
 let db = null;
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -496,7 +497,7 @@ function ejemploX(){ $('aXEj').textContent = ($('aXNom').value.trim() || DEF_A.x
 
 // ---------- pantallas
 // permisos por pantalla
-const VIS = { tab:'Paros de máquina (tablero de mantenimiento)', ag:'Áreas generales', agmat:'Áreas generales · lista de materiales (compras)', graf:'Gráficas', op:'Tablero producción (pantalla de máquina)', kb:'Fallas y soluciones', rep:'Reportes y Excel', cfg:'Configuración' };
+const VIS = { tab:'Paros de máquina (tablero de mantenimiento)', ag:'Áreas generales · reportar fallas (tablero de usuario)', agmt:'Áreas generales · tablero de mantenimiento', agmat:'Áreas generales · lista de materiales (compras)', graf:'Gráficas', op:'Tablero producción (pantalla de máquina)', kb:'Fallas y soluciones', rep:'Reportes y Excel', cfg:'Configuración' };
 const VIS_DEF = { general:Object.keys(VIS), admin:Object.keys(VIS), mtto:['tab','graf','kb','ag'], procesos:['op','graf'], operador:['op','graf'], oficina:['ag'] };
 const DEPS = { mtto:'Mantenimiento', prod:'Producción' };
 const esAdm = p => !!p && ['admin','general'].includes(p.r);
@@ -505,11 +506,12 @@ const depDe = p => !p ? '' : (p.dep || (['operador','procesos'].includes(p.r) ? 
 // el personal de producción nunca ve el tablero de mantenimiento (salvo el administrador general)
 const sinTabMtto = p => (depDe(p) === 'prod' || depDe(p) === 'ag') && !esAdm(p);
 // todos los usuarios pueden reportar en Áreas generales (tablero de usuario)
-const vistasDe = p => !p ? [] : [...new Set([...(esAdm(p) ? Object.keys(VIS) : (Array.isArray(p.vis) ? p.vis : (VIS_DEF[p.r] || ['graf'])).filter(v => v !== 'rep' && v !== 'cfg')).filter(v => !(v === 'tab' && sinTabMtto(p))), 'ag'])];
+const vistasDe = p => !p ? [] : [...new Set([...(esAdm(p) ? Object.keys(VIS) : (Array.isArray(p.vis) ? p.vis : (VIS_DEF[p.r] || ['graf'])).filter(v => v !== 'rep' && v !== 'cfg')).filter(v => !(v === 'tab' && sinTabMtto(p))), ...(depDe(p) === 'mtto' || depDe(p) === 'ag' || p.r === 'oficina' || (Array.isArray(p.vis) && (p.vis.includes('agmt') || p.vis.includes('agmat'))) ? ['ag'] : [])])];
 // área de este equipo (computadora / tableta): se elige al abrir la página la primera vez y se queda guardada
 const devArea = () => LS.get('tc_dev_area') || '';
 function devScreen(){
   const dt = LS.get('tc_dev_tipo'), dm = LS.get('tc_dev_maq'), ar = devArea();
+  if (dt === 'ag') return { v:'ag' };
   if (dt === 'tab' && ar !== 'prod') return { v:'tab' };
   if (dt === 'op' && dm) return { v:'op', maq:dm };
   if (ar === 'mtto') return { v:'tab' };
@@ -519,6 +521,7 @@ function devScreen(){
 }
 function puedeVer(v){
   if (v === 'home') return true;
+  if (devArea() === 'ag' && !(S.sesion && esAdm(S.sesion))) return v === 'ag';
   if (v === 'tab' && (devArea() === 'prod' || devArea() === 'ag') && !(S.sesion && (esAdm(S.sesion) || depDe(S.sesion) === 'mtto'))) return false;
   if (v === 'tab' && S.sesion && sinTabMtto(S.sesion)) return false;
   // la pantalla fija del equipo siempre se puede ver (ej. el técnico entra en la tableta de una máquina)
@@ -1227,7 +1230,7 @@ function renderCfg(){
   const rp = rolesPermitidos(); const cur = $('perRol').value;
   $('perRol').innerHTML = rp.map(r => '<option value="'+r+'">'+ROLES[r]+'</option>').join(''); if (rp.includes(cur)) $('perRol').value = cur;
   const ord = r => Object.keys(ROLES).indexOf(r);
-  if (!$('perVis').childElementCount) $('perVis').innerHTML = ['tab','op','graf','kb','ag','agmat'].map(v => '<label style="display:flex;gap:6px;align-items:center;font-size:14px"><input type="checkbox" name="vis" value="'+v+'" style="width:auto">'+VIS[v]+'</label>').join('');
+  if (!$('perVis').childElementCount) $('perVis').innerHTML = ['tab','op','graf','kb','ag','agmt','agmat'].map(v => '<label style="display:flex;gap:6px;align-items:center;font-size:14px"><input type="checkbox" name="vis" value="'+v+'" style="width:auto">'+VIS[v]+'</label>').join('');
   marcarDep();
   $('perList').innerHTML = '<table class="tbl"><tr><th>Nómina</th><th>Nombre</th><th>Departamento</th><th>Rol</th><th>Pantallas que puede ver</th><th>Máquina</th><th>Activo</th><th></th></tr>' + Object.entries(S.per).sort((a,b) => ord(a[1].r)-ord(b[1].r) || a[1].n.localeCompare(b[1].n,'es')).map(([k,p]) => {
     const editable = k !== S.admin.nomina && (S.admin.r === 'general' || !['general','admin'].includes(p.r));
@@ -1235,7 +1238,7 @@ function renderCfg(){
     return '<tr><td class="mono">'+esc(k)+'</td><td>'+esc(p.n)+'</td><td><span class="tag '+(depDe(p)==='prod'?'warn':'ok')+'">'+DEPS[depDe(p)]+'</span></td><td>'+(editable ? '<select data-prol="'+esc(k)+'">'+rp.map(r => '<option value="'+r+'"'+(r===p.r?' selected':'')+'>'+ROLES[r]+'</option>').join('')+'</select>' : '<span class="tag ok">'+ROLES[p.r]+'</span>')+'</td><td style="font-size:12.5px">'+esc(vs)+'</td><td>'+esc(p.maq ? maqName(p.maq) : '')+'</td><td>'+(p.a===false?'No':'Sí')+'</td><td style="white-space:nowrap">'+(editable ? '<button type="button" data-pedit="'+esc(k)+'">Editar</button> <button type="button" data-pact="'+esc(k)+'">'+(p.a===false?'Activar':'Desactivar')+'</button> <button type="button" data-preset="'+esc(k)+'">🔁 Contraseña</button>' : '')+'</td></tr>';
   }).join('') + '</table>';
   $('maqList').innerHTML = '<table class="tbl"><tr><th>Código</th><th>Máquina</th><th>Categoría</th><th>Área</th><th>Estado actual</th><th></th></tr>' + Object.keys(S.maq).sort((a,b)=>maqName(a).localeCompare(maqName(b),'es')).map(k => { const m = S.maq[k], st = (S.est[k]||{}).st || 'ok'; return '<tr><td class="mono">'+esc(m.cod||k)+'</td><td>'+esc(m.n)+'</td><td>'+esc(m.cat||'')+'</td><td>'+esc(m.area||'')+'</td><td><span class="tag '+(st==='ok'?'ok':st==='falla'?'bad':'warn')+'">'+({ok:'En función',falla:'Falla',sinprod:'Sin producción'}[st])+'</span></td><td><button type="button" data-mact="'+esc(k)+'">'+(m.a===false?'Activar':'Ocultar')+'</button></td></tr>'; }).join('') + '</table>';
-  if (document.activeElement !== $('ntfyTema')) $('ntfyTema').value = S.ntfy || ''; $('panInact').value = String(S.cfg.inact); $('panMtto').value = S.cfg.mtto; $('panProc').value = S.cfg.procesos; $('panOper').value = S.cfg.operador;
+  if (document.activeElement !== $('ntfyTema')) $('ntfyTema').value = S.ntfy || ''; $('panInact').value = String(S.cfg.inact); $('panMtto').value = S.cfg.mtto; $('panProc').value = S.cfg.procesos; $('panOper').value = S.cfg.operador; $('panAG').value = S.cfg.oficina || 'ag';
   $('devArea').value = devArea() || 'mtto'; $('devTipo').value = LS.get('tc_dev_tipo') || ''; $('devMaq').value = LS.get('tc_dev_maq') || lista()[0] || ''; $('devKiosk').value = LS.get('tc_kiosk') || '0';
 }
 function llenarMaquinas(){
@@ -1313,7 +1316,7 @@ $('btnNtfyNuevo').addEventListener('click', () => { const a = new Uint8Array(8);
 $('btnNtfyProbar').addEventListener('click', () => { if (!S.ntfy) { toast('Primero guarda un tema.'); return; } avisarCelulares('PRUEBA', 'Aviso de prueba de Control de Paros (no es falla real)', true); toast('Aviso de prueba enviado a los celulares.'); });
 $('fPan').addEventListener('submit', async e => {
   e.preventDefault(); if (!S.admin) return;
-  await upd('config/pantallas', { inact:Number($('panInact').value), mtto:$('panMtto').value, procesos:$('panProc').value, operador:$('panOper').value }, 'Pantallas guardadas para todos los equipos');
+  await upd('config/pantallas', { inact:Number($('panInact').value), mtto:$('panMtto').value, procesos:$('panProc').value, operador:$('panOper').value, oficina:$('panAG').value }, 'Pantallas guardadas para todos los equipos');
 });
 $('btnDev').addEventListener('click', async () => {
   const ar = $('devArea').value; LS.set('tc_dev_area', ar);

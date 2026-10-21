@@ -53,7 +53,8 @@ function agConectar(db){
 }
 
 // ---------- alarma ROSA (solo a mantenimiento): sin tiempo de llegada; el técnico pone tiempo estimado
-const alertaAG = () => S.view !== 'op' && (S.sesion ? (esMttoAdm(S.sesion) && (S.view === 'tab' || S.view === 'ag' || devArea() === 'mtto')) : devArea() === 'mtto');
+// la alarma rosa sale a mantenimiento; nunca en equipos de áreas generales ni en la pantalla de máquina
+const alertaAG = () => S.view !== 'op' && devArea() !== 'ag' && (S.sesion ? ((esMttoAdm(S.sesion) || vistasDe(S.sesion).includes('agmt')) && (S.view === 'tab' || S.view === 'ag' || devArea() === 'mtto')) : devArea() === 'mtto');
 const agNotif = new Set();
 function renderAlertaAG(){
   const esp = agEsp();
@@ -89,9 +90,13 @@ document.addEventListener('click', e => {
 // quién ve qué: usuario → su tablero; mantenimiento → tablero de mantenimiento, pendientes, historial y gráficas;
 // administradores → todo; "lista de materiales" también a quien tenga ese permiso (ej. compras / almacén)
 function agPestanas(){
-  const p = S.sesion, adm = !!p && esAdm(p), mt = p ? esMttoAdm(p) : devArea() === 'mtto';
-  const mat = mt || (!!p && vistasDe(p).includes('agmat'));
-  return { usr: adm || !mt, tab: mt, pend: mat, hist: mt, graf: mt, eq: adm };
+  const p = S.sesion, adm = !!p && esAdm(p);
+  // equipo marcado como ÁREAS GENERALES: solo el tablero de usuario (el administrador general ve todo)
+  if (devArea() === 'ag' && !adm) return { usr:true, tab:false, pend:false, hist:false, graf:false, eq:false };
+  const v = p ? vistasDe(p) : [];
+  const mt = p ? (esMttoAdm(p) || v.includes('agmt')) : devArea() === 'mtto';
+  const mat = mt || v.includes('agmat');
+  return { usr: adm || !mt || v.includes('ag'), tab: mt, pend: mat, hist: mt, graf: mt, eq: adm };
 }
 function renderAG(){
   const ok = agPestanas();
