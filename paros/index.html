@@ -94,6 +94,8 @@ label.f{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--mu
 @keyframes latido{0%,100%{box-shadow:0 4px 16px rgba(198,40,40,.35)}50%{box-shadow:0 4px 26px rgba(198,40,40,.85)}}
 .avisoPeq{background:var(--bad);color:#fff;border-radius:12px;padding:10px 16px;font-weight:600;max-width:calc(100% - 32px);display:flex;gap:12px;align-items:center;flex-wrap:wrap;cursor:pointer;animation:latido 1.4s infinite;font-size:15px}
 .avisoPeq.prueba{background:#5B2C83;animation:none}
+.avisoPeq.sinprod{background:var(--warn);color:#1a1400;animation:none;cursor:default}
+.avisoPeq.sinprod button{background:#fff;color:#1a1400;border-color:#1a1400;padding:5px 12px}
 .avisoPeq .t{font-family:'IBM Plex Mono',monospace;font-size:18px;font-weight:700}
 .avisoPeq small{opacity:.9;font-weight:500}
 .alerta .a1{font-size:clamp(30px,6vw,84px);font-weight:700;letter-spacing:.04em;line-height:1}
@@ -197,6 +199,7 @@ body.kiosk .top nav.nav, body.kiosk .hide-kiosk{display:none}
 
 <div class="wrap">
   <div class="avisoPeq" id="avisoPeq" hidden></div>
+  <div class="avisoPeq sinprod" id="avisoSinProd" hidden></div>
   <div id="iosTip" class="banner" hidden style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between"><span>📲 <b>Para usarla como app en iPhone:</b> toca <b>Compartir</b> (cuadro con flecha ↑) → <b>Agregar a pantalla de inicio</b> y ábrela desde el ícono. Para que la alarma suene con el iPhone bloqueado, instala la app <b>ntfy</b> (guía de instalación).</span><button type="button" id="iosTipX">Entendido</button></div>
   <div id="dbBanner" class="banner" hidden>La base de datos no está disponible en esta vista. Abre la página desde claude.ai con tu cuenta de Línea Italia.</div>
 
@@ -598,7 +601,7 @@ async function accionEstado(k, st){
   if (e0.st === 'falla') { toast('Primero hay que atender y liberar la falla.'); return; }
   if (e0.st === st) return;
   const p = await pedirNomina((st==='ok' ? 'Poner EN FUNCIÓN' : 'Poner SIN PRODUCCIÓN') + ' · ' + maqName(k), 'estado'); if (!p) return;
-  try { await cambiarEstado(k, st, '', p); cerrarModal(); toast(maqName(k) + (st==='ok' ? ' en función' : ' sin producción')); }
+  try { await cambiarEstado(k, st, '', p); if (st === 'sinprod') avisarCelulares(maqName(k), 'La máquina quedó sin producción (no es falla).', false, true); cerrarModal(); toast(maqName(k) + (st==='ok' ? ' en función' : ' sin producción')); }
   catch(err) { toast('No se pudo cambiar ('+(err.code||'error')+').'); }
 }
 async function accionSitio(ev){
@@ -658,9 +661,9 @@ async function accionLiberar(ev){
 }
 // ---------- aviso a celulares (iPhone y Android) con la app gratuita ntfy · el tema se guarda en config/avisos
 // el aviso solo lleva la máquina y la falla, sin nombres ni nóminas
-function avisarCelulares(maq, texto, prueba){
+function avisarCelulares(maq, texto, prueba, sp){
   if (!S.ntfy) return;
-  fetch('https://ntfy.sh/', { method:'POST', body: JSON.stringify({ topic:S.ntfy, title:(prueba ? '🧪 PRUEBA · ' : '⚠ FALLA · ') + maq, message: String(texto || '').slice(0, 300) || 'Falla en máquina', priority:5, tags:['rotating_light'], click: location.origin + location.pathname }) }).catch(() => {});
+  fetch('https://ntfy.sh/', { method:'POST', body: JSON.stringify({ topic:S.ntfy, title:(sp ? '⏸ SIN PRODUCCIÓN · ' : prueba ? '🧪 PRUEBA · ' : '⚠ FALLA · ') + maq, message: String(texto || '').slice(0, 300) || 'Falla en máquina', priority: sp ? 2 : 5, tags:[sp ? 'pause_button' : 'rotating_light'], click: location.origin + location.pathname }) }).catch(() => {});
 }
 // ---------- pruebas de alarma (solo administradores)
 async function accionPrueba(k){
@@ -752,6 +755,7 @@ function render(){
   if (S.view === 'rep') renderRep();
   if (S.view === 'cfg') renderCfg();
   renderAlerta();
+  avisoSinProd();
 }
 function tpmBadge(k){ const n = S.tpm.filter(t => t.maq === k && t.estado !== 'atendido').length; return n ? '<span class="tpmb">📋 ' + n + ' TPM</span>' : ''; }
 function renderTablero(){
@@ -789,6 +793,22 @@ function renderTablero(){
 const alertaAqui = () => !(S.sesion && sinTabMtto(S.sesion)) && (S.view === 'tab' || devArea() === 'mtto');
 const TITULO = document.title;
 // mensaje pequeño: cuando hay fallas esperando técnico y en esta pantalla no sale la alarma grande
+// "Sin producción": aviso pequeño SIN sonido para mantenimiento (últimos 30 min, hasta que alguien toque "Enterado")
+const sinProdVisto = new Set(), sinProdNotif = new Set();
+function avisoSinProd(){
+  const el = $('avisoSinProd'); if (!el) return;
+  const lim = Date.now() - 30 * 60000;
+  const ks = lista().filter(k => { const e = S.est[k]; return e && e.st === 'sinprod' && new Date(e.desde) > lim && !sinProdVisto.has(k + '|' + e.desde); });
+  if (!ks.length || !alertaAqui()) { el.hidden = true; return; }
+  el.innerHTML = '<span>⏸ <b>Sin producción</b>: ' + ks.map(k => '<b>' + esc(maqName(k)) + '</b> <span class="mono" data-since="' + esc(S.est[k].desde) + '">' + hms(ms(S.est[k].desde)) + '</span>').join(' · ') + '</span><small>aviso sin sonido · la máquina no tiene falla</small><button type="button" data-spok>Enterado</button>';
+  el.hidden = false;
+  // aviso del sistema silencioso en equipos de mantenimiento (si están en otra página)
+  if (devArea() === 'mtto' && 'Notification' in window && Notification.permission === 'granted') ks.forEach(k => {
+    const c = k + '|' + S.est[k].desde; if (sinProdNotif.has(c)) return; sinProdNotif.add(c);
+    try { const op = { body: 'La máquina quedó sin producción (no es falla).', tag: 'sinprod-' + k, silent: true, icon: 'icono-192.png' }; if (swReg && swReg.showNotification) swReg.showNotification('⏸ SIN PRODUCCIÓN · ' + maqName(k), op); else new Notification('⏸ SIN PRODUCCIÓN · ' + maqName(k), op); } catch (e) {}
+  });
+}
+document.addEventListener('click', e => { if (e.target.closest('[data-spok]')) { lista().forEach(k => { const x = S.est[k]; if (x && x.st === 'sinprod') sinProdVisto.add(k + '|' + x.desde); }); avisoSinProd(); } });
 function avisoPeq(esp, grande){
   const el = $('avisoPeq'); if (!el) return;
   if (!esp.length || grande) { el.hidden = true; return; }
