@@ -1,0 +1,304 @@
+/* Áreas generales · PRUEBA "Paros con áreas generales" · Mantenimiento Línea Italia
+ * Solicitudes que NO son paro de máquina: mejoras, modificaciones, acondicionamientos y reparaciones
+ * de equipos de áreas generales, oficinas y edificio. Datos en apps/parosag/ag (solicitudes) y apps/parosag/config/ag (equipos).
+ * Flujo: espera (alarma rosa a mantenimiento) → proceso (técnico pone tiempo estimado) → [pendiente con fecha compromiso
+ * y materiales] → terminada (solución) → cerrada (encuesta de quien solicitó: duración, área limpia, calidad).
+ */
+const AG_CATS_DEF = { MTC:'Maquinaria tipo C', AG:'Áreas generales', AA:'Aires acondicionados', IL:'Iluminación', EBT:'Eléctrico baja tensión', EMT:'Eléctrico media tensión', EM:'Equipo móvil', EA:'Equipo auxiliar' };
+// equipos iniciales (nombre corto · categoría · ubicación). Se editan en la pestaña "⚙ Equipos".
+const AG_EQ_DEF = (() => {
+  const L = [
+    ['Taladros de banco','MTC','Planta'], ['Taladro dúplex','MTC','Planta'], ['Sierra lenta','MTC','Planta'], ['Sierra Master 1','MTC','Planta'], ['Sierra Master 2','MTC','Planta'],
+    ['Guillotina 1','MTC','Planta'], ['Roladora','MTC','Planta'], ['Punteadora','MTC','Planta'], ['Máquinas de soldar','MTC','Planta'], ['Envolvedora 1','MTC','Planta'], ['Envolvedora 2','MTC','Planta'],
+    ['Oficinas administrativas','AG','Oficina'], ['Baños oficinas','AG','Oficina'], ['Baños planta','AG','Planta'], ['Comedor','AG','Planta'], ['Docks','AG','Planta'],
+    ['Instalación hidráulica','AG','Planta'], ['Puertas y portones','AG','Planta'], ['Techos y láminas','AG','Planta'], ['Pisos y pintura','AG','Planta'], ['Estacionamiento','AG','Exterior'],
+    ['Aires acondicionados oficinas','AA','Oficina'], ['Refrigeración','AA','Planta'],
+    ['Iluminación planta','IL','Planta'], ['Iluminación oficinas','IL','Oficina'], ['Lámparas de emergencia','IL','Planta'], ['Fotocelda / control inteligente','IL','Planta'], ['Luz de docks','IL','Planta'],
+    ['Tableros 220 V','EBT','Planta'], ['Tableros 440 V','EBT','Planta'], ['Contactos y clavijas','EBT','Planta'], ['Banco de capacitores 220 V','EBT','Planta'],
+    ['Subestación','EMT','Exterior'], ['Banco de capacitores 440 V','EMT','Planta'],
+    ['Montacargas','EM','Planta'], ['Polipasto','EM','Planta'],
+    ['Compresor 100 HP','EA','Planta'], ['Compresor 50 HP','EA','Planta'], ['Colector de polvo','EA','Planta'], ['Sistema de gas','EA','Planta'], ['Banda archiveros','EA','Planta'], ['Banda muebles','EA','Planta']
+  ];
+  const o = {}; L.forEach(([n, cat, ubic], i) => { o['e' + String(i + 1).padStart(3, '0')] = { n, cat, ubic, a:true }; }); return o;
+})();
+const AG_TIPOS = ['Reparación', 'Mejora', 'Modificación', 'Acondicionamiento', 'Instalación nueva', 'Otro'];
+const AG_EST = { espera:'Esperando técnico', proceso:'En proceso', pendiente:'Pendiente', terminada:'Terminada · por calificar', cerrada:'Cerrada' };
+const AG_MOTIVOS = ['Falta refacción / material', 'Esperando compra', 'Requiere contratista', 'Requiere paro del área', 'Requiere autorización', 'Otro'];
+
+S.agReq = S.agReq || []; S.agCfg = S.agCfg || null; S.agt = S.agt || 'tab'; S.agQ = '';
+const agCats = () => Object.assign({}, AG_CATS_DEF, (S.agCfg && S.agCfg.cats) || {});
+const agEq = () => (S.agCfg && S.agCfg.eq && Object.keys(S.agCfg.eq).length) ? S.agCfg.eq : AG_EQ_DEF;
+const agById = id => S.agReq.find(r => r.id === id);
+const esMttoAdm = p => !!p && (esAdm(p) || p.r === 'mtto' || depDe(p) === 'mtto');
+const agEsp = () => S.agReq.filter(r => r.estado === 'espera').sort((a, b) => (a.t0 || '').localeCompare(b.t0 || ''));
+const agMin = r => r.tAcept && r.tFin ? ms(r.tAcept, r.tFin) : null;   // tiempo real de reparación
+const agFmtEst = m => m == null ? '—' : m >= 60 ? (Math.round(m / 6) / 10) + ' h' : m + ' min';
+const agEstrellas = n => n ? '★'.repeat(n) + '☆'.repeat(5 - n) : '—';
+
+// ---------- conexión (la llama la página al conectarse a la base de datos)
+function agConectar(db){
+  db.collection('ag').orderBy('t0', 'desc').limit(1000).onSnapshot(s => { S.agReq = s.docs.map(d => Object.assign({ id:d.id }, d.data())); render(); }, () => {});
+  db.doc('config/ag').onSnapshot(s => { S.agCfg = s.exists ? s.data() : null; if (S.view === 'ag') renderAG(); }, () => {});
+}
+
+// ---------- alarma ROSA (solo a mantenimiento): sin tiempo de llegada; el técnico pone tiempo estimado
+const alertaAG = () => S.view !== 'op' && (S.sesion ? (esMttoAdm(S.sesion) && (S.view === 'tab' || S.view === 'ag' || devArea() === 'mtto')) : devArea() === 'mtto');
+const agNotif = new Set();
+function renderAlertaAG(){
+  const esp = agEsp();
+  if (!esp.length || !alertaAG() || Date.now() <= S.hideAlert) return false;
+  const r = esp[0], sil = esp.every(x => silenciados.has(claveEv(x)));
+  const el = $('alerta'); el.classList.remove('prueba'); el.classList.add('ag'); el.hidden = false;
+  if (devArea() === 'mtto') document.title = (sil ? '🔕 Alarma silenciada · ' : '⚠ FALLA · ') + '🏢 ÁREAS GENERALES · ' + r.eqN;
+  el.innerHTML = '<div class="a1">🏢 ÁREAS GENERALES</div><div class="a2">' + esc(r.eqN) + '</div>' +
+    '<div class="a3">' + esc(r.tipo || '') + ' · ' + esc(agCats()[r.cat] || r.cat || '') + ' · ' + esc(r.ubic || '') + (r.prio === 'alta' ? ' · <b>PRIORIDAD ALTA</b>' : '') + '</div>' +
+    '<div class="a3"><b>' + esc(r.desc || '') + '</b><br>Solicita: ' + esc(r.sol?.n || '') + ' · ' + fdt(r.t0) + '</div>' +
+    (esp.length > 1 ? '<div class="a3">+ ' + (esp.length - 1) + ' solicitud(es) más esperando técnico</div>' : '') +
+    '<div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">' +
+      '<button type="button" data-agacc="atender" data-id="' + r.id + '" style="background:#fff;color:#AD1457;border-color:#fff;font-size:20px;padding:14px 26px">🧰 Atender · poner tiempo estimado</button>' +
+      (sil ? '<span style="font-size:18px;font-weight:700;align-self:center">🔕 Silenciada</span>' : '<button type="button" id="btnSilenciarAG" style="background:#fff;color:#AD1457;border-color:#fff">🔕 Silenciar</button>') +
+      '<button type="button" id="btnOcultar" style="background:transparent;color:#fff;border-color:#fff">Ver tablero 1 min</button></div>';
+  beep(!sil);
+  // aviso del sistema en equipos de mantenimiento
+  if (devArea() === 'mtto' && 'Notification' in window && Notification.permission === 'granted') esp.forEach(x => {
+    const c = claveEv(x); if (agNotif.has(c)) return; agNotif.add(c);
+    try { mostrarAviso('⚠ FALLA · 🏢 ÁREAS GENERALES · ' + x.eqN, (x.tipo || '') + ': ' + (x.desc || ''), 'ag-' + x.id); } catch (e) {}
+  });
+  return true;
+}
+document.addEventListener('click', e => { if (e.target.id === 'btnSilenciarAG') { agEsp().forEach(x => silenciados.add(claveEv(x))); beep(false); renderAlerta(); } });
+setInterval(() => { if ($('alerta').hidden && agEsp().length && alertaAG() && Date.now() > S.hideAlert) renderAlerta(); }, 1000);
+
+// ---------- pestañas del módulo
+document.addEventListener('click', e => { const b = e.target.closest('[data-agt]'); if (b) { S.agt = b.dataset.agt; renderAG(); } });
+function renderAG(){
+  document.querySelectorAll('#agTabs button').forEach(b => { b.setAttribute('aria-selected', b.dataset.agt === S.agt); b.hidden = b.dataset.agt === 'eq' && !(S.sesion && esAdm(S.sesion)); });
+  if (S.agt === 'eq' && !(S.sesion && esAdm(S.sesion))) S.agt = 'tab';
+  ({ tab:agTablero, nueva:agNueva, pend:agPendientes, hist:agHistorial, graf:agGraficas, eq:agEquipos })[S.agt]();
+}
+const agTarjeta = r => {
+  const col = { espera:'#D81B60', proceso:'#1565C0', pendiente:'#C99700', terminada:'#2E7D32', cerrada:'#607D8B' }[r.estado];
+  return '<button type="button" class="kbi" data-agver="' + r.id + '" style="border-left-color:' + col + ';text-align:left;cursor:pointer;font-weight:400;width:100%">' +
+    '<div class="h"><span><b style="color:var(--fg)">' + esc(r.eqN) + '</b> · ' + esc(r.ubic || '') + '</span><span class="tag">' + esc(r.tipo || '') + '</span></div>' +
+    '<div>' + esc(r.desc || '') + '</div>' +
+    '<div class="foot">' + esc(r.sol?.n || '') + ' · ' + fdt(r.t0) + (r.tec ? ' · 🧰 ' + esc(r.tec.n) : '') + (r.est ? ' · estimado ' + agFmtEst(r.est) : '') +
+    (r.estado === 'espera' ? ' · <b data-since="' + esc(r.t0) + '">' + hms(ms(r.t0)) + '</b>' : '') +
+    (r.estado === 'pendiente' && r.pend ? ' · compromiso <b>' + esc(r.pend.fecha || 'sin fecha') + '</b>' : '') + (r.prio === 'alta' ? ' · <span class="tag bad">prioridad alta</span>' : '') + '</div></button>';
+};
+function agTablero(){
+  const R = S.agReq, h0 = new Date(); h0.setHours(0, 0, 0, 0);
+  const n = k => R.filter(r => r.estado === k).length;
+  const col = (k, t) => { const L = R.filter(r => r.estado === k); return '<div class="box" style="min-width:0"><h3>' + t + ' · ' + L.length + '</h3>' + (L.length ? '<div class="kb">' + L.slice(0, 40).map(agTarjeta).join('') + '</div>' : '<p class="foot">Sin solicitudes.</p>') + '</div>'; };
+  $('agBody').innerHTML =
+    '<div class="kpis"><div class="kpi bad"><b>' + n('espera') + '</b><span>esperando técnico</span></div><div class="kpi"><b>' + n('proceso') + '</b><span>en proceso</span></div><div class="kpi warn"><b>' + n('pendiente') + '</b><span>pendientes</span></div><div class="kpi ok"><b>' + n('terminada') + '</b><span>por calificar</span></div><div class="kpi"><b>' + R.filter(r => new Date(r.t0) >= h0).length + '</b><span>solicitudes hoy</span></div></div>' +
+    '<div style="display:flex;gap:10px;flex-wrap:wrap"><button class="primary" type="button" data-agt="nueva" style="background:#AD1457;border-color:#AD1457">➕ Nueva solicitud</button><p class="foot" style="align-self:center">Para mejoras, modificaciones o reparaciones que NO son paro de máquina. Los paros de máquina van en "🛠 Paros de máquina".</p></div>' +
+    '<div class="charts">' + col('espera', '🔴 Esperando técnico') + col('proceso', '🧰 En proceso') + col('pendiente', '⏳ Pendientes') + col('terminada', '✅ Terminadas · por calificar') + '</div>';
+}
+
+// ---------- nueva solicitud
+function agNueva(){
+  const C = agCats(), E = agEq();
+  $('agBody').innerHTML = '<form class="box" id="fAgNueva"><h3>➕ Nueva solicitud a mantenimiento · áreas generales</h3>' +
+    '<div class="g3"><label class="f">Categoría *<select id="agCat">' + Object.keys(C).map(k => '<option value="' + k + '">' + esc(C[k]) + '</option>').join('') + '</select></label>' +
+    '<label class="f">Equipo / área *<select id="agEq"></select></label>' +
+    '<label class="f">Ubicación<input id="agUbic" placeholder="Planta / Oficina / …"></label>' +
+    '<label class="f">Tipo de trabajo *<select id="agTipo">' + AG_TIPOS.map(t => '<option>' + t + '</option>').join('') + '</select></label>' +
+    '<label class="f">Prioridad<select id="agPrio"><option value="media">Media · esta semana</option><option value="alta">Alta · hoy</option><option value="baja">Baja · cuando se pueda</option></select></label>' +
+    '<label class="f" id="agOtroL" hidden>Nombre del equipo o área<input id="agOtro" placeholder="ej. bodega de cartón"></label></div>' +
+    '<label class="f">¿Qué se necesita? *<textarea id="agDesc" required placeholder="ej. cambiar 4 lámparas fundidas en la oficina de compras; instalar contacto doble junto a la impresora; reforzar la base del polipasto"></textarea></label>' +
+    '<p class="msg" id="agMsg"></p><button class="primary" type="submit" style="padding:14px;font-size:17px;background:#AD1457;border-color:#AD1457">🏢 Enviar solicitud a mantenimiento</button></form>';
+  const llenar = () => {
+    const c = $('agCat').value, L = Object.entries(E).filter(([k, v]) => v.cat === c && v.a !== false).sort((a, b) => a[1].n.localeCompare(b[1].n, 'es'));
+    $('agEq').innerHTML = L.map(([k, v]) => '<option value="' + k + '">' + esc(v.n) + '</option>').join('') + '<option value="otro">Otro (escribir)</option>';
+    ubic();
+  };
+  const ubic = () => { const k = $('agEq').value; $('agOtroL').hidden = k !== 'otro'; $('agUbic').value = k !== 'otro' && E[k] ? (E[k].ubic || '') : ''; };
+  $('agCat').addEventListener('change', llenar); $('agEq').addEventListener('change', ubic); llenar();
+  $('fAgNueva').addEventListener('submit', async e => {
+    e.preventDefault();
+    if (!S.sesion) { toast('🔒 Primero entra con tu nómina (botón 👤 Entrar).'); entrar(); return; }
+    const k = $('agEq').value, desc = $('agDesc').value.trim(), m = $('agMsg');
+    const eqN = k === 'otro' ? $('agOtro').value.trim() : (E[k] && E[k].n);
+    if (!eqN || !desc) { m.className = 'msg err'; m.textContent = 'Falta el equipo o la descripción.'; return; }
+    const p = await pedirNomina('Solicitud · ' + eqN, 'agsol', 'Nómina de quien solicita'); if (!p) return; cerrarModal();
+    try {
+      await db.collection('ag').add({ cat:$('agCat').value, eq:k, eqN, ubic:$('agUbic').value.trim(), tipo:$('agTipo').value, prio:$('agPrio').value, desc, t0:nowIso(), estado:'espera', sol:{ n:p.n, nom:p.nomina }, log:[{ t:nowIso(), por:p.n, txt:'Solicitud creada' }] });
+      if (typeof avisarCelulares === 'function' && S.ntfy) fetch('https://ntfy.sh/', { method:'POST', body: JSON.stringify({ topic:S.ntfy, title:'🏢 ÁREAS GENERALES · ' + eqN, message: desc.slice(0, 300), priority:4, tags:['office'] }) }).catch(() => {});
+      toast('Solicitud enviada a mantenimiento.'); S.agt = 'tab'; renderAG();
+    } catch (er) { m.className = 'msg err'; m.textContent = 'No se pudo enviar (' + (er.code || er.message) + ').'; }
+  });
+}
+
+// ---------- detalle y acciones
+document.addEventListener('click', e => {
+  const v = e.target.closest('[data-agver]'); if (v) { const r = agById(v.dataset.agver); if (r) agDetalle(r); return; }
+  const a = e.target.closest('[data-agacc]'); if (!a) return;
+  if (!S.sesion) { toast('🔒 Primero entra con tu nómina (botón 👤 Entrar).'); entrar(); return; }
+  const r = agById(a.dataset.id); if (!r && a.dataset.agacc !== 'mat') return;
+  ({ atender:agAtender, pendiente:agPendiente, reanudar:agReanudar, terminar:agTerminar, calificar:agCalificar, mat:() => agMaterial(a.dataset.id, +a.dataset.i, a.dataset.est) })[a.dataset.agacc]?.(r);
+});
+const agLog = (r, por, txt) => [...(r.log || []), { t:nowIso(), por, txt }];
+function agDetalle(r){
+  const tecOk = S.sesion && esMttoAdm(S.sesion), b = [];
+  if (r.estado === 'espera') b.push('<button class="primary" data-agacc="atender" data-id="' + r.id + '">🧰 Atender · tiempo estimado</button>');
+  if (r.estado === 'proceso') { b.push('<button class="ok" data-agacc="terminar" data-id="' + r.id + '">✅ Terminada</button>'); b.push('<button class="warn" data-agacc="pendiente" data-id="' + r.id + '">⏳ Dejar pendiente</button>'); }
+  if (r.estado === 'pendiente') { b.push('<button class="primary" data-agacc="reanudar" data-id="' + r.id + '">▶ Reanudar</button>'); b.push('<button class="warn" data-agacc="pendiente" data-id="' + r.id + '">✏ Actualizar pendiente / materiales</button>'); b.push('<button class="ok" data-agacc="terminar" data-id="' + r.id + '">✅ Terminada</button>'); }
+  if (r.estado === 'terminada') b.push('<button class="ok" data-agacc="calificar" data-id="' + r.id + '">⭐ Calificar y cerrar (quien solicitó)</button>');
+  const mats = (r.mats || []);
+  abrirModal('<div class="mhead" style="background:#AD1457;color:#fff"><div><h2>🏢 ' + esc(r.eqN) + '</h2><p style="color:#fff;opacity:.85">' + esc(AG_EST[r.estado] || r.estado) + ' · ' + esc(r.tipo || '') + ' · ' + esc(agCats()[r.cat] || '') + ' · ' + esc(r.ubic || '') + '</p></div><button type="button" data-close>✕</button></div>' +
+    '<div class="box"><p style="margin:0"><b>' + esc(r.desc || '') + '</b></p><p class="foot">Solicitó: ' + esc(r.sol?.n || '') + ' · ' + fdt(r.t0) + (r.prio ? ' · prioridad ' + esc(r.prio) : '') + '</p>' +
+    '<div class="times"><div><b>' + agFmtEst(r.est) + '</b><span>tiempo estimado</span></div><div><b>' + (agMin(r) != null ? dur(agMin(r)) : r.tAcept ? '<span data-since="' + esc(r.tAcept) + '">' + hms(ms(r.tAcept)) + '</span>' : '—') + '</b><span>tiempo real</span></div><div><b>' + esc(r.tec?.n?.split(' ').slice(0, 2).join(' ') || '—') + '</b><span>técnico</span></div><div><b>' + (r.enc ? agEstrellas(r.enc.cal) : '—') + '</b><span>calidad</span></div></div>' +
+    (r.pend && r.estado === 'pendiente' ? '<div class="banner"><b>Pendiente:</b> ' + esc(r.pend.motivo || '') + ' · fecha compromiso <b>' + esc(r.pend.fecha || 'sin fecha') + '</b><br>' + esc(r.pend.coment || '') + '</div>' : '') +
+    (r.solucion ? '<p style="margin:0"><b>Solución:</b> ' + esc(r.solucion) + (r.usados ? '<br><b>Materiales usados:</b> ' + esc(r.usados) : '') + '</p>' : '') +
+    (r.enc ? '<p style="margin:0"><b>Encuesta:</b> duración ' + esc(r.enc.dur || '') + ' · área limpia: ' + (r.enc.limpia ? 'sí' : 'no') + ' · calidad ' + agEstrellas(r.enc.cal) + (r.enc.com ? ' · "' + esc(r.enc.com) + '"' : '') + '</p>' : '') +
+    (mats.length ? '<div><b>Materiales solicitados</b><table class="tbl"><tr><th>Cant.</th><th>Material</th><th>Estado</th></tr>' + mats.map(x => '<tr><td>' + esc(x.c || '') + '</td><td>' + esc(x.d) + '</td><td>' + esc(x.est) + '</td></tr>').join('') + '</table></div>' : '') +
+    (b.length ? '<div style="display:flex;flex-wrap:wrap;gap:8px">' + b.join('') + '</div>' + (!tecOk && r.estado !== 'terminada' ? '<p class="foot">Las acciones del técnico piden nómina de mantenimiento.</p>' : '') : '') +
+    '<details><summary class="foot">Historial de la solicitud</summary>' + (r.log || []).map(l => '<div class="foot">' + fdt(l.t) + ' · ' + esc(l.por || '') + ' · ' + esc(l.txt) + '</div>').join('') + '</details></div>');
+}
+async function agAtender(r){
+  const p = await pedirNomina('Atender · ' + r.eqN, 'agtec', 'Nómina del técnico'); if (!p) return;
+  abrirModal('<div class="mhead" style="background:#AD1457;color:#fff"><div><h2>🧰 Atender · ' + esc(r.eqN) + '</h2><p style="color:#fff;opacity:.85">' + esc(p.n) + ' · ' + esc(r.desc || '') + '</p></div><button type="button" data-close>✕</button></div>' +
+    '<form id="fAgAt" class="box"><div class="g2"><label class="f">Tiempo estimado de reparación *<input id="agEstN" type="number" min="1" step="1" required placeholder="ej. 2"></label><label class="f">Unidad<select id="agEstU"><option value="60">horas</option><option value="1">minutos</option><option value="480">días (8 h)</option></select></label></div>' +
+    '<label class="f">Comentario (opcional)<input id="agAtCom" placeholder="ej. voy después de la ronda de preventivo"></label><p class="msg" id="agAtMsg"></p><button class="primary" type="submit">Confirmar · empiezo a atender</button></form>');
+  $('fAgAt').addEventListener('submit', async e => {
+    e.preventDefault(); const est = Math.round((+$('agEstN').value || 0) * (+$('agEstU').value)); if (!est) return;
+    try { await db.doc('ag/' + r.id).update({ estado:'proceso', tAcept:r.tAcept || nowIso(), tec:{ n:p.n, nom:p.nomina }, est, log:agLog(r, p.n, 'Atiende · estimado ' + agFmtEst(est) + ($('agAtCom').value.trim() ? ' · ' + $('agAtCom').value.trim() : '')) }); cerrarModal(); toast('Solicitud en proceso · estimado ' + agFmtEst(est) + '.'); }
+    catch (er) { $('agAtMsg').className = 'msg err'; $('agAtMsg').textContent = 'No se pudo guardar (' + (er.code || er.message) + ').'; }
+  });
+}
+async function agPendiente(r){
+  const p = await pedirNomina('Pendiente · ' + r.eqN, 'agtec', 'Nómina del técnico'); if (!p) return;
+  const pe = r.pend || {};
+  abrirModal('<div class="mhead" style="background:#C99700;color:#1a1400"><div><h2>⏳ Pendiente · ' + esc(r.eqN) + '</h2><p style="color:#1a1400;opacity:.8">' + esc(p.n) + ' · explica por qué no se termina y qué se necesita</p></div><button type="button" data-close>✕</button></div>' +
+    '<form id="fAgPe" class="box"><div class="g2"><label class="f">Motivo *<select id="agPeMot">' + AG_MOTIVOS.map(m => '<option' + (m === pe.motivo ? ' selected' : '') + '>' + m + '</option>').join('') + '</select></label>' +
+    '<label class="f">Fecha compromiso (llegada de refacciones / terminar)<input id="agPeFe" type="date" value="' + esc(pe.fecha || '') + '"></label></div>' +
+    '<label class="f">Comentarios del técnico: ¿por qué no se termina? *<textarea id="agPeCom" required>' + esc(pe.coment || '') + '</textarea></label>' +
+    '<label class="f">Materiales a solicitar para compra (uno por renglón: cantidad · descripción)<textarea id="agPeMat" placeholder="4 · lámpara LED 18 W&#10;1 · contacto doble 127 V"></textarea></label>' +
+    '<p class="msg" id="agPeMsg"></p><button class="warn" type="submit">Guardar pendiente</button></form>');
+  $('fAgPe').addEventListener('submit', async e => {
+    e.preventDefault(); const com = $('agPeCom').value.trim(); if (!com) return;
+    const nuevos = $('agPeMat').value.split('\n').map(x => x.trim()).filter(Boolean).map(x => { const m = x.match(/^(\d+(?:[.,]\d+)?)\s*[·xX\-*:]\s*(.+)$/); return { c: m ? m[1] : '', d: m ? m[2].trim() : x, est:'solicitado', t:nowIso(), por:p.n, eq:r.eqN }; });
+    try {
+      await db.doc('ag/' + r.id).update({ estado:'pendiente', tec: r.tec || { n:p.n, nom:p.nomina }, tAcept: r.tAcept || nowIso(), pend:{ motivo:$('agPeMot').value, fecha:$('agPeFe').value, coment:com, t:nowIso(), por:p.n }, mats:[...(r.mats || []), ...nuevos], log:agLog(r, p.n, 'Pendiente: ' + $('agPeMot').value + (nuevos.length ? ' · ' + nuevos.length + ' material(es) solicitados' : '')) });
+      cerrarModal(); toast('Pendiente guardado.');
+    } catch (er) { $('agPeMsg').className = 'msg err'; $('agPeMsg').textContent = 'No se pudo guardar (' + (er.code || er.message) + ').'; }
+  });
+}
+async function agReanudar(r){
+  const p = await pedirNomina('Reanudar · ' + r.eqN, 'agtec', 'Nómina del técnico'); if (!p) return;
+  try { await db.doc('ag/' + r.id).update({ estado:'proceso', log:agLog(r, p.n, 'Reanuda el trabajo') }); cerrarModal(); toast('Solicitud en proceso.'); } catch (er) { toast('No se pudo guardar (' + (er.code || er.message) + ').'); }
+}
+async function agTerminar(r){
+  const p = await pedirNomina('Terminada · ' + r.eqN, 'agtec', 'Nómina del técnico'); if (!p) return;
+  abrirModal('<div class="mhead" style="background:#2E7D32;color:#fff"><div><h2>✅ Terminada · ' + esc(r.eqN) + '</h2><p style="color:#fff;opacity:.85">' + esc(p.n) + ' · ' + esc(r.desc || '') + '</p></div><button type="button" data-close>✕</button></div>' +
+    '<form id="fAgTe" class="box"><label class="f">Solución / qué se hizo *<textarea id="agTeSol" required placeholder="ej. se cambiaron 4 lámparas por LED 18 W y se limpió el difusor"></textarea></label>' +
+    '<label class="f">Materiales usados<input id="agTeUs" placeholder="ej. 4 lámparas LED 18 W"></label><p class="msg" id="agTeMsg"></p><button class="ok" type="submit">Terminada · avisar a quien solicitó</button></form>');
+  $('fAgTe').addEventListener('submit', async e => {
+    e.preventDefault(); const sol = $('agTeSol').value.trim(); if (!sol) return;
+    try { await db.doc('ag/' + r.id).update({ estado:'terminada', tFin:nowIso(), tAcept: r.tAcept || r.t0, tec: r.tec || { n:p.n, nom:p.nomina }, solucion:sol, usados:$('agTeUs').value.trim(), tecFin:{ n:p.n, nom:p.nomina }, log:agLog(r, p.n, 'Terminada') }); cerrarModal(); toast('Terminada. Falta que quien solicitó califique.'); }
+    catch (er) { $('agTeMsg').className = 'msg err'; $('agTeMsg').textContent = 'No se pudo guardar (' + (er.code || er.message) + ').'; }
+  });
+}
+async function agCalificar(r){
+  const p = await pedirNomina('Calificar · ' + r.eqN, 'agcal', 'Nómina de quien solicitó'); if (!p) return;
+  let cal = 0;
+  abrirModal('<div class="mhead" style="background:#AD1457;color:#fff"><div><h2>⭐ Encuesta · ' + esc(r.eqN) + '</h2><p style="color:#fff;opacity:.85">' + esc(p.n) + ' · solución: ' + esc(r.solucion || '') + '</p></div><button type="button" data-close>✕</button></div>' +
+    '<form id="fAgCa" class="box"><label class="f">¿Cuánto tardó la reparación?<select id="agCaDur"><option>Menos de lo estimado</option><option selected>Lo estimado</option><option>Más de lo estimado</option><option>Mucho más de lo estimado</option></select></label>' +
+    '<label class="f">¿Se dejó limpia el área?<select id="agCaLim"><option value="1">Sí, quedó limpia</option><option value="0">No, quedó sucia</option></select></label>' +
+    '<div class="f"><span style="font-size:13px;color:var(--muted)">Calidad del trabajo *</span><div id="agCaEst" style="font-size:34px;cursor:pointer;color:#C99700">' + [1, 2, 3, 4, 5].map(i => '<span data-cal="' + i + '">☆</span>').join('') + '</div></div>' +
+    '<label class="f">Comentario (opcional)<input id="agCaCom"></label><p class="msg" id="agCaMsg"></p>' +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="ok" type="submit">Cerrar solicitud</button><button type="button" class="danger" id="agCaNo">🔁 No quedó bien · regresar a mantenimiento</button></div></form>');
+  $('agCaEst').addEventListener('click', e => { const s = e.target.closest('[data-cal]'); if (!s) return; cal = +s.dataset.cal; $('agCaEst').querySelectorAll('[data-cal]').forEach(x => x.textContent = +x.dataset.cal <= cal ? '★' : '☆'); });
+  $('fAgCa').addEventListener('submit', async e => {
+    e.preventDefault(); if (!cal) { $('agCaMsg').className = 'msg err'; $('agCaMsg').textContent = 'Marca la calidad (estrellas).'; return; }
+    try { await db.doc('ag/' + r.id).update({ estado:'cerrada', tCierre:nowIso(), enc:{ dur:$('agCaDur').value, limpia:$('agCaLim').value === '1', cal, com:$('agCaCom').value.trim(), por:{ n:p.n, nom:p.nomina } }, log:agLog(r, p.n, 'Cerrada · calidad ' + cal + '/5') }); cerrarModal(); toast('Gracias. Solicitud cerrada.'); }
+    catch (er) { $('agCaMsg').className = 'msg err'; $('agCaMsg').textContent = 'No se pudo guardar (' + (er.code || er.message) + ').'; }
+  });
+  $('agCaNo').addEventListener('click', async () => {
+    const com = $('agCaCom').value.trim(); if (!com) { $('agCaMsg').className = 'msg err'; $('agCaMsg').textContent = 'Escribe en el comentario qué no quedó bien.'; return; }
+    try { await db.doc('ag/' + r.id).update({ estado:'proceso', reab:(r.reab || 0) + 1, log:agLog(r, p.n, 'No quedó bien: ' + com) }); cerrarModal(); toast('Se regresó a mantenimiento.'); } catch (er) { toast('No se pudo guardar.'); }
+  });
+}
+async function agMaterial(id, i, est){
+  const r = agById(id); if (!r || !r.mats || !r.mats[i]) return;
+  const p = await pedirNomina('Material · ' + r.mats[i].d, 'agmat', 'Nómina de quien actualiza'); if (!p) return; cerrarModal();
+  const mats = r.mats.map((x, j) => j === i ? Object.assign({}, x, { est, ['t_' + est]: nowIso(), ['por_' + est]: p.n }) : x);
+  try { await db.doc('ag/' + id).update({ mats, log:agLog(r, p.n, 'Material "' + r.mats[i].d + '" → ' + est) }); toast('Material: ' + est + '.'); } catch (er) { toast('No se pudo guardar (' + (er.code || er.message) + ').'); }
+}
+
+// ---------- pendientes y materiales (para el técnico y para personal auxiliar de compras)
+function agPendientes(){
+  const P = S.agReq.filter(r => r.estado === 'pendiente').sort((a, b) => String(a.pend?.fecha || '9999').localeCompare(String(b.pend?.fecha || '9999')));
+  const hoy = fday(new Date());
+  const M = []; S.agReq.forEach(r => (r.mats || []).forEach((x, i) => { if (x.est !== 'recibido' || r.estado !== 'cerrada') M.push({ r, x, i }); }));
+  const porEq = {}; M.forEach(o => { (porEq[o.r.eqN] = porEq[o.r.eqN] || []).push(o); });
+  const puedeMat = S.sesion && PUEDE.agmat.includes(S.sesion.r);
+  $('agBody').innerHTML = '<div class="box"><h3>⏳ Solicitudes pendientes · ' + P.length + '</h3>' + (P.length ? '<div class="scroll"><table class="tbl"><tr><th>Equipo</th><th>Ubicación</th><th>Técnico</th><th>Motivo</th><th>Fecha compromiso</th><th>Comentarios del técnico</th><th>Días pendiente</th></tr>' +
+      P.map(r => { const f = r.pend?.fecha || '', venc = f && f < hoy; return '<tr data-agver="' + r.id + '" style="cursor:pointer"><td>' + esc(r.eqN) + '</td><td>' + esc(r.ubic || '') + '</td><td>' + esc(r.tec?.n || '') + '</td><td>' + esc(r.pend?.motivo || '') + '</td><td>' + (f ? '<span class="tag ' + (venc ? 'bad' : 'warn') + '">' + esc(f) + (venc ? ' · vencida' : '') + '</span>' : '<span class="tag">sin fecha</span>') + '</td><td>' + esc(r.pend?.coment || '') + '</td><td class="num">' + Math.floor(ms(r.pend?.t || r.t0) / 86400000) + '</td></tr>'; }).join('') + '</table></div>' : '<p class="foot">Sin pendientes.</p>') + '</div>' +
+    '<div class="box"><h3>🛒 Lista de materiales solicitados para compra (por equipo)</h3><p class="foot">La llena el técnico al dejar una solicitud pendiente. El personal auxiliar (compras / almacén) marca cuando se compra y cuando llega. Más adelante se cruzará con las existencias del Almacén.</p>' +
+    (Object.keys(porEq).length ? Object.entries(porEq).map(([eq, L]) => '<div style="margin-top:8px"><b>' + esc(eq) + '</b><div class="scroll"><table class="tbl"><tr><th>Cant.</th><th>Material</th><th>Solicitó (técnico)</th><th>Fecha</th><th>Estado</th><th></th></tr>' +
+      L.map(o => '<tr><td>' + esc(o.x.c || '') + '</td><td>' + esc(o.x.d) + '</td><td>' + esc(o.x.por || '') + '</td><td>' + fdt(o.x.t) + '</td><td><span class="tag ' + (o.x.est === 'recibido' ? 'ok' : o.x.est === 'comprado' ? 'warn' : 'bad') + '">' + esc(o.x.est) + '</span></td><td style="white-space:nowrap">' +
+        (puedeMat && o.x.est === 'solicitado' ? '<button type="button" data-agacc="mat" data-id="' + o.r.id + '" data-i="' + o.i + '" data-est="comprado">Comprado</button> ' : '') + (puedeMat && o.x.est !== 'recibido' ? '<button type="button" data-agacc="mat" data-id="' + o.r.id + '" data-i="' + o.i + '" data-est="recibido">Recibido</button>' : '') + '</td></tr>').join('') + '</table></div></div>').join('') : '<p class="foot">No hay materiales solicitados.</p>') + '</div>';
+}
+
+// ---------- historial de soluciones
+function agHistorial(){
+  const q = norm(S.agQ || '');
+  const L = S.agReq.filter(r => r.solucion && (!q || norm(r.eqN + ' ' + r.desc + ' ' + r.solucion + ' ' + (r.tec?.n || '') + ' ' + (r.usados || '')).includes(q)));
+  $('agBody').innerHTML = '<div class="box" style="flex-direction:row;flex-wrap:wrap;align-items:end"><label class="f" style="flex:1;min-width:240px">Buscar en soluciones<input id="agQ" type="search" value="' + esc(S.agQ || '') + '" placeholder="ej. lámpara, contacto, puerta, Montacargas"></label><p class="foot">' + L.length + ' solución(es)</p></div>' +
+    '<div class="kb">' + (L.length ? L.map(r => '<div class="kbi" style="border-left-color:#AD1457"><div class="h"><span><b style="color:var(--fg)">' + esc(r.eqN) + '</b> · ' + fdt(r.t0) + ' · ' + esc(agCats()[r.cat] || '') + '</span><span><span class="tag">' + esc(r.tipo || '') + '</span> ' + (r.enc ? '<span class="tag ok">' + agEstrellas(r.enc.cal) + '</span>' : '<span class="tag warn">sin calificar</span>') + '</span></div>' +
+      '<div><b>Solicitud:</b> ' + esc(r.desc) + '</div><div><b>Solución:</b> ' + esc(r.solucion) + '</div>' + (r.usados ? '<div><b>Materiales:</b> ' + esc(r.usados) + '</div>' : '') +
+      '<div class="foot">Técnico: ' + esc(r.tec?.n || '—') + ' · estimado ' + agFmtEst(r.est) + ' · real ' + (agMin(r) != null ? dur(agMin(r)) : '—') + (r.enc ? ' · área limpia: ' + (r.enc.limpia ? 'sí' : 'no') + ' · ' + esc(r.enc.dur) : '') + '</div></div>').join('') : '<div class="box"><p class="foot">Todavía no hay soluciones registradas.</p></div>') + '</div>';
+  $('agQ').addEventListener('input', e => { S.agQ = e.target.value; const pos = e.target.selectionStart; agHistorial(); const i = $('agQ'); i.focus(); i.setSelectionRange(pos, pos); });
+}
+
+// ---------- gráficas
+function agGraficas(){
+  const R = S.agReq, h0 = new Date(); h0.setHours(0, 0, 0, 0);
+  const fin = R.filter(r => r.tFin), cer = R.filter(r => r.enc);
+  const avg = a => a.length ? a.reduce((s, x) => s + x, 0) / a.length : null;
+  const tProm = avg(fin.map(agMin).filter(x => x != null)), calProm = avg(cer.map(r => r.enc.cal));
+  const enEst = fin.filter(r => r.est && agMin(r) != null);
+  const pctEst = enEst.length ? enEst.filter(r => agMin(r) <= r.est * 60000).length / enEst.length * 100 : null;
+  $('agBody').innerHTML = '<div class="kpis"><div class="kpi"><b>' + R.filter(r => r.tFin && new Date(r.tFin) >= h0).length + '</b><span>reparaciones terminadas hoy</span></div><div class="kpi"><b>' + dur(tProm) + '</b><span>tiempo promedio de reparación</span></div><div class="kpi ok"><b>' + (pctEst == null ? '—' : Math.round(pctEst) + ' %') + '</b><span>terminadas dentro del tiempo estimado</span></div><div class="kpi warn"><b>' + (calProm == null ? '—' : calProm.toFixed(1) + ' / 5') + '</b><span>calidad promedio (encuesta)</span></div><div class="kpi"><b>' + (cer.length ? Math.round(cer.filter(r => r.enc.limpia).length / cer.length * 100) + ' %' : '—') + '</b><span>áreas que quedaron limpias</span></div></div>' +
+    '<div class="charts"><div class="box"><h3>Reparaciones terminadas por día (30 días)</h3><div id="agG1"></div></div><div class="box"><h3>Tiempo promedio de reparación por día (min)</h3><div id="agG2"></div></div>' +
+    '<div class="box"><h3>Estatus de las solicitudes</h3><div id="agG3"></div></div><div class="box"><h3>Solicitudes por categoría</h3><div id="agG4"></div></div>' +
+    '<div class="box"><h3>Rendimiento por técnico · reparaciones terminadas</h3><div id="agG5"></div></div><div class="box"><h3>Rendimiento por técnico · tiempo promedio</h3><div id="agG6"></div></div>' +
+    '<div class="box"><h3>Rendimiento por técnico · calidad promedio (1 a 5)</h3><div id="agG7"></div></div><div class="box"><h3>Rendimiento por técnico · % dentro del estimado</h3><div id="agG8"></div></div></div>';
+  const dias = cubetas('dia');
+  vchart('agG1', dias.map(c => ({ l:c.l, v:fin.filter(r => new Date(r.tFin) >= c.a && new Date(r.tFin) < c.b).length })), v => v + ' rep.');
+  vchart('agG2', dias.map(c => { const L = fin.filter(r => new Date(r.tFin) >= c.a && new Date(r.tFin) < c.b).map(agMin).filter(x => x != null); return { l:c.l, v:L.length ? Math.round(avg(L) / 60000) : 0, t:L.length + ' reparaciones' }; }), v => v + ' min');
+  barras('agG3', Object.keys(AG_EST).map(k => ({ l:AG_EST[k], v:R.filter(r => r.estado === k).length })), v => v + '');
+  const C = agCats(); barras('agG4', Object.keys(C).map(k => ({ l:C[k], v:R.filter(r => r.cat === k).length })).filter(x => x.v).sort((a, b) => b.v - a.v), v => v + '');
+  const T = {}; fin.forEach(r => { const n = (r.tecFin || r.tec)?.n; if (!n) return; const o = T[n] = T[n] || { n:0, t:[], cal:[], ok:0, conEst:0 }; o.n++; const m = agMin(r); if (m != null) o.t.push(m); if (r.enc) o.cal.push(r.enc.cal); if (r.est && m != null) { o.conEst++; if (m <= r.est * 60000) o.ok++; } });
+  const E = Object.entries(T);
+  barras('agG5', E.map(([l, o]) => ({ l, v:o.n })).sort((a, b) => b.v - a.v), v => v + ' rep.');
+  barras('agG6', E.filter(([l, o]) => o.t.length).map(([l, o]) => ({ l, v:avg(o.t) })).sort((a, b) => a.v - b.v), dur);
+  barras('agG7', E.filter(([l, o]) => o.cal.length).map(([l, o]) => ({ l, v:avg(o.cal) })).sort((a, b) => b.v - a.v), v => v.toFixed(1), '#C99700');
+  barras('agG8', E.filter(([l, o]) => o.conEst).map(([l, o]) => ({ l, v:o.ok / o.conEst * 100, t:o.conEst + ' con estimado' })).sort((a, b) => b.v - a.v), v => Math.round(v) + ' %', 'var(--ok)');
+}
+
+// ---------- equipos de áreas generales (solo administradores)
+function agEquipos(){
+  const C = agCats(), E = agEq();
+  $('agBody').innerHTML = '<form class="box" id="fAgEq"><h3>Agregar o actualizar equipo / área</h3><p class="foot">Nombre corto y su ubicación en planta u oficina. Para cambiar uno existente, toca "Editar".</p>' +
+    '<div class="g3"><label class="f">Nombre corto *<input id="agEqN" required placeholder="ej. Aire acondicionado compras"></label><label class="f">Categoría<select id="agEqC">' + Object.keys(C).map(k => '<option value="' + k + '">' + esc(C[k]) + '</option>').join('') + '</select></label><label class="f">Ubicación<input id="agEqU" placeholder="ej. Oficina · 2º piso"></label></div>' +
+    '<input type="hidden" id="agEqId"><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="primary" type="submit">Guardar equipo</button><p class="msg" id="agEqMsg"></p></div></form>' +
+    '<div class="box"><h3>Equipos y áreas · ' + Object.keys(E).length + '</h3><div class="scroll"><table class="tbl"><tr><th>Equipo</th><th>Categoría</th><th>Ubicación</th><th>Activo</th><th></th></tr>' +
+    Object.entries(E).sort((a, b) => (a[1].cat || '').localeCompare(b[1].cat || '') || a[1].n.localeCompare(b[1].n, 'es')).map(([k, v]) => '<tr><td>' + esc(v.n) + '</td><td>' + esc(C[v.cat] || v.cat) + '</td><td>' + esc(v.ubic || '') + '</td><td>' + (v.a === false ? 'No' : 'Sí') + '</td><td style="white-space:nowrap"><button type="button" data-ageqed="' + k + '">Editar</button> <button type="button" data-ageqact="' + k + '">' + (v.a === false ? 'Activar' : 'Ocultar') + '</button></td></tr>').join('') + '</table></div></div>';
+  $('fAgEq').addEventListener('submit', async e => {
+    e.preventDefault(); const n = $('agEqN').value.trim(); if (!n) return;
+    const id = $('agEqId').value || ('e' + Date.now().toString(36));
+    const eq = Object.assign({}, agEq()); eq[id] = { n, cat:$('agEqC').value, ubic:$('agEqU').value.trim(), a:true };
+    if (await agGuardarCfg({ cats:agCats(), eq })) { $('agEqMsg').className = 'msg okm'; $('agEqMsg').textContent = 'Guardado: ' + n; }
+  });
+}
+async function agGuardarCfg(d){ try { await db.doc('config/ag').set(d); toast('Equipos de áreas generales guardados.'); return true; } catch (er) { toast('No se pudo guardar (' + (er.code || er.message) + ').'); return false; } }
+document.addEventListener('click', async e => {
+  const ed = e.target.closest('[data-ageqed]'); if (ed) { const v = agEq()[ed.dataset.ageqed]; $('agEqN').value = v.n; $('agEqC').value = v.cat; $('agEqU').value = v.ubic || ''; $('agEqId').value = ed.dataset.ageqed; $('agEqN').focus(); return; }
+  const ac = e.target.closest('[data-ageqact]'); if (ac) { const eq = Object.assign({}, agEq()); const k = ac.dataset.ageqact; eq[k] = Object.assign({}, eq[k], { a: eq[k].a === false }); agGuardarCfg({ cats:agCats(), eq }); }
+});
+
+// estilo de la alarma rosa
+(() => { const st = document.createElement('style'); st.textContent = '@keyframes parpadeoAG{0%,100%{background:#D81B60}50%{background:#880E4F}} .alerta.ag{animation:parpadeoAG 1.2s infinite}'; document.head.appendChild(st); })();
+render();
