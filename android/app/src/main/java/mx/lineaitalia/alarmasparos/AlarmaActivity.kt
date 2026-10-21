@@ -83,7 +83,8 @@ class AlarmaActivity : Activity() {
         raiz.addView(texto("El técnico registra \"Técnico en sitio\" con su nómina en la pantalla de la máquina.", 17f, false))
         val abrir = Button(this).apply {
             text = "ABRIR PAROS LI"; textSize = 20f
-            setOnClickListener { callar(); startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(Cfg.URL_PAROS)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); finish() }
+            // abre la pantalla de Control de Paros dentro de la app
+            setOnClickListener { callar(); startActivity(Intent(this@AlarmaActivity, MainActivity::class.java).putExtra("pestana", "paros").addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)); finish() }
         }
         val silencio = Button(this).apply { text = "SILENCIAR"; textSize = 18f; setOnClickListener { callar() } }
         raiz.addView(abrir); raiz.addView(silencio)

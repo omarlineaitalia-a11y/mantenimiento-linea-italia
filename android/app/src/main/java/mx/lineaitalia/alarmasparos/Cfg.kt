@@ -15,6 +15,8 @@ object Cfg {
     const val ACCION_FIN = "mx.lineaitalia.alarmasparos.FIN_ALARMA"
     const val ACCION_PRUEBA = "mx.lineaitalia.alarmasparos.PRUEBA_LOCAL"
     const val ACCION_ESTADO = "mx.lineaitalia.alarmasparos.ESTADO"
+    fun activo(ctx: Context) = ctx.getSharedPreferences("vigia", Context.MODE_PRIVATE).getBoolean("activo", true)
+    fun ponerActivo(ctx: Context, v: Boolean) = ctx.getSharedPreferences("vigia", Context.MODE_PRIVATE).edit().putBoolean("activo", v).apply()
 
     fun app(ctx: Context): FirebaseApp =
         FirebaseApp.getApps(ctx).firstOrNull() ?: FirebaseApp.initializeApp(

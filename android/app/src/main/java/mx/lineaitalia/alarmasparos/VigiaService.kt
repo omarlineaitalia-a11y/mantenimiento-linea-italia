@@ -37,6 +37,12 @@ class VigiaService : Service() {
             this, 1, fija("Iniciando vigilancia…"),
             if (Build.VERSION.SDK_INT >= 34) ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE else 0
         )
+        // alarmas desactivadas en este equipo (personal que no está laborando): no vigilar
+        if (!Cfg.activo(this) && intent?.action != Cfg.ACCION_PRUEBA) {
+            estado("🔕 Alarmas desactivadas en este equipo")
+            ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE); stopSelf()
+            return START_NOT_STICKY
+        }
         if (intent?.action == Cfg.ACCION_PRUEBA) {
             h.postDelayed({ alarmar("prueba-local-" + System.currentTimeMillis(), "PRUEBA DE ESTA TABLETA", "Prueba local de la alarma (no es una falla real)", true) }, 10_000)
         }
@@ -51,7 +57,7 @@ class VigiaService : Service() {
         if (reg != null) return
         val u = Cfg.auth(this).currentUser
         if (u == null) { estado("Sin cuenta: abre la aplicación y entra con tu nómina"); return }
-        estado("Vigilando alarmas · cuenta " + (u.email ?: "").substringBefore("@").substringBefore("."))
+        estado("Vigilando alarmas · nómina " + (u.email ?: "").substringBefore("@").substringBefore("."))
         reg = Cfg.db(this).collection("apps/paros/eventos").whereEqualTo("estado", "espera")
             .addSnapshotListener { snap, err ->
                 if (err != null) {
