@@ -51,13 +51,14 @@ class VigiaService : Service() {
         return START_STICKY
     }
 
-    override fun onDestroy() { reg?.remove(); reg = null; super.onDestroy() }
+    override fun onDestroy() { reg?.remove(); reg = null; regSinProd?.remove(); regSinProd = null; super.onDestroy() }
 
     private fun escuchar() {
         if (reg != null) return
         val u = Cfg.auth(this).currentUser
         if (u == null) { estado("Sin cuenta: abre la aplicación y entra con tu nómina"); return }
         estado("Vigilando alarmas · nómina " + (u.email ?: "").substringBefore("@").substringBefore("."))
+        escucharSinProd()
         reg = Cfg.db(this).collection("apps/paros/eventos").whereEqualTo("estado", "espera")
             .addSnapshotListener { snap, err ->
                 if (err != null) {
@@ -87,6 +88,43 @@ class VigiaService : Service() {
                     )
                 }
             }
+    }
+
+    // ---- "Sin producción": aviso SILENCIOSO en la barra (no enciende la pantalla ni abre la alarma)
+    private var regSinProd: ListenerRegistration? = null
+    private val nombres = mutableMapOf<String, String>()
+
+    private fun escucharSinProd() {
+        if (regSinProd != null) return
+        Cfg.db(this).document("apps/paros/config/maquinas").get().addOnSuccessListener { s ->
+            (s.get("m") as? Map<*, *>)?.forEach { (k, v) -> ((v as? Map<*, *>)?.get("n") as? String)?.let { nombres[k.toString()] = it } }
+        }
+        regSinProd = Cfg.db(this).document("apps/paros/estado/maquinas").addSnapshotListener { snap, err ->
+            if (err != null || snap == null) return@addSnapshotListener
+            val e = snap.get("e") as? Map<*, *> ?: return@addSnapshotListener
+            val prefs = getSharedPreferences("vigia", MODE_PRIVATE)
+            val vistos = (prefs.getStringSet("sinprod", emptySet()) ?: emptySet()).toMutableSet()
+            val limite = System.currentTimeMillis() - 30 * 60_000L
+            e.forEach { (k, v) ->
+                val m = v as? Map<*, *> ?: return@forEach
+                if (m["st"] != "sinprod") return@forEach
+                val desde = m["desde"] as? String ?: return@forEach
+                val clave = "$k|$desde"
+                if (clave in vistos) return@forEach
+                vistos.add(clave)
+                val t = try { java.time.Instant.parse(desde).toEpochMilli() } catch (_: Exception) { 0L }
+                if (t < limite) return@forEach
+                val n = NotificationCompat.Builder(this, "avisos")
+                    .setSmallIcon(android.R.drawable.ic_media_pause)
+                    .setContentTitle("⏸ Sin producción · " + (nombres[k.toString()] ?: k.toString()))
+                    .setContentText("La máquina quedó sin producción (no es falla).")
+                    .setSilent(true).setAutoCancel(true)
+                    .setContentIntent(PendingIntent.getActivity(this, 9, Intent(this, MainActivity::class.java).putExtra("pestana", "paros"), PendingIntent.FLAG_IMMUTABLE))
+                    .build()
+                getSystemService(NotificationManager::class.java).notify(("sinprod" + k).hashCode(), n)
+            }
+            prefs.edit().putStringSet("sinprod", vistos.toList().takeLast(300).toSet()).apply()
+        }
     }
 
     private fun alarmar(id: String, maquina: String, falla: String, prueba: Boolean) {
@@ -135,6 +173,8 @@ class VigiaService : Service() {
         fun canales(ctx: Context) {
             val nm = ctx.getSystemService(NotificationManager::class.java)
             nm.createNotificationChannel(NotificationChannel("vigia", "Vigilancia (aviso fijo)", NotificationManager.IMPORTANCE_LOW))
+            // avisos sin sonido (ej. máquina sin producción)
+            nm.createNotificationChannel(NotificationChannel("avisos", "Avisos sin sonido (sin producción)", NotificationManager.IMPORTANCE_DEFAULT).apply { setSound(null, null); enableVibration(false) })
             val c = NotificationChannel("alarmas", "Alarmas de falla", NotificationManager.IMPORTANCE_HIGH)
             c.setSound(
                 RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM),
