@@ -790,7 +790,8 @@ function renderTablero(){
   $('buzon').innerHTML = '<h3>📬 Buzón de seguimiento</h3>' + (items.length ? items.slice(0,14).map(i => '<button type="button" class="bitem" '+(i.ev ? 'data-a="ver" data-ev="'+i.ev.id+'"' : i.tpm ? 'data-vtpm="'+i.tpm.id+'"' : 'data-goop="'+esc(i.maq)+'"')+'><b>'+esc(i.h)+'</b><span>'+esc(i.d)+'</span><span class="foot" style="color:inherit;opacity:.8">'+fdt(i.t)+'</span></button>').join('') : '<p class="foot" style="color:inherit">Sin pendientes. Todo en orden.</p>');
 }
 // la alerta grande sale en el tablero de mantenimiento y, en equipos de mantenimiento, en cualquier pantalla
-const alertaAqui = () => !(S.sesion && sinTabMtto(S.sesion)) && (S.view === 'tab' || devArea() === 'mtto');
+// en la pantalla de la máquina (tablero de producción) no sale la alarma grande: ahí el técnico registra "Técnico en sitio"
+const alertaAqui = () => !(S.sesion && sinTabMtto(S.sesion)) && (S.view === 'tab' || (devArea() === 'mtto' && S.view !== 'op'));
 const TITULO = document.title;
 // mensaje pequeño: cuando hay fallas esperando técnico y en esta pantalla no sale la alarma grande
 // "Sin producción": aviso pequeño SIN sonido para mantenimiento (últimos 30 min, hasta que alguien toque "Enterado")
@@ -840,7 +841,6 @@ function renderAlerta(){
     $('alerta').innerHTML = '<div class="a1">🧪 PRUEBA DE ALARMA</div><div class="a2">' + esc(ev.maqN) + '</div><div class="at" data-since="'+esc(ev.t0)+'">' + hms(ms(ev.t0)) + '</div>' +
       '<div class="a3">No es una falla real. Lanzó la prueba: <b>' + esc(ev.op?.n || '') + '</b>' + (ev.nota ? '<br>' + esc(ev.nota) : '') + '</div>' +
       '<div class="a3" style="font-size:clamp(16px,2vw,24px)">🧰 Atiéndela igual que una falla: el técnico va a la máquina y registra <b>"Técnico en sitio (prueba)"</b> con su nómina. Se mide el tiempo de respuesta.</div>' +
-      '<div><button type="button" data-a="sitioPrueba" data-ev="' + ev.id + '" style="background:#fff;color:#5B2C83;border-color:#fff;font-size:20px;padding:14px 26px">🧰 Técnico en sitio · terminar prueba</button></div>' +
       '<div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">' + (silenciada(esp) ? '<span style="font-size:18px;font-weight:700;align-self:center">🔕 Silenciada</span>' : '<button type="button" id="btnSilenciar" style="background:#fff;color:#7A1212;border-color:#fff">🔕 Silenciar</button>') + '<button type="button" id="btnOcultar" style="background:transparent;color:#fff;border-color:#fff">Ver tablero 1 min</button></div>';
     beep(!silenciada(esp)); return;
   }
