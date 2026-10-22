@@ -23,7 +23,9 @@ const AG_EQ_DEF = (() => {
 })();
 // tipos de trabajo: solo reparaciones
 const AG_TIPOS = ['Reparación eléctrica', 'Reparación hidráulica (agua / plomería)', 'Reparación estructural', 'Reparación estética', 'Reparación mecánica'];
-const AG_PRIO = { urgente:'Urgente · ahora mismo', alta:'Alta · hoy', media:'Media · esta semana', baja:'Baja · cuando se pueda' };
+const AG_PRIO = { urgente:'Urgente', alta:'Alta (hoy)', media:'Media (semana)', baja:'Baja (mes)' };
+// ubicaciones de la falla (tablero de usuario)
+const AG_UBIC = ['Planta', 'Edificio', 'Comedor', 'Baños', 'Oficina', 'Escaleras', 'Jardín', 'Estacionamiento'];
 const AG_EST = { espera:'Esperando técnico', proceso:'En proceso', pendiente:'Pendiente', terminada:'Terminada · por calificar', cerrada:'Cerrada' };
 const AG_MOTIVOS = ['Falta refacción / material', 'Esperando compra', 'Requiere contratista', 'Requiere paro del área', 'Requiere autorización', 'Otro'];
 
@@ -172,17 +174,20 @@ function agFormulario(cont){
   cont.innerHTML = '<form class="box" id="fAgNueva" style="border:2px solid #AD1457"><h3 style="color:#AD1457">➕ Reportar una falla o pedir un trabajo a mantenimiento</h3>' +
     '<div class="g3"><label class="f">1 · ¿Qué equipo o área está fallando? *<select id="agEq"><option value="">— elige —</option>' + grupos + '<option value="otro">Otro (escribir)</option></select></label>' +
     '<label class="f" id="agOtroL" hidden>Nombre del equipo o área *<input id="agOtro" placeholder="ej. bodega de cartón"></label>' +
-    '<label class="f">2 · ¿Dónde se ubica la falla? *<input id="agUbic" list="agUbicList" autocomplete="off" placeholder="escribe o elige: Baños planta, Comedor, Oficinas…"><datalist id="agUbicList">' + agUbicaciones().map(u => '<option value="' + esc(u) + '">').join('') + '</datalist></label>' +
+    '<label class="f">2 · ¿Dónde se ubica la falla? *<select id="agUbicSel"><option value="">— elige —</option>' + AG_UBIC.map(u => '<option>' + u + '</option>').join('') + '<option value="otro">Otro (escribir)</option></select></label>' +
+    '<label class="f" id="agUbicL" hidden>Escribe la ubicación *<input id="agUbic" placeholder="ej. bodega de cartón"></label>' +
     '<label class="f">Tipo de trabajo<select id="agTipo">' + AG_TIPOS.map(t => '<option>' + t + '</option>').join('') + '</select></label>' +
     '<label class="f">Prioridad<select id="agPrio">' + Object.keys(AG_PRIO).map(k => '<option value="' + k + '"' + (k === 'media' ? ' selected' : '') + '>' + AG_PRIO[k] + '</option>').join('') + '</select></label></div>' +
     '<label class="f">3 · Notas: explica rápido qué está pasando *<textarea id="agDesc" required placeholder="ej. fuga de agua en el lavabo del baño de hombres; se fundieron 2 lámparas del pasillo; el aire no enfría"></textarea></label>' +
     '<p class="msg" id="agMsg"></p><button class="primary" type="submit" style="padding:14px;font-size:17px;background:#AD1457;border-color:#AD1457">🏢 Enviar a mantenimiento</button></form>';
-  const ubic = () => { const k = $('agEq').value; $('agOtroL').hidden = k !== 'otro'; if (k && k !== 'otro' && E[k]) $('agUbic').value = E[k].ubic || ''; };
+  const ubic = () => { const k = $('agEq').value; $('agOtroL').hidden = k !== 'otro'; const u = k && k !== 'otro' && E[k] ? AG_UBIC.find(x => norm(x) === norm(E[k].ubic || '')) : ''; if (u && !$('agUbicSel').value) $('agUbicSel').value = u; };
+  $('agUbicSel').addEventListener('change', () => { $('agUbicL').hidden = $('agUbicSel').value !== 'otro'; });
   $('agEq').addEventListener('change', ubic);
   $('fAgNueva').addEventListener('submit', async e => {
     e.preventDefault();
     if (!S.sesion) { toast('🔒 Primero entra con tu nómina (botón 👤 Entrar).'); entrar(); return; }
-    const k = $('agEq').value, desc = $('agDesc').value.trim(), ub = $('agUbic').value.trim(), m = $('agMsg');
+    const k = $('agEq').value, desc = $('agDesc').value.trim(), m = $('agMsg');
+    const ub = $('agUbicSel').value === 'otro' ? $('agUbic').value.trim() : $('agUbicSel').value;
     const eqN = k === 'otro' ? $('agOtro').value.trim() : (E[k] && E[k].n);
     if (!eqN || !ub || !desc) { m.className = 'msg err'; m.textContent = 'Falta qué equipo falla, dónde está o la nota.'; return; }
     const p = await pedirNomina('Reporte · ' + eqN, 'agsol', 'Nómina de quien solicita'); if (!p) return; cerrarModal();
