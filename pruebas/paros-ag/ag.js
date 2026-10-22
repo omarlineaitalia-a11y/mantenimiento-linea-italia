@@ -56,31 +56,52 @@ function agConectar(db){
 // la alarma rosa sale a mantenimiento; nunca en equipos de áreas generales ni en la pantalla de máquina
 const alertaAG = () => S.view !== 'op' && devArea() !== 'ag' && (S.sesion ? ((esMttoAdm(S.sesion) || vistasDe(S.sesion).includes('agmt')) && (S.view === 'tab' || S.view === 'ag' || devArea() === 'mtto')) : devArea() === 'mtto');
 const agNotif = new Set();
-function renderAlertaAG(){
-  const esp = agEsp();
-  if (!esp.length || !alertaAG() || Date.now() <= S.hideAlert) return false;
-  const r = esp[0], sil = esp.every(x => silenciados.has(claveEv(x)));
-  const el = $('alerta'); el.classList.remove('prueba'); el.classList.add('ag'); el.hidden = false;
-  if (devArea() === 'mtto') document.title = (sil ? '🔕 Alarma silenciada · ' : '⚠ FALLA · ') + '🏢 ÁREAS GENERALES · ' + r.eqN;
-  el.innerHTML = '<div class="a1">🏢 ' + (r.reab ? '🔁 LA FALLA CONTINÚA' : 'ÁREAS GENERALES') + '</div><div class="a2">' + esc(r.eqN) + '</div>' +
-    (r.reab ? '<div class="a3">Sigue fallando: <b>' + esc(r.reabNota || '') + '</b> · ' + (r.reab + 1) + 'ª atención · reparó antes: ' + esc(r.reabTec || '') + '</div>' : '') +
-    '<div class="a2" style="font-size:clamp(20px,3.4vw,40px)">📍 ' + esc(r.ubic || 'sin ubicación') + '</div>' +
-    '<div class="a3">👤 Solicita: <b>' + esc(r.sol?.n || '') + '</b> · ' + fdt(r.t0) + '<br>' + esc(r.tipo || '') + ' · ' + esc(agCats()[r.cat] || r.cat || '') + (r.prio === 'urgente' ? ' · <b>⚠ URGENTE</b>' : r.prio === 'alta' ? ' · <b>PRIORIDAD ALTA</b>' : '') + '</div>' +
-    '<div class="a3">📝 Notas: <b>' + esc(r.desc || '') + '</b></div>' +
-    (esp.length > 1 ? '<div class="a3">+ ' + (esp.length - 1) + ' solicitud(es) más esperando técnico</div>' : '') +
-    '<div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">' +
-      '<button type="button" data-agacc="atender" data-id="' + r.id + '" style="background:#fff;color:#AD1457;border-color:#fff;font-size:20px;padding:14px 26px">🧰 Atender · poner tiempo estimado</button>' +
-      (sil ? '<span style="font-size:18px;font-weight:700;align-self:center">🔕 Silenciada</span>' : '<button type="button" id="btnSilenciarAG" style="background:#fff;color:#AD1457;border-color:#fff">🔕 Silenciar</button>') +
-      '<button type="button" id="btnOcultar" style="background:transparent;color:#fff;border-color:#fff">Ver tablero 1 min</button></div>';
+// Alarma de mantenimiento: si solo hay solicitudes de áreas generales → alarma rosa; si coinciden con fallas de máquina
+// (o hay varias), la pantalla se DIVIDE en un panel por falla (rojo = falla de máquina, morado = prueba, rosa = áreas generales).
+// Si solo hay fallas de máquina, la dibuja la página como siempre (devuelve false).
+function renderAlertaAG(espMaq, showMaq){
+  const el = $('alerta');
+  const ag = alertaAG() && Date.now() > S.hideAlert ? agEsp() : [];
+  if (!ag.length) { el.classList.remove('multi', 'ag'); return false; }
+  const maq = (showMaq || alertaAG()) && Date.now() > S.hideAlert ? (espMaq || []) : [];
+  const todos = [...maq, ...ag], sil = todos.every(x => silenciados.has(claveEv(x)));
+  el.classList.remove('prueba'); el.hidden = false;
+  if (devArea() === 'mtto') document.title = (sil ? '🔕 Alarma silenciada · ' : '⚠ FALLA · ') + (maq.length ? maq[0].maqN + ' · ' : '') + '🏢 ' + ag[0].eqN;
+  const pie = '<div class="apie">' + (sil ? '<span style="font-size:18px;font-weight:700;align-self:center">🔕 Silenciada</span>' : '<button type="button" id="btnSilenciarAG" style="background:#fff;color:#7A1212;border-color:#fff">🔕 Silenciar</button>') +
+    '<button type="button" id="btnOcultar" style="background:transparent;color:#fff;border-color:#fff">Ver tablero 1 min</button></div>';
+  if (todos.length === 1) {
+    // una sola solicitud de áreas generales: alarma rosa completa
+    const r = ag[0];
+    el.classList.remove('multi'); el.classList.add('ag');
+    el.innerHTML = '<div class="a1">🏢 ' + (r.reab ? '🔁 LA FALLA CONTINÚA' : 'ÁREAS GENERALES') + '</div><div class="a2">' + esc(r.eqN) + '</div>' +
+      (r.reab ? '<div class="a3">Sigue fallando: <b>' + esc(r.reabNota || '') + '</b> · ' + (r.reab + 1) + 'ª atención · reparó antes: ' + esc(r.reabTec || '') + '</div>' : '') +
+      '<div class="a2" style="font-size:clamp(20px,3.4vw,40px)">📍 ' + esc(r.ubic || 'sin ubicación') + '</div>' +
+      '<div class="a3">👤 Solicita: <b>' + esc(r.sol?.n || '') + '</b> · ' + fdt(r.t0) + '<br>' + esc(r.tipo || '') + ' · ' + esc(agCats()[r.cat] || r.cat || '') + (r.prio === 'urgente' ? ' · <b>⚠ URGENTE</b>' : r.prio === 'alta' ? ' · <b>PRIORIDAD ALTA</b>' : '') + '</div>' +
+      '<div class="a3">📝 Notas: <b>' + esc(r.desc || '') + '</b></div>' +
+      '<div><button type="button" data-agacc="atender" data-id="' + r.id + '" style="background:#fff;color:#AD1457;border-color:#fff;font-size:20px;padding:14px 26px">🧰 Atender · poner tiempo estimado</button></div>' + pie;
+  } else {
+    // varias fallas a la vez: pantalla dividida
+    el.classList.remove('ag'); el.classList.add('multi');
+    const panelMaq = e => '<div class="apanel ' + (e.prueba ? 'pru' : 'maq') + '"><div class="pt">' + (e.prueba ? '🧪 PRUEBA DE ALARMA' : e.reab ? '🔁 LA FALLA CONTINÚA' : '⚠ FALLA EN MÁQUINA') + '</div>' +
+      '<div class="pn">' + esc(e.maqN) + '</div><div class="pti" data-since="' + esc(e.tAlerta || e.t0) + '">' + hms(ms(e.tAlerta || e.t0)) + '</div>' +
+      '<div>Operador: <b>' + esc((e.reab ? e.reabOp?.n : e.op?.n) || '') + '</b></div><div>' + (e.prueba ? 'No es falla real' : 'Falla: <b>' + esc(e.reab ? e.reabNota || '' : e.falla || '') + '</b>') + '</div>' +
+      '<div class="pf">🧰 El técnico registra "Técnico en sitio" en la pantalla de la máquina</div></div>';
+    const panelAG = r => '<div class="apanel agp"><div class="pt">🏢 ' + (r.reab ? '🔁 CONTINÚA · ' : '') + 'ÁREAS GENERALES' + (r.prio === 'urgente' ? ' · ⚠ URGENTE' : '') + '</div>' +
+      '<div class="pn">' + esc(r.eqN) + '</div><div>📍 <b>' + esc(r.ubic || '') + '</b></div><div>👤 Solicita: <b>' + esc(r.sol?.n || '') + '</b></div><div>📝 ' + esc(r.reab ? r.reabNota || r.desc || '' : r.desc || '') + '</div>' +
+      '<div><button type="button" data-agacc="atender" data-id="' + r.id + '" style="background:#fff;color:#AD1457;border-color:#fff">🧰 Atender · tiempo estimado</button></div></div>';
+    const lim = 6, L = todos.slice(0, lim);
+    el.innerHTML = '<div class="agrid">' + L.map(x => x.eqN !== undefined && x.maqN === undefined ? panelAG(x) : panelMaq(x)).join('') + '</div>' +
+      (todos.length > lim ? '<div class="a3">+ ' + (todos.length - lim) + ' falla(s) más</div>' : '') + pie;
+  }
   beep(!sil);
   // aviso del sistema en equipos de mantenimiento
-  if (devArea() === 'mtto' && 'Notification' in window && Notification.permission === 'granted') esp.forEach(x => {
+  if (devArea() === 'mtto' && 'Notification' in window && Notification.permission === 'granted') ag.forEach(x => {
     const c = claveEv(x); if (agNotif.has(c)) return; agNotif.add(c);
-    try { mostrarAviso('⚠ FALLA · 🏢 ÁREAS GENERALES · ' + x.eqN, (x.tipo || '') + ': ' + (x.desc || ''), 'ag-' + x.id); } catch (e) {}
+    try { mostrarAviso('⚠ FALLA · 🏢 ÁREAS GENERALES · ' + x.eqN, (x.ubic || '') + ': ' + (x.desc || ''), 'ag-' + x.id); } catch (e) {}
   });
   return true;
 }
-document.addEventListener('click', e => { if (e.target.id === 'btnSilenciarAG') { agEsp().forEach(x => silenciados.add(claveEv(x))); beep(false); renderAlerta(); } });
+document.addEventListener('click', e => { if (e.target.id === 'btnSilenciarAG') { enEspera().concat(agEsp()).forEach(x => silenciados.add(claveEv(x))); beep(false); renderAlerta(); } });
 setInterval(() => { if ($('alerta').hidden && agEsp().length && alertaAG() && Date.now() > S.hideAlert) renderAlerta(); }, 1000);
 
 // ---------- pestañas del módulo
@@ -180,10 +201,11 @@ document.addEventListener('click', e => {
 });
 const agLog = (r, por, txt) => [...(r.log || []), { t:nowIso(), por, txt }];
 function agDetalle(r){
-  const tecOk = S.sesion && esMttoAdm(S.sesion), b = [];
-  if (r.estado === 'espera') b.push('<button class="primary" data-agacc="atender" data-id="' + r.id + '">🧰 Atender · tiempo estimado</button>');
-  if (r.estado === 'proceso') { b.push('<button class="ok" data-agacc="terminar" data-id="' + r.id + '">✅ Terminada</button>'); b.push('<button class="warn" data-agacc="pendiente" data-id="' + r.id + '">⏳ Dejar pendiente</button>'); }
-  if (r.estado === 'pendiente') { b.push('<button class="primary" data-agacc="reanudar" data-id="' + r.id + '">▶ Reanudar</button>'); b.push('<button class="warn" data-agacc="pendiente" data-id="' + r.id + '">✏ Actualizar pendiente / materiales</button>'); b.push('<button class="ok" data-agacc="terminar" data-id="' + r.id + '">✅ Terminada</button>'); }
+  // botones de mantenimiento (Atender, Terminada, Dejar pendiente, Reanudar): solo mantenimiento y quien tenga el tablero de mantenimiento AG
+  const tecOk = S.sesion ? (esMttoAdm(S.sesion) || vistasDe(S.sesion).includes('agmt')) : devArea() === 'mtto', b = [];
+  if (tecOk && r.estado === 'espera') b.push('<button class="primary" data-agacc="atender" data-id="' + r.id + '">🧰 Atender · tiempo estimado</button>');
+  if (tecOk && r.estado === 'proceso') { b.push('<button class="ok" data-agacc="terminar" data-id="' + r.id + '">✅ Terminada</button>'); b.push('<button class="warn" data-agacc="pendiente" data-id="' + r.id + '">⏳ Dejar pendiente</button>'); }
+  if (tecOk && r.estado === 'pendiente') { b.push('<button class="primary" data-agacc="reanudar" data-id="' + r.id + '">▶ Reanudar</button>'); b.push('<button class="warn" data-agacc="pendiente" data-id="' + r.id + '">✏ Actualizar pendiente / materiales</button>'); b.push('<button class="ok" data-agacc="terminar" data-id="' + r.id + '">✅ Terminada</button>'); }
   // liberar: solo quien solicitó; mantenimiento (y administradores) no ven este botón
   if (r.estado === 'terminada' && !(S.sesion && esMttoAdm(S.sesion))) { b.push('<button class="ok" data-agacc="calificar" data-id="' + r.id + '">✅ Liberar trabajo realizado (solo quien solicitó)</button>'); b.push('<button class="danger" data-agacc="continua" data-id="' + r.id + '">🔁 Continúa la falla</button>'); }
   const mats = (r.mats || []);
@@ -379,5 +401,12 @@ document.addEventListener('click', async e => {
 });
 
 // estilo de la alarma rosa
-(() => { const st = document.createElement('style'); st.textContent = '@keyframes parpadeoAG{0%,100%{background:#D81B60}50%{background:#880E4F}} .alerta.ag{animation:parpadeoAG 1.2s infinite}'; document.head.appendChild(st); })();
+(() => { const st = document.createElement('style'); st.textContent = '@keyframes parpadeoAG{0%,100%{background:#D81B60}50%{background:#880E4F}} .alerta.ag{animation:parpadeoAG 1.2s infinite}' +
+  ' .alerta.multi{background:#1C1F1E;animation:none;justify-content:flex-start;overflow-y:auto;padding:16px}' +
+  ' .alerta .agrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;width:100%;max-width:1500px}' +
+  ' .apanel{border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:8px;text-align:center;align-items:center;color:#fff;font-size:clamp(15px,1.6vw,20px)}' +
+  ' .apanel .pt{font-weight:800;letter-spacing:.04em;font-size:clamp(16px,2vw,24px)} .apanel .pn{font-weight:800;font-size:clamp(22px,3vw,40px);line-height:1.1}' +
+  ' .apanel .pti{font-family:"IBM Plex Mono",monospace;font-size:clamp(28px,4vw,54px);font-weight:700} .apanel .pf{font-size:13px;opacity:.9}' +
+  ' .apanel.maq{animation:parpadeo 1.2s infinite} .apanel.pru{animation:parpadeoP 1.2s infinite} .apanel.agp{animation:parpadeoAG 1.2s infinite}' +
+  ' .alerta .apie{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}'; document.head.appendChild(st); })();
 render();

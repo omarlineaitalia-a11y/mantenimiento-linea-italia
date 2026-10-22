@@ -511,7 +511,8 @@ const vistasDe = p => !p ? [] : [...new Set([...(esAdm(p) ? Object.keys(VIS) : (
 const devArea = () => LS.get('tc_dev_area') || '';
 function devScreen(){
   const dt = LS.get('tc_dev_tipo'), dm = LS.get('tc_dev_maq'), ar = devArea();
-  if (dt === 'ag') return { v:'ag' };
+  // equipo de ÁREAS GENERALES: su pantalla principal siempre es Áreas generales
+  if (ar === 'ag' || dt === 'ag') return { v:'ag' };
   if (dt === 'tab' && ar !== 'prod') return { v:'tab' };
   if (dt === 'op' && dm) return { v:'op', maq:dm };
   if (ar === 'mtto') return { v:'tab' };
@@ -860,7 +861,8 @@ function renderAlerta(){
   const show = alertaAqui() && esp.length && Date.now() > S.hideAlert;
   $('alerta').hidden = !show;
   avisoPeq(esp, show);
-  if (!show && typeof renderAlertaAG === 'function' && renderAlertaAG()) return;
+  // alarmas de áreas generales (y combinadas con fallas de máquina: pantalla dividida)
+  if (typeof renderAlertaAG === 'function' && renderAlertaAG(esp, show)) return;
   if (!show) { beep(false); return; }
   const ev = esp[0];
   $('alerta').classList.toggle('prueba', !!ev.prueba); $('alerta').classList.remove('ag');
