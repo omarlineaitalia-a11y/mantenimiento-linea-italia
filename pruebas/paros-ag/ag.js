@@ -49,6 +49,8 @@ const agEstrellas = n => n ? '★'.repeat(n) + '☆'.repeat(5 - n) : '—';
 
 // ---------- conexión (la llama la página al conectarse a la base de datos)
 function agConectar(db){
+  db.collection('agLog').orderBy('t', 'desc').limit(3000).onSnapshot(s => { S.agEv = s.docs.map(d => Object.assign({ id:d.id }, d.data())); if (S.view === 'ag' && S.agt === 'hist') agHistorial(); }, () => {});
+  db.doc('config/agArchivo').onSnapshot(s => { S.agArch = (s.exists && s.data().meses) || {}; if (S.view === 'ag' && S.agt === 'graf') agGraficas(); }, () => {});
   db.collection('ag').orderBy('t0', 'desc').limit(1000).onSnapshot(s => { S.agReq = s.docs.map(d => Object.assign({ id:d.id }, d.data())); render(); }, () => {});
   db.doc('config/ag').onSnapshot(s => { S.agCfg = s.exists ? s.data() : null; if (S.view === 'ag') renderAG(); }, () => {});
 }
@@ -185,7 +187,8 @@ function agFormulario(cont){
     if (!eqN || !ub || !desc) { m.className = 'msg err'; m.textContent = 'Falta qué equipo falla, dónde está o la nota.'; return; }
     const p = await pedirNomina('Reporte · ' + eqN, 'agsol', 'Nómina de quien solicita'); if (!p) return; cerrarModal();
     try {
-      await db.collection('ag').add({ cat: k !== 'otro' && E[k] ? E[k].cat : 'AG', eq:k, eqN, ubic:ub, tipo:$('agTipo').value, prio:$('agPrio').value, desc, t0:nowIso(), estado:'espera', sol:{ n:p.n, nom:p.nomina }, log:[{ t:nowIso(), por:p.n, txt:'Solicitud creada' }] });
+      const nuevo = await db.collection('ag').add({ cat: k !== 'otro' && E[k] ? E[k].cat : 'AG', eq:k, eqN, ubic:ub, tipo:$('agTipo').value, prio:$('agPrio').value, desc, t0:nowIso(), estado:'espera', sol:{ n:p.n, nom:p.nomina }, log:[{ t:nowIso(), por:p.n, txt:'Solicitud creada' }] });
+      agEvento({ id:nuevo.id, eqN, ubic:ub, cat:(k !== 'otro' && E[k] ? E[k].cat : 'AG'), estado:'' }, p.n, 'Solicitud creada · ' + $('agPrio').value + ' · ' + desc);
       if (S.ntfy) fetch('https://ntfy.sh/', { method:'POST', body: JSON.stringify({ topic:S.ntfy, title:'🏢 ÁREAS GENERALES · ' + eqN + ' · ' + ub, message: desc.slice(0, 300), priority:4, tags:['office'] }) }).catch(() => {});
       toast('Enviado a mantenimiento. Lo verás en "Mis solicitudes".'); renderAG();
     } catch (er) { m.className = 'msg err'; m.textContent = 'No se pudo enviar (' + (er.code || er.message) + ').'; }
@@ -200,7 +203,9 @@ document.addEventListener('click', e => {
   const r = agById(a.dataset.id); if (!r && a.dataset.agacc !== 'mat') return;
   ({ atender:agAtender, pendiente:agPendiente, reanudar:agReanudar, terminar:agTerminar, calificar:agCalificar, continua:agContinua, cerrar:agCerrarAdm, mat:() => agMaterial(a.dataset.id, +a.dataset.i, a.dataset.est) })[a.dataset.agacc]?.(r);
 });
-const agLog = (r, por, txt) => [...(r.log || []), { t:nowIso(), por, txt }];
+// historial: cada acción queda en la solicitud (log) y además como evento aparte en la bitácora (agLog), que no se borra
+function agEvento(r, por, txt){ try { db.collection('agLog').add({ t:nowIso(), sol:r.id || '', eqN:r.eqN || '', ubic:r.ubic || '', cat:r.cat || '', antes:r.estado || '', por:por || '', txt }).catch(() => {}); } catch (e) {} }
+const agLog = (r, por, txt) => { agEvento(r, por, txt); return [...(r.log || []), { t:nowIso(), por, txt }]; };
 function agDetalle(r){
   // botones de mantenimiento (Atender, Terminada, Dejar pendiente, Reanudar): solo mantenimiento y quien tenga el tablero de mantenimiento AG
   const tecOk = S.sesion ? (esMttoAdm(S.sesion) || vistasDe(S.sesion).includes('agmt')) : devArea() === 'mtto', b = [];
@@ -354,7 +359,11 @@ function agHistorial(){
   const cuenta = {}; L.forEach(r => { cuenta[r.eqN] = (cuenta[r.eqN] || 0) + 1; });
   $('agBody').innerHTML = '<div class="box" style="flex-direction:row;flex-wrap:wrap;align-items:end"><label class="f" style="flex:1;min-width:240px">Buscar (equipo, falla o solución)<input id="agQ" type="search" value="' + esc(S.agQ || '') + '" placeholder="ej. baños, lámpara, contacto, portón"></label><p class="foot">' + L.length + ' solución(es)</p></div>' +
     '<div class="box"><div class="scroll">' + (L.length ? '<table class="tbl"><tr><th>Equipo</th><th>Ubicación</th><th>Falla (notas del usuario)</th><th>Solución del técnico</th><th>Técnico</th><th>Terminada</th><th>Tiempo real</th><th>Calidad</th></tr>' +
-      L.map((r, i) => '<tr data-agver="' + r.id + '" style="cursor:pointer"><td>' + (i === 0 || L[i - 1].eqN !== r.eqN ? '<b>' + esc(r.eqN) + '</b>' + (cuenta[r.eqN] > 1 ? ' <span class="tag warn">' + cuenta[r.eqN] + ' veces</span>' : '') : '<span class="foot">〃</span>') + '</td><td>' + esc(r.ubic || '') + '</td><td>' + esc(r.desc || '') + '</td><td>' + esc(r.solucion) + (r.usados ? '<br><span class="foot">Materiales: ' + esc(r.usados) + '</span>' : '') + '</td><td>' + esc((r.tecFin || r.tec)?.n || '') + '</td><td>' + fdt(r.tFin) + '</td><td class="num">' + (agMin(r) != null ? dur(agMin(r)) : '—') + '</td><td>' + (r.enc ? agEstrellas(r.enc.cal) : '<span class="tag warn">sin liberar</span>') + '</td></tr>').join('') + '</table>' : '<p class="foot">Todavía no hay soluciones registradas.</p>') + '</div></div>';
+      L.map((r, i) => '<tr data-agver="' + r.id + '" style="cursor:pointer"><td>' + (i === 0 || L[i - 1].eqN !== r.eqN ? '<b>' + esc(r.eqN) + '</b>' + (cuenta[r.eqN] > 1 ? ' <span class="tag warn">' + cuenta[r.eqN] + ' veces</span>' : '') : '<span class="foot">〃</span>') + '</td><td>' + esc(r.ubic || '') + '</td><td>' + esc(r.desc || '') + '</td><td>' + esc(r.solucion) + (r.usados ? '<br><span class="foot">Materiales: ' + esc(r.usados) + '</span>' : '') + '</td><td>' + esc((r.tecFin || r.tec)?.n || '') + '</td><td>' + fdt(r.tFin) + '</td><td class="num">' + (agMin(r) != null ? dur(agMin(r)) : '—') + '</td><td>' + (r.enc ? agEstrellas(r.enc.cal) : '<span class="tag warn">sin liberar</span>') + '</td></tr>').join('') + '</table>' : '<p class="foot">Todavía no hay soluciones registradas.</p>') + '</div></div>' +
+    // 📜 bitácora: TODOS los eventos (se graban aparte y no se borran)
+    (() => { const EV = (S.agEv || []).filter(x => !q || norm(x.eqN + ' ' + x.ubic + ' ' + x.por + ' ' + x.txt).includes(q));
+      return '<div class="box"><h3>📜 Bitácora de eventos · ' + EV.length + '</h3><p class="foot">Cada acción queda grabada: solicitud, atención, pendientes, materiales, terminada, liberada, continúa la falla y cierres.</p><div class="scroll" style="max-height:480px;overflow-y:auto">' +
+        (EV.length ? '<table class="tbl"><tr><th>Fecha y hora</th><th>Equipo</th><th>Ubicación</th><th>Evento</th><th>Quién</th></tr>' + EV.slice(0, 500).map(x => '<tr' + (x.sol ? ' data-agver="' + x.sol + '" style="cursor:pointer"' : '') + '><td class="mono">' + fdt(x.t) + '</td><td>' + esc(x.eqN) + '</td><td>' + esc(x.ubic) + '</td><td>' + esc(x.txt) + '</td><td>' + esc(x.por) + '</td></tr>').join('') + '</table>' + (EV.length > 500 ? '<p class="foot">Se muestran los 500 más recientes; el Excel trae todos.</p>' : '') : '<p class="foot">Sin eventos todavía.</p>') + '</div></div>'; })();
   $('agQ').addEventListener('input', e => { S.agQ = e.target.value; const pos = e.target.selectionStart; agHistorial(); const i = $('agQ'); i.focus(); i.setSelectionRange(pos, pos); });
 }
 
@@ -367,7 +376,8 @@ function agGraficas(){
   const enEst = fin.filter(r => r.est && agMin(r) != null);
   const pctEst = enEst.length ? enEst.filter(r => agMin(r) <= r.est * 60000).length / enEst.length * 100 : null;
   const nom = { dia:'por día (30 días)', sem:'por semana (12 semanas)', mes:'por mes (12 meses)', anio:'por año' }[per];
-  $('agBody').innerHTML = '<div class="box" style="flex-direction:row;flex-wrap:wrap;align-items:center;gap:12px"><div class="seg" id="agPerSeg">' + [['dia', 'Por día'], ['sem', 'Por semana'], ['mes', 'Por mes'], ['anio', 'Por año']].map(([k, t]) => '<button type="button" data-agper="' + k + '" aria-pressed="' + (k === per) + '">' + t + '</button>').join('') + '</div></div>' +
+  $('agBody').innerHTML = '<div class="box" style="flex-direction:row;flex-wrap:wrap;align-items:center;gap:12px"><div class="seg" id="agPerSeg">' + [['dia', 'Por día'], ['sem', 'Por semana'], ['mes', 'Por mes'], ['anio', 'Por año']].map(([k, t]) => '<button type="button" data-agper="' + k + '" aria-pressed="' + (k === per) + '">' + t + '</button>').join('') + '</div><button type="button" class="primary" data-agxls style="margin-left:auto">⬇ Descargar Excel (gráficas y estadísticas)</button></div>' +
+    agCajaArchivo() +
     '<div class="kpis"><div class="kpi"><b>' + R.filter(r => r.tFin && new Date(r.tFin) >= h0).length + '</b><span>reparaciones terminadas hoy</span></div><div class="kpi"><b>' + dur(tProm) + '</b><span>tiempo promedio de reparación</span></div><div class="kpi ok"><b>' + (pctEst == null ? '—' : Math.round(pctEst) + ' %') + '</b><span>terminadas dentro del tiempo estimado</span></div><div class="kpi warn"><b>' + (calProm == null ? '—' : calProm.toFixed(1) + ' / 5') + '</b><span>calidad promedio (encuesta)</span></div><div class="kpi"><b>' + (cer.length ? Math.round(cer.filter(r => r.enc.limpia).length / cer.length * 100) + ' %' : '—') + '</b><span>áreas que quedaron limpias</span></div></div>' +
     '<div class="charts"><div class="box"><h3>Reparaciones terminadas ' + nom + '</h3><div id="agG1"></div></div><div class="box"><h3>Solicitudes recibidas ' + nom + '</h3><div id="agG0"></div></div>' +
     '<div class="box"><h3>Tiempo promedio de reparación ' + nom + ' (min)</h3><div id="agG2"></div></div><div class="box"><h3>Estatus de las solicitudes</h3><div id="agG3"></div></div>' +
@@ -415,6 +425,106 @@ document.addEventListener('click', async e => {
     agGuardarCfg({ cats:agCats(), eq });
   }
 });
+
+// ---------- 📦 ARCHIVO MENSUAL: descarga en Excel todo un mes para guardarlo; al marcarlo queda registrado
+const agMesAnterior = () => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); };
+const agNomMes = k => { const [a, m] = k.split('-'); return ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'][+m - 1] + ' ' + a; };
+function agCajaArchivo(){
+  const adm = !!S.sesion && esAdm(S.sesion), A = S.agArch || {}, meses = Object.keys(A).sort().reverse();
+  return '<div class="box"><h3>📦 Archivo mensual</h3><p class="foot">Descarga en un Excel todo lo de un mes: solicitudes, soluciones, pendientes, materiales, bitácora de eventos, gráficas y promedios. Al guardar puedes elegir la carpeta (en Edge o Chrome). Los datos se quedan también en el sistema.</p>' +
+    '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end"><label class="f">Mes<input type="month" id="agArchMes" value="' + agMesAnterior() + '"></label><button type="button" data-agarch="bajar">⬇ Descargar archivo del mes</button>' +
+    (adm ? '<button type="button" class="primary" data-agarch="marcar">📦 Descargar y marcar mes como archivado</button>' : '') + '</div>' +
+    (meses.length ? '<div class="scroll"><table class="tbl"><tr><th>Mes archivado</th><th>Solicitudes</th><th>Archivó</th><th>Fecha</th><th></th></tr>' + meses.map(k => '<tr><td><b>' + agNomMes(k) + '</b></td><td class="num">' + (A[k].n || 0) + '</td><td>' + esc(A[k].por || '') + '</td><td>' + fdt(A[k].t) + '</td><td><button type="button" data-agarch="rebajar" data-mes="' + k + '">⬇ Volver a descargar</button></td></tr>').join('') + '</table></div>' : '<p class="foot">Todavía no hay meses archivados.</p>') + '</div>';
+}
+document.addEventListener('click', async e => {
+  if (e.target.closest('[data-agxls]')) { agExcel(null); return; }
+  const b = e.target.closest('[data-agarch]'); if (!b) return;
+  const mes = b.dataset.mes || ($('agArchMes') && $('agArchMes').value); if (!mes) { toast('Elige el mes.'); return; }
+  const n = S.agReq.filter(r => (r.t0 || '').slice(0, 7) === mes).length;
+  const ok = await agExcel(mes);
+  if (ok && b.dataset.agarch === 'marcar') {
+    if (!(S.sesion && esAdm(S.sesion))) { toast('Solo administradores marcan meses archivados.'); return; }
+    const A = Object.assign({}, S.agArch || {}); A[mes] = { t:nowIso(), por:S.sesion.n, n };
+    try { await db.doc('config/agArchivo').set({ meses:A }); agEvento({ id:'', eqN:'(archivo)', ubic:'', cat:'' }, S.sesion.n, 'Mes archivado: ' + agNomMes(mes) + ' · ' + n + ' solicitudes'); toast(agNomMes(mes) + ' archivado.'); }
+    catch (er) { toast('Se descargó, pero no se pudo marcar (' + (er.code || er.message) + ').'); }
+  }
+});
+
+// ---------- ⬇ EXCEL de áreas generales: gráficas, estadísticas, promedios por categoría y por técnico,
+// equipos con más fallas recurrentes, solicitudes, pendientes, materiales y bitácora. mes = 'AAAA-MM' o null (todo)
+async function agExcel(mes){
+  if (!window.ExcelJS) { toast('No se pudo cargar el generador de Excel. Revisa la conexión.'); return false; }
+  toast('Generando Excel de áreas generales…');
+  const enMes = f => !mes || (f || '').slice(0, 7) === mes;
+  const R = S.agReq.filter(r => enMes(r.t0)), EV = (S.agEv || []).filter(x => enMes(x.t));
+  const C = agCats(), avg = a => a.length ? a.reduce((s, x) => s + x, 0) / a.length : null, r1 = v => v == null ? '' : Math.round(v * 10) / 10;
+  const minR = r => { const m = agMin(r); return m == null ? null : m / 60000; };
+  const fin = R.filter(r => r.tFin), cer = R.filter(r => r.enc);
+  const wb = new ExcelJS.Workbook(); wb.creator = 'Mantenimiento Línea Italia · Áreas generales';
+  const ROSA = 'FFAD1457', GRIS = 'FFF6F0F3';
+  const hoja = (name, headers, rows, widths, titulo) => {
+    const ws = wb.addWorksheet(name, { views:[{ state:'frozen', ySplit: titulo ? 3 : 1 }] });
+    const r0 = titulo ? 3 : 1;
+    if (titulo) { ws.getCell('A1').value = titulo; ws.getCell('A1').font = { bold:true, size:14, color:{ argb:ROSA } }; ws.getCell('A2').value = 'Línea Italia · Mantenimiento · ' + (mes ? 'Mes: ' + agNomMes(mes) : 'Todo el historial') + ' · generado ' + new Date().toLocaleString('es-MX'); ws.getCell('A2').font = { italic:true, color:{ argb:'FF5C6A62' } }; }
+    const hr = ws.getRow(r0); headers.forEach((h, i) => { const c = hr.getCell(i + 1); c.value = h; c.font = { bold:true, color:{ argb:'FFFFFFFF' } }; c.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:ROSA } }; c.alignment = { vertical:'middle', wrapText:true }; }); hr.height = 30;
+    rows.forEach((r, j) => { const row = ws.getRow(r0 + 1 + j); r.forEach((v, i) => { const c = row.getCell(i + 1); c.value = v; c.alignment = { vertical:'top', wrapText:true }; if (j % 2) c.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:GRIS } }; }); });
+    widths.forEach((w, i) => ws.getColumn(i + 1).width = w);
+    if (rows.length) ws.autoFilter = { from:{ row:r0, column:1 }, to:{ row:r0, column:headers.length } };
+    return ws;
+  };
+  const img = (ws, cfg, row, col = 0, w = 900, h = 400) => { const id = wb.addImage({ base64: chartPng(cfg), extension:'png' }); ws.addImage(id, { tl:{ col, row }, ext:{ width:w, height:h } }); };
+  const estad = L => { const f = L.filter(r => r.tFin), c = L.filter(r => r.enc), e = f.filter(r => r.est && agMin(r) != null);
+    return { n:L.length, fin:f.length, abiertas:L.filter(r => r.estado !== 'cerrada' && r.estado !== 'terminada').length, tprom:r1(avg(f.map(minR).filter(x => x != null))), cal:r1(avg(c.map(r => r.enc.cal))), pctEst: e.length ? Math.round(e.filter(r => agMin(r) <= r.est * 60000).length / e.length * 100) : '', limpia: c.length ? Math.round(c.filter(r => r.enc.limpia).length / c.length * 100) : '', cont:L.reduce((s, r) => s + (r.reab || 0), 0) }; };
+
+  // RESUMEN
+  const E0 = estad(R);
+  let ws = hoja('Resumen', ['Indicador', 'Valor'], [
+    ['Solicitudes recibidas', E0.n], ['Reparaciones terminadas', E0.fin], ['Abiertas (esperando / en proceso / pendientes)', E0.abiertas],
+    ['Tiempo promedio de reparación (min)', E0.tprom], ['% terminadas dentro del tiempo estimado', E0.pctEst === '' ? '' : E0.pctEst + ' %'],
+    ['Calidad promedio (encuesta, 1 a 5)', E0.cal], ['% áreas que quedaron limpias', E0.limpia === '' ? '' : E0.limpia + ' %'], ['Veces que "continúa la falla"', E0.cont],
+    ...Object.keys(AG_EST).map(k => ['Estatus · ' + AG_EST[k], R.filter(r => r.estado === k).length])
+  ], [46, 18], 'RESUMEN · ÁREAS GENERALES');
+  img(ws, { title:'Solicitudes por estatus', labels:Object.keys(AG_EST).map(k => AG_EST[k]), series:[{ name:'Solicitudes', color:'#AD1457', values:Object.keys(AG_EST).map(k => R.filter(r => r.estado === k).length) }], horizontal:true, w:900, h:300 }, 22, 0, 760, 260);
+
+  // POR PERIODO (día, semana, mes, año)
+  const per = (p, t) => { const cs = cubetas(p); const rows = cs.map(c => { const sol = R.filter(r => r.t0 && new Date(r.t0) >= c.a && new Date(r.t0) < c.b), f = R.filter(r => r.tFin && new Date(r.tFin) >= c.a && new Date(r.tFin) < c.b); return [c.k, sol.length, f.length, r1(avg(f.map(minR).filter(x => x != null))), r1(avg(f.filter(r => r.enc).map(r => r.enc.cal)))]; });
+    const w = hoja(t, ['Periodo', 'Solicitudes', 'Terminadas', 'Tiempo prom. reparación (min)', 'Calidad prom.'], rows, [26, 13, 13, 18, 13], 'ÁREAS GENERALES · ' + t.toUpperCase());
+    img(w, { title:'Solicitudes y terminadas · ' + t.toLowerCase(), labels:cs.map(c => c.l), series:[{ name:'Solicitudes', color:'#AD1457', values:rows.map(r => r[1]) }, { name:'Terminadas', color:'#2E7D32', values:rows.map(r => r[2]) }] }, rows.length + 5, 0, 900, 380); };
+  if (mes) per('dia', 'Por día'); else { per('dia', 'Por día'); per('sem', 'Por semana'); per('mes', 'Por mes'); per('anio', 'Por año'); }
+
+  // PROMEDIOS POR CATEGORÍA
+  const filasCat = Object.keys(C).map(k => { const s = estad(R.filter(r => r.cat === k)); return [C[k], s.n, s.fin, s.abiertas, s.tprom, s.cal, s.pctEst, s.limpia, s.cont]; });
+  ws = hoja('Por categoría', ['Categoría', 'Solicitudes', 'Terminadas', 'Abiertas', 'Tiempo prom. (min)', 'Calidad prom.', '% dentro del estimado', '% área limpia', 'Continúa la falla'], filasCat, [28, 12, 12, 10, 16, 12, 16, 12, 14], 'PROMEDIOS POR CATEGORÍA');
+  img(ws, { title:'Solicitudes por categoría', labels:filasCat.map(f => f[0]), series:[{ name:'Solicitudes', color:'#AD1457', values:filasCat.map(f => f[1]) }], horizontal:true, w:900, h:360 }, filasCat.length + 5, 0, 760, 320);
+
+  // PROMEDIOS POR TÉCNICO
+  const T = {}; R.forEach(r => { const n = (r.tecFin || r.tec)?.n; if (n) (T[n] = T[n] || []).push(r); (r.ciclos || []).forEach(c => { const m = (c.tecFin || c.tec)?.n; if (m) { (T[m] = T[m] || []); } }); });
+  const filasTec = Object.entries(T).map(([n, L]) => { const s = estad(L); const reab = R.filter(r => (r.ciclos || []).some(c => (c.tecFin || c.tec)?.n === n)).length; return [n, s.n, s.fin, s.tprom, s.cal, s.pctEst, s.limpia, reab]; }).sort((a, b) => b[2] - a[2]);
+  ws = hoja('Por técnico', ['Técnico', 'Atendidas', 'Terminadas', 'Tiempo prom. (min)', 'Calidad prom.', '% dentro del estimado', '% área limpia', 'Le regresaron (continúa la falla)'], filasTec, [30, 12, 12, 16, 12, 16, 12, 18], 'RENDIMIENTO POR TÉCNICO');
+  if (filasTec.length) img(ws, { title:'Reparaciones terminadas por técnico', labels:filasTec.map(f => f[0]), series:[{ name:'Terminadas', color:'#2E7D32', values:filasTec.map(f => f[2]) }], horizontal:true, w:900, h:340 }, filasTec.length + 5, 0, 760, 300);
+
+  // EQUIPOS CON MÁS FALLAS RECURRENTES
+  const Q = {}; R.forEach(r => { const k = r.eqN + '|' + (r.ubic || ''); (Q[k] = Q[k] || []).push(r); });
+  const filasEq = Object.entries(Q).map(([k, L]) => { const [eq, ub] = k.split('|'); const ult = L.slice().sort((a, b) => (b.t0 || '').localeCompare(a.t0 || ''))[0]; return [eq, ub, C[L[0].cat] || L[0].cat || '', L.length, L.reduce((s, r) => s + (r.reab || 0), 0), L.length + L.reduce((s, r) => s + (r.reab || 0), 0), fdt(ult.t0), [...new Set(L.map(r => r.solucion).filter(Boolean))].join(' | ')]; }).sort((a, b) => b[5] - a[5]);
+  ws = hoja('Equipos recurrentes', ['Equipo', 'Ubicación', 'Categoría', 'Solicitudes', 'Continúa la falla', 'Total de fallas', 'Última', 'Soluciones aplicadas'], filasEq, [28, 24, 22, 12, 14, 12, 16, 60], 'EQUIPOS CON MÁS FALLAS RECURRENTES');
+  const top = filasEq.slice(0, 15); if (top.length) img(ws, { title:'Equipos con más fallas (top ' + top.length + ')', labels:top.map(f => f[0] + ' · ' + f[1]), series:[{ name:'Fallas', color:'#C62828', values:top.map(f => f[5]) }], horizontal:true, w:1000, h:Math.max(260, top.length * 34 + 100) }, filasEq.length + 5, 0, 860, Math.max(240, top.length * 30 + 90));
+
+  // DETALLE
+  hoja('Solicitudes', ['Fecha', 'Equipo', 'Ubicación', 'Categoría', 'Tipo', 'Prioridad', 'Notas (falla)', 'Solicitó', 'Nómina', 'Estatus', 'Técnico', 'Estimado (min)', 'Real (min)', 'Solución', 'Materiales usados', 'Continúa la falla', 'Liberó', 'Calidad', 'Área limpia', 'Duración (encuesta)', 'Cierre admin.'],
+    R.map(r => [fdt(r.t0), r.eqN, r.ubic || '', C[r.cat] || r.cat || '', r.tipo || '', r.prio || '', r.desc || '', r.sol?.n || '', r.sol?.nom || '', AG_EST[r.estado] || r.estado, (r.tecFin || r.tec)?.n || '', r.est || '', r1(minR(r)), r.solucion || '', r.usados || '', r.reab || 0, r.lib?.n || '', r.enc?.cal || '', r.enc ? (r.enc.limpia ? 'Sí' : 'No') : '', r.enc?.dur || '', r.cierreAdm ? r.cierreAdm.n + ' · ' + r.cierreAdm.motivo : '']),
+    [16, 24, 20, 18, 22, 10, 40, 22, 10, 18, 22, 11, 10, 40, 24, 10, 20, 9, 9, 18, 26], 'SOLICITUDES DE ÁREAS GENERALES');
+  hoja('Pendientes', ['Equipo', 'Ubicación', 'Técnico', 'Avance %', 'Motivo', 'Refacciones necesarias', 'Comentario', 'Fecha compromiso'],
+    R.filter(r => r.estado === 'pendiente').map(r => [r.eqN, r.ubic || '', r.tec?.n || '', +r.pend?.avance || 0, r.pend?.motivo || '', r.pend?.refac || '', r.pend?.coment || '', r.pend?.fecha || '']), [24, 20, 22, 10, 22, 30, 40, 14], 'PENDIENTES');
+  const M = []; R.forEach(r => (r.mats || []).forEach(x => M.push([r.eqN, r.ubic || '', x.c || '', x.d, x.por || '', fdt(x.t), x.est])));
+  hoja('Materiales', ['Equipo', 'Ubicación', 'Cantidad', 'Material', 'Solicitó (técnico)', 'Fecha', 'Estado'], M, [24, 20, 10, 40, 22, 16, 12], 'MATERIALES SOLICITADOS PARA COMPRA');
+  hoja('Bitácora de eventos', ['Fecha y hora', 'Equipo', 'Ubicación', 'Evento', 'Quién', 'Estatus antes'],
+    EV.slice().sort((a, b) => (a.t || '').localeCompare(b.t || '')).map(x => [fdt(x.t), x.eqN || '', x.ubic || '', x.txt || '', x.por || '', AG_EST[x.antes] || x.antes || '']), [18, 24, 20, 60, 22, 18], 'BITÁCORA DE EVENTOS');
+
+  const buf = await wb.xlsx.writeBuffer();
+  const nombre = 'Areas generales ' + (mes ? 'archivo ' + mes : 'estadisticas ' + fday(new Date())) + '.xlsx';
+  try { const dl = await window.claude.use('downloads'); if (!dl) { toast('La descarga no está disponible.'); return false; } await dl.save({ filename:nombre, data:new Blob([buf]) }); toast('Excel guardado: ' + nombre); return true; }
+  catch (er) { if (er && er.code !== 'declined') toast('No se pudo descargar (' + (er.code || er.message) + ').'); return false; }
+}
 
 // estilo de la alarma rosa
 (() => { const st = document.createElement('style'); st.textContent = '@keyframes parpadeoAG{0%,100%{background:#D81B60}50%{background:#880E4F}} .alerta.ag{animation:parpadeoAG 1.2s infinite}' +
