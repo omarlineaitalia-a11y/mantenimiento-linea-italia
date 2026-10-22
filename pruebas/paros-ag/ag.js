@@ -62,7 +62,8 @@ function renderAlertaAG(){
   const r = esp[0], sil = esp.every(x => silenciados.has(claveEv(x)));
   const el = $('alerta'); el.classList.remove('prueba'); el.classList.add('ag'); el.hidden = false;
   if (devArea() === 'mtto') document.title = (sil ? '🔕 Alarma silenciada · ' : '⚠ FALLA · ') + '🏢 ÁREAS GENERALES · ' + r.eqN;
-  el.innerHTML = '<div class="a1">🏢 ÁREAS GENERALES</div><div class="a2">' + esc(r.eqN) + '</div>' +
+  el.innerHTML = '<div class="a1">🏢 ' + (r.reab ? '🔁 LA FALLA CONTINÚA' : 'ÁREAS GENERALES') + '</div><div class="a2">' + esc(r.eqN) + '</div>' +
+    (r.reab ? '<div class="a3">Sigue fallando: <b>' + esc(r.reabNota || '') + '</b> · ' + (r.reab + 1) + 'ª atención · reparó antes: ' + esc(r.reabTec || '') + '</div>' : '') +
     '<div class="a2" style="font-size:clamp(20px,3.4vw,40px)">📍 ' + esc(r.ubic || 'sin ubicación') + '</div>' +
     '<div class="a3">👤 Solicita: <b>' + esc(r.sol?.n || '') + '</b> · ' + fdt(r.t0) + '<br>' + esc(r.tipo || '') + ' · ' + esc(agCats()[r.cat] || r.cat || '') + (r.prio === 'urgente' ? ' · <b>⚠ URGENTE</b>' : r.prio === 'alta' ? ' · <b>PRIORIDAD ALTA</b>' : '') + '</div>' +
     '<div class="a3">📝 Notas: <b>' + esc(r.desc || '') + '</b></div>' +
@@ -112,7 +113,7 @@ function agUsuario(){
   const abiertas = mias.filter(r => r.estado !== 'cerrada'), porLiberar = mias.filter(r => r.estado === 'terminada');
   const chip = r => '<span class="tag ' + ({ espera:'bad', proceso:'', pendiente:'warn', terminada:'ok', cerrada:'' }[r.estado]) + '">' + esc(AG_EST[r.estado] || r.estado) + '</span>';
   $('agBody').innerHTML = '<div id="agFormU"></div>' +
-    (porLiberar.length ? '<div class="box" style="border:2px solid var(--ok)"><h3>✅ Trabajos terminados · confírmalos con tu nómina</h3>' + porLiberar.map(r => '<div class="kbi" style="border-left-color:var(--ok)"><div class="h"><span><b style="color:var(--fg)">' + esc(r.eqN) + '</b> · 📍 ' + esc(r.ubic || '') + '</span><span>' + chip(r) + '</span></div><div>📝 ' + esc(r.desc || '') + '</div><div><b>Solución:</b> ' + esc(r.solucion || '') + ' <span class="foot">· 🧰 ' + esc((r.tecFin || r.tec)?.n || '') + '</span></div>' + (p && esMttoAdm(p) ? '<p class="foot">Lo libera quien solicitó (' + esc(r.sol?.n || '') + ') con su nómina.</p>' : '<div><button type="button" class="ok" data-agacc="calificar" data-id="' + r.id + '" style="font-size:17px;padding:12px 20px">✅ Liberar trabajo realizado</button></div>') + '</div>').join('') + '</div>' : '') +
+    (porLiberar.length ? '<div class="box" style="border:2px solid var(--ok)"><h3>✅ Trabajos terminados · confírmalos con tu nómina</h3>' + porLiberar.map(r => '<div class="kbi" style="border-left-color:var(--ok)"><div class="h"><span><b style="color:var(--fg)">' + esc(r.eqN) + '</b> · 📍 ' + esc(r.ubic || '') + '</span><span>' + chip(r) + '</span></div><div>📝 ' + esc(r.desc || '') + '</div><div><b>Solución:</b> ' + esc(r.solucion || '') + ' <span class="foot">· 🧰 ' + esc((r.tecFin || r.tec)?.n || '') + '</span></div>' + (p && esMttoAdm(p) ? '<p class="foot">Lo libera quien solicitó (' + esc(r.sol?.n || '') + ') con su nómina.</p>' : '<div><button type="button" class="ok" data-agacc="calificar" data-id="' + r.id + '" style="font-size:17px;padding:12px 20px">✅ Liberar trabajo realizado</button> <button type="button" class="danger" data-agacc="continua" data-id="' + r.id + '" style="font-size:17px;padding:12px 20px">🔁 Continúa la falla</button></div>') + '</div>').join('') + '</div>' : '') +
     '<div class="box"><h3>' + (adm ? '📋 Todas las solicitudes abiertas (administrador)' : '📋 Mis solicitudes') + ' · ' + abiertas.length + '</h3>' +
     (!p ? '<p class="foot">Entra con tu nómina (👤 Entrar) para ver tus solicitudes y liberar trabajos.</p>' : abiertas.length ? '<div class="kb">' + abiertas.map(r => '<button type="button" class="kbi" data-agver="' + r.id + '" style="text-align:left;cursor:pointer;font-weight:400;width:100%;align-items:stretch;border-left-color:#AD1457"><div class="h"><span><b style="color:var(--fg)">' + esc(r.eqN) + '</b> · 📍 ' + esc(r.ubic || '') + '</span><span>' + chip(r) + '</span></div><div>📝 ' + esc(r.desc || '') + '</div><div class="foot">' + fdt(r.t0) + (adm ? ' · 👤 ' + esc(r.sol?.n || '') : '') + (r.tec ? ' · 🧰 ' + esc(r.tec.n) : '') + (r.est ? ' · estimado ' + agFmtEst(r.est) : '') + (r.estado === 'pendiente' && r.pend ? ' · compromiso ' + esc(r.pend.fecha || 'sin fecha') + ' · ' + esc(r.pend.coment || '') : '') + '</div></button>').join('') + '</div>' : '<p class="foot">No tienes solicitudes abiertas.</p>') + '</div>';
   agFormulario($('agFormU'));
@@ -120,7 +121,8 @@ function agUsuario(){
 const agTarjeta = r => {
   const col = { espera:'#D81B60', proceso:'#1565C0', pendiente:'#C99700', terminada:'#2E7D32', cerrada:'#607D8B' }[r.estado];
   return '<button type="button" class="kbi" data-agver="' + r.id + '" style="border-left-color:' + col + ';text-align:left;cursor:pointer;font-weight:400;width:100%;align-items:stretch">' +
-    '<div class="h"><span><b style="color:var(--fg);font-size:15px">' + esc(r.eqN) + '</b></span><span class="tag">' + esc(r.tipo || '') + '</span></div>' +
+    '<div class="h"><span><b style="color:var(--fg);font-size:15px">' + esc(r.eqN) + '</b>' + (r.reab ? ' <span class="tag bad">🔁 la falla continúa · ' + (r.reab + 1) + 'ª atención</span>' : '') + '</span><span class="tag">' + esc(r.tipo || '') + '</span></div>' +
+    (r.reab && r.reabNota ? '<div>🔁 <b>Sigue fallando:</b> ' + esc(r.reabNota) + '</div>' : '') +
     '<div>📍 <b>' + esc(r.ubic || 'sin ubicación') + '</b> · 👤 solicita <b>' + esc(r.sol?.n || '') + '</b></div>' +
     '<div>📝 <b>Notas:</b> ' + esc(r.desc || '') + '</div>' +
     '<div class="foot">' + fdt(r.t0) + (r.tec ? ' · 🧰 ' + esc(r.tec.n) : '') + (r.est ? ' · estimado ' + agFmtEst(r.est) : '') +
@@ -174,7 +176,7 @@ document.addEventListener('click', e => {
   const a = e.target.closest('[data-agacc]'); if (!a) return;
   if (!S.sesion) { toast('🔒 Primero entra con tu nómina (botón 👤 Entrar).'); entrar(); return; }
   const r = agById(a.dataset.id); if (!r && a.dataset.agacc !== 'mat') return;
-  ({ atender:agAtender, pendiente:agPendiente, reanudar:agReanudar, terminar:agTerminar, calificar:agCalificar, mat:() => agMaterial(a.dataset.id, +a.dataset.i, a.dataset.est) })[a.dataset.agacc]?.(r);
+  ({ atender:agAtender, pendiente:agPendiente, reanudar:agReanudar, terminar:agTerminar, calificar:agCalificar, continua:agContinua, mat:() => agMaterial(a.dataset.id, +a.dataset.i, a.dataset.est) })[a.dataset.agacc]?.(r);
 });
 const agLog = (r, por, txt) => [...(r.log || []), { t:nowIso(), por, txt }];
 function agDetalle(r){
@@ -183,7 +185,7 @@ function agDetalle(r){
   if (r.estado === 'proceso') { b.push('<button class="ok" data-agacc="terminar" data-id="' + r.id + '">✅ Terminada</button>'); b.push('<button class="warn" data-agacc="pendiente" data-id="' + r.id + '">⏳ Dejar pendiente</button>'); }
   if (r.estado === 'pendiente') { b.push('<button class="primary" data-agacc="reanudar" data-id="' + r.id + '">▶ Reanudar</button>'); b.push('<button class="warn" data-agacc="pendiente" data-id="' + r.id + '">✏ Actualizar pendiente / materiales</button>'); b.push('<button class="ok" data-agacc="terminar" data-id="' + r.id + '">✅ Terminada</button>'); }
   // liberar: solo quien solicitó; mantenimiento (y administradores) no ven este botón
-  if (r.estado === 'terminada' && !(S.sesion && esMttoAdm(S.sesion))) b.push('<button class="ok" data-agacc="calificar" data-id="' + r.id + '">✅ Liberar trabajo realizado (solo quien solicitó)</button>');
+  if (r.estado === 'terminada' && !(S.sesion && esMttoAdm(S.sesion))) { b.push('<button class="ok" data-agacc="calificar" data-id="' + r.id + '">✅ Liberar trabajo realizado (solo quien solicitó)</button>'); b.push('<button class="danger" data-agacc="continua" data-id="' + r.id + '">🔁 Continúa la falla</button>'); }
   const mats = (r.mats || []);
   abrirModal('<div class="mhead" style="background:#AD1457;color:#fff"><div><h2>🏢 ' + esc(r.eqN) + '</h2><p style="color:#fff;opacity:.85">' + esc(AG_EST[r.estado] || r.estado) + ' · ' + esc(r.tipo || '') + ' · ' + esc(agCats()[r.cat] || '') + ' · ' + esc(r.ubic || '') + '</p></div><button type="button" data-close>✕</button></div>' +
     '<div class="box"><p style="margin:0"><b>' + esc(r.desc || '') + '</b></p><p class="foot">Solicitó: ' + esc(r.sol?.n || '') + ' · ' + fdt(r.t0) + (r.prio ? ' · prioridad ' + esc(r.prio) : '') + '</p>' +
@@ -243,6 +245,24 @@ async function agTerminar(r){
     catch (er) { $('agTeMsg').className = 'msg err'; $('agTeMsg').textContent = 'No se pudo guardar (' + (er.code || er.message) + ').'; }
   });
 }
+// 🔁 Continúa la falla: quien solicitó (con su nómina) regresa el trabajo a mantenimiento antes de liberarlo;
+// vuelve a "esperando técnico" con alarma rosa nueva; lo anterior queda guardado en "ciclos"
+async function agContinua(r){
+  const p = await pedirNomina('Continúa la falla · ' + r.eqN, 'agcal', 'Escribe TU nómina (solo quien solicitó: ' + (r.sol?.n || '') + ')'); if (!p) return;
+  if (p.nomina !== r.sol?.nom) { cerrarModal(); toast('Solo quien solicitó (' + (r.sol?.n || '') + ') puede regresar este trabajo.'); return; }
+  abrirModal('<div class="mhead bad"><div><h2>🔁 Continúa la falla · ' + esc(r.eqN) + '</h2><p>' + esc(p.n) + ' · solución anterior: ' + esc(r.solucion || '') + '</p></div><button type="button" data-close>✕</button></div>' +
+    '<form id="fAgCo" class="box"><label class="f">¿Qué sigue fallando? *<textarea id="agCoNota" required placeholder="ej. sigue goteando el lavabo; una lámpara sigue parpadeando"></textarea></label>' +
+    '<p class="msg" id="agCoMsg"></p><button class="danger" type="submit" style="padding:14px;font-size:17px">🔁 Regresar a mantenimiento</button></form>');
+  $('agCoNota').focus();
+  $('fAgCo').addEventListener('submit', async e => {
+    e.preventDefault(); const nota = $('agCoNota').value.trim(); if (!nota) return;
+    const ant = { tAcept:r.tAcept || null, tFin:r.tFin || null, est:r.est || null, tec:r.tec || null, tecFin:r.tecFin || null, solucion:r.solucion || '', usados:r.usados || '', nota, por:{ n:p.n, nom:p.nomina }, t:nowIso() };
+    try {
+      await db.doc('ag/' + r.id).update({ ciclos:[...(r.ciclos || []), ant], estado:'espera', tAlerta:nowIso(), reab:(r.reab || 0) + 1, reabNota:nota, reabTec:(r.tecFin || r.tec)?.n || '', tAcept:null, tFin:null, est:null, tec:null, tecFin:null, solucion:'', usados:'', log:agLog(r, p.n, 'Continúa la falla: ' + nota) });
+      cerrarModal(); toast('Se regresó a mantenimiento: la falla continúa.');
+    } catch (er) { $('agCoMsg').className = 'msg err'; $('agCoMsg').textContent = 'No se pudo enviar (' + (er.code || er.message) + ').'; }
+  });
+}
 async function agCalificar(r){
   // liberar SOLO lo hace quien solicitó, escribiendo siempre su nómina (mantenimiento no tiene este botón)
   const p = await pedirNomina('Liberar trabajo · ' + r.eqN, 'agcal', 'Escribe TU nómina (solo quien solicitó: ' + (r.sol?.n || '') + ')'); if (!p) return;
@@ -253,16 +273,12 @@ async function agCalificar(r){
     '<label class="f">¿Se dejó limpia el área?<select id="agCaLim"><option value="1">Sí, quedó limpia</option><option value="0">No, quedó sucia</option></select></label>' +
     '<div class="f"><span style="font-size:13px;color:var(--muted)">Calidad del trabajo *</span><div id="agCaEst" style="font-size:34px;cursor:pointer;color:#C99700">' + [1, 2, 3, 4, 5].map(i => '<span data-cal="' + i + '">☆</span>').join('') + '</div></div>' +
     '<label class="f">Comentario (opcional)<input id="agCaCom"></label><p class="msg" id="agCaMsg"></p>' +
-    '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="ok" type="submit">✅ Liberar · quedó bien</button><button type="button" class="danger" id="agCaNo">🔁 No quedó bien · regresar a mantenimiento</button></div></form>');
+    '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="ok" type="submit">✅ Liberar · quedó bien</button></div></form>');
   $('agCaEst').addEventListener('click', e => { const s = e.target.closest('[data-cal]'); if (!s) return; cal = +s.dataset.cal; $('agCaEst').querySelectorAll('[data-cal]').forEach(x => x.textContent = +x.dataset.cal <= cal ? '★' : '☆'); });
   $('fAgCa').addEventListener('submit', async e => {
     e.preventDefault(); if (!cal) { $('agCaMsg').className = 'msg err'; $('agCaMsg').textContent = 'Marca la calidad (estrellas).'; return; }
     try { await db.doc('ag/' + r.id).update({ estado:'cerrada', tCierre:nowIso(), lib:{ n:p.n, nom:p.nomina, t:nowIso() }, enc:{ dur:$('agCaDur').value, limpia:$('agCaLim').value === '1', cal, com:$('agCaCom').value.trim(), por:{ n:p.n, nom:p.nomina } }, log:agLog(r, p.n, 'Liberada por ' + p.n + ' (nómina ' + p.nomina + ') · calidad ' + cal + '/5') }); cerrarModal(); toast('Gracias. Solicitud cerrada.'); }
     catch (er) { $('agCaMsg').className = 'msg err'; $('agCaMsg').textContent = 'No se pudo guardar (' + (er.code || er.message) + ').'; }
-  });
-  $('agCaNo').addEventListener('click', async () => {
-    const com = $('agCaCom').value.trim(); if (!com) { $('agCaMsg').className = 'msg err'; $('agCaMsg').textContent = 'Escribe en el comentario qué no quedó bien.'; return; }
-    try { await db.doc('ag/' + r.id).update({ estado:'proceso', reab:(r.reab || 0) + 1, log:agLog(r, p.n, 'No quedó bien: ' + com) }); cerrarModal(); toast('Se regresó a mantenimiento.'); } catch (er) { toast('No se pudo guardar.'); }
   });
 }
 async function agMaterial(id, i, est){
