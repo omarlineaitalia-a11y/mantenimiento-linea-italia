@@ -409,7 +409,7 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-agpe
 function agEquipos(){
   const C = agCats(), E = agEq();
   const usos = {}; S.agReq.forEach(r => { usos[r.eq] = (usos[r.eq] || 0) + 1; });
-  $('agBody').innerHTML = '<form class="box" id="fAgEq"><h3>Agregar o actualizar equipo / área</h3><p class="foot">Nombre corto y su ubicación en planta u oficina. Para cambiar uno existente, toca "Editar".</p>' +
+  $('agBody').innerHTML = '<div class="box" id="agBd"></div><form class="box" id="fAgEq"><h3>Agregar o actualizar equipo / área</h3><p class="foot">Nombre corto y su ubicación en planta u oficina. Para cambiar uno existente, toca "Editar".</p>' +
     '<div class="g3"><label class="f">Nombre corto *<input id="agEqN" required placeholder="ej. Aire acondicionado compras"></label><label class="f">Categoría<select id="agEqC">' + Object.keys(C).map(k => '<option value="' + k + '">' + esc(C[k]) + '</option>').join('') + '</select></label><label class="f">Ubicación<input id="agEqU" list="agUbicList2" placeholder="ej. Oficina · 2º piso"><datalist id="agUbicList2">' + agUbicaciones().map(u => '<option value="' + esc(u) + '">').join('') + '</datalist></label></div>' +
     '<input type="hidden" id="agEqId"><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="primary" type="submit">Guardar equipo</button><p class="msg" id="agEqMsg"></p></div></form>' +
     '<div class="box"><h3>Equipos y áreas · ' + Object.values(E).filter(v => v.a !== false).length + ' activos</h3><div class="scroll"><table class="tbl"><tr><th>Equipo</th><th>Categoría</th><th>Ubicación</th><th>Trabajos en historial</th><th>Estado</th><th></th></tr>' +
@@ -420,7 +420,58 @@ function agEquipos(){
     const eq = Object.assign({}, agEq()); eq[id] = Object.assign({}, eq[id] || {}, { n, cat:$('agEqC').value, ubic:$('agEqU').value.trim(), a: eq[id] ? eq[id].a !== false : true });
     if (await agGuardarCfg({ cats:agCats(), eq })) { $('agEqMsg').className = 'msg okm'; $('agEqMsg').textContent = 'Guardado: ' + n; }
   });
+  agBdCaja();
 }
+// ---------- 📥 equipos de la Base de Datos de Planta (equipos-bd.js): da de alta los que falten.
+// Máquinas tipo A y B → Paros de máquina (config/maquinas); lo demás → Áreas generales (config/ag)
+const AG_BD_PAROS = ['MTA', 'MTB'];
+const agNorm = s => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '');
+function agBdFaltantes(){
+  if (typeof LI_EQUIPOS_BD === 'undefined') return [];
+  const M = S.maq || {}, eqAG = Object.values(agEq()), nomMaq = Object.keys(M).map(k => M[k].n || k), codMaq = Object.keys(M).map(k => agNorm(M[k].cod || k));
+  return LI_EQUIPOS_BD.map((e, i) => {
+    const paros = AG_BD_PAROS.includes(e.cat), x = agNorm(e.n);
+    if ((paros ? nomMaq : eqAG.map(v => v.n)).some(y => agNorm(y) === x) || (paros && e.cod && codMaq.includes(agNorm(e.cod)))) return null;
+    // parecido: misma categoría y un nombre contiene al otro (ej. "Selexx" y "Selexx 1") → sin palomita para no duplicar
+    const ya = paros ? nomMaq : eqAG.filter(v => v.cat === e.cat).map(v => v.n);
+    const par = ya.find(y => { const z = agNorm(y); return z.length >= 4 && x.length >= 4 && (z.includes(x) || x.includes(z)); });
+    return Object.assign({ i, paros, parecido: par || '' }, e);
+  }).filter(Boolean);
+}
+function agBdCaja(){
+  const el = $('agBd'); if (!el) return;
+  if (typeof LI_EQUIPOS_BD === 'undefined') { el.remove(); return; }
+  const F = agBdFaltantes();
+  if (!F.length) { el.innerHTML = '<h3>📥 Base de datos de planta</h3><p class="foot">Los ' + LI_EQUIPOS_BD.length + ' equipos de la base de datos ya están dados de alta.</p>'; return; }
+  const C = Object.assign({ MTA:'Maquinaria tipo A', MTB:'Maquinaria tipo B' }, agCats()), nP = F.filter(f => f.paros).length;
+  el.innerHTML = '<h3>📥 Base de datos de planta · faltan ' + F.length + ' de ' + LI_EQUIPOS_BD.length + '</h3><p class="foot">Las máquinas tipo A y B se dan de alta en <b>Paros de máquina</b> (' + nP + '); lo demás en <b>Áreas generales</b> (' + (F.length - nP) + '). Los que se parecen a uno ya registrado vienen sin palomita para no duplicarlos.</p>' +
+    '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:8px 0"><button type="button" class="primary" id="agBdOk">📥 Dar de alta los seleccionados</button><button type="button" id="agBdTodos">Marcar todos</button><button type="button" id="agBdNinguno">Quitar todos</button><p class="msg" id="agBdMsg"></p></div>' +
+    '<div class="scroll" style="max-height:360px"><table class="tbl"><tr><th></th><th>Equipo</th><th>Categoría</th><th>Ubicación</th><th>Se da de alta en</th><th>Aviso</th></tr>' +
+    F.map(f => '<tr><td><input type="checkbox" data-agbd="' + f.i + '"' + (f.parecido ? '' : ' checked') + '></td><td>' + esc(f.n) + '</td><td>' + esc(C[f.cat] || f.cat) + '</td><td>' + esc(f.ubic || '') + '</td><td>' + (f.paros ? 'Paros de máquina' : 'Áreas generales') + '</td><td>' + (f.parecido ? '<span class="tag">Parecido a: ' + esc(f.parecido) + '</span>' : '') + '</td></tr>').join('') + '</table></div>';
+}
+document.addEventListener('click', async e => {
+  const id = e.target.id;
+  if (id === 'agBdTodos' || id === 'agBdNinguno') { document.querySelectorAll('[data-agbd]').forEach(c => { c.checked = id === 'agBdTodos'; }); return; }
+  if (id !== 'agBdOk') return;
+  const sel = [...document.querySelectorAll('[data-agbd]:checked')].map(c => LI_EQUIPOS_BD[+c.dataset.agbd]);
+  if (!sel.length) { $('agBdMsg').textContent = 'No hay equipos seleccionados.'; return; }
+  e.target.disabled = true;
+  const eq = Object.assign({}, agEq()), M = S.maq || {}, maq = {}; let nA = 0, nM = 0, ok = true;
+  sel.forEach(x => {
+    if (AG_BD_PAROS.includes(x.cat)) {
+      let k = (x.cod || x.n).toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Z0-9]+/g, '-').replace(/^-|-$/g, '');
+      while (M[k] || maq[k]) k += 'X';
+      maq[k] = { n:x.n, cod:k, cat:x.cat, area:x.ubic || '', a:true }; nM++;
+    } else {
+      let k = 'bd' + String(x.no).padStart(3, '0'); while (eq[k]) k += 'x';
+      eq[k] = { n:x.n, cat:x.cat, ubic:x.ubic || '', a:true, bd:x.no }; nA++;
+    }
+  });
+  if (nA) ok = await agGuardarCfg({ cats:agCats(), eq });
+  if (ok && nM) { try { await db.doc('config/maquinas').set({ m:maq }, { merge:true }); } catch (er) { ok = false; toast('No se pudieron guardar las máquinas (' + (er.code || er.message) + ').'); } }
+  if (ok) { toast('Dados de alta: ' + nA + ' en Áreas generales y ' + nM + ' en Paros de máquina.'); agEvento({ id:'', eqN:'(base de datos)', ubic:'', cat:'' }, S.sesion ? S.sesion.n : '', 'Alta desde la base de datos: ' + nA + ' equipos de áreas generales y ' + nM + ' máquinas'); }
+  else e.target.disabled = false;
+});
 async function agGuardarCfg(d){ try { await db.doc('config/ag').set(d); toast('Equipos de áreas generales guardados.'); return true; } catch (er) { toast('No se pudo guardar (' + (er.code || er.message) + ').'); return false; } }
 document.addEventListener('click', async e => {
   const ed = e.target.closest('[data-ageqed]'); if (ed) { const v = agEq()[ed.dataset.ageqed]; $('agEqN').value = v.n; $('agEqC').value = v.cat; $('agEqU').value = v.ubic || ''; $('agEqId').value = ed.dataset.ageqed; $('agEqN').focus(); return; }
