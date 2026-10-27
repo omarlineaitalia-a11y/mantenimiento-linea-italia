@@ -1,8 +1,7 @@
 // Calculadora extractor Â· funciona sin internet: guarda la app, jsPDF y las fuentes la primera vez que se abre.
 // Cambia VERSION cada vez que se publique una actualizaciÃ³n de index.html.
-const VERSION = 'extractor-v1';
-const SHELL = ['./', './index.html', './manifest.json', './icono-192.png', './icono-512.png', './icono-maskable-512.png',
-  'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'];
+const VERSION = 'extractor-v2';
+const SHELL = ['./', './index.html', './manifest.json', './jspdf.umd.min.js', './icono-192.png', './icono-512.png', './icono-maskable-512.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
@@ -20,8 +19,8 @@ self.addEventListener('fetch', e => {
       .catch(() => caches.match('./index.html')));
     return;
   }
-  // Archivos propios, jsPDF y fuentes de Google: primero la copia guardada.
-  if (url.origin === location.origin || url.hostname === 'cdnjs.cloudflare.com' || /fonts\.(googleapis|gstatic)\.com$/.test(url.hostname)) {
+  // Archivos propios y fuentes de Google: primero la copia guardada.
+  if (url.origin === location.origin || /fonts\.(googleapis|gstatic)\.com$/.test(url.hostname)) {
     e.respondWith(caches.match(req).then(hit => hit || fetch(req).then(r => {
       if (r.ok || r.type === 'opaque') { const c = r.clone(); caches.open(VERSION).then(k => k.put(req, c)); }
       return r;
