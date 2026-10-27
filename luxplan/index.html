@@ -1,0 +1,995 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#152030">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="LuxPlan LI">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style><link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="icono-192.png">
+<link rel="apple-touch-icon" href="icono-192.png"><title>LuxPlan Línea Italia</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Saira+Semi+Condensed:wght@500;600;700&display=swap">
+<style>
+/* Layout: banco de cálculo — pestañas fijas arriba, columna de datos a la izquierda y lienzo de resultados (plano, 3D, curva) a la derecha */
+:root{
+  --bg:#eef1f5; --panel:#ffffff; --ink:#152030; --muted:#5a6879; --line:#d5dce5;
+  --accent:#b86e00; --accent-ink:#ffffff; --accent-soft:#f8e7cc;
+  --ok:#1d8048; --warn:#a86d12; --bad:#bf3328;
+  --cv-bg:#f9fafc; --cv-ink:#1c2736; --cv-grid:rgba(28,39,54,.14); --cv-floor:#e3e7ed; --cv-wall:#cfd6df;
+  --f-disp:"Saira Semi Condensed","Arial Narrow",sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0d131a; --panel:#141c26; --ink:#e4e9ef; --muted:#93a1b2; --line:#253140;
+  --accent:#f0a32e; --accent-ink:#1b1206; --accent-soft:#2c2312;
+  --ok:#43c07c; --warn:#e0a948; --bad:#ef6b5f;
+  --cv-bg:#0a1017; --cv-ink:#dfe6ee; --cv-grid:rgba(223,230,238,.13); --cv-floor:#1a232e; --cv-wall:#222d3a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0d131a; --panel:#141c26; --ink:#e4e9ef; --muted:#93a1b2; --line:#253140;
+  --accent:#f0a32e; --accent-ink:#1b1206; --accent-soft:#2c2312;
+  --ok:#43c07c; --warn:#e0a948; --bad:#ef6b5f;
+  --cv-bg:#0a1017; --cv-ink:#dfe6ee; --cv-grid:rgba(223,230,238,.13); --cv-floor:#1a232e; --cv-wall:#222d3a; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:14px/1.45 var(--f-body);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 40px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:6;background:var(--bg);display:flex;flex-wrap:wrap;gap:10px 28px;align-items:center;padding-block:12px 10px;border-bottom:1px solid var(--line)}
+.brand{display:flex;gap:10px;align-items:center}
+.brand svg{flex:none}
+.brand b{font:700 24px/1 var(--f-disp);letter-spacing:.01em}
+.brand span{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+.tabs{display:flex;gap:4px;flex-wrap:wrap}
+.tabs button{font:600 13px/1 var(--f-disp);letter-spacing:.06em;text-transform:uppercase;padding:9px 12px;border:1px solid var(--line);background:var(--panel);color:var(--muted);border-radius:6px;cursor:pointer}
+.tabs button:hover{color:var(--ink)}
+.tabs button[aria-selected="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.intro{color:var(--muted);max-width:80ch;margin:14px 0 0;font-size:13px}
+.work{display:grid;grid-template-columns:minmax(280px,350px) minmax(0,1fr);gap:18px;margin-top:14px;align-items:start}
+@media (max-width:900px){.work{grid-template-columns:minmax(0,1fr)}}
+.side{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;display:grid;gap:16px;min-width:0}
+.grp{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px}
+.grp h3{grid-column:1/-1;margin:0;font:600 12px/1 var(--f-disp);text-transform:uppercase;letter-spacing:.1em;color:var(--accent)}
+.fld{display:grid;gap:3px;min-width:0;align-content:start}
+.fld.w2,.w2{grid-column:1/-1}
+.fld>span{font-size:12px;color:var(--muted)}
+.in{display:flex;align-items:center;border:1px solid var(--line);border-radius:6px;background:var(--bg);min-width:0}
+.in input,.in select{flex:1;min-width:0;width:100%;border:0;background:transparent;color:var(--ink);font:14px var(--f-mono);padding:7px 8px;outline:none}
+.in select{font-family:var(--f-body);font-size:13px}
+.in em{font-style:normal;color:var(--muted);font-size:12px;padding-right:8px;white-space:nowrap}
+.in:focus-within{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+.chk{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--muted)}
+.lumcard{font-size:12px;color:var(--muted);background:var(--bg);border:1px dashed var(--line);border-radius:6px;padding:7px 9px;line-height:1.5}
+.lumcard b{color:var(--ink);font-weight:600}
+.btns{display:flex;flex-wrap:wrap;gap:8px}
+.btn{font:600 13px var(--f-body);padding:8px 12px;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+.btn.pri{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.sm{padding:4px 9px;font-size:12px}
+.res{display:grid;gap:12px;min-width:0}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(122px,1fr));gap:8px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0}
+.kpi small{display:block;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.06em}
+.kpi b{font:600 23px/1.15 var(--f-disp);font-variant-numeric:tabular-nums}
+.kpi i{font-style:normal;font-size:12px;color:var(--muted);margin-left:3px}
+.pill{display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:999px;margin-top:3px}
+.pill.ok{background:color-mix(in srgb,var(--ok) 15%,transparent);color:var(--ok)}
+.pill.bad{background:color-mix(in srgb,var(--bad) 15%,transparent);color:var(--bad)}
+.pill.warn{background:color-mix(in srgb,var(--warn) 18%,transparent);color:var(--warn)}
+.viewbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.viewbar button{font:600 12px var(--f-body);padding:6px 10px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--muted);cursor:pointer}
+.viewbar button.on{background:var(--accent-soft);color:var(--ink);border-color:var(--accent)}
+.viewbar .hint{font-size:12px;color:var(--muted);margin-left:auto}
+.stage{position:relative;background:var(--cv-bg);border-radius:10px;border:1px solid var(--line);overflow:hidden}
+.stage canvas{display:block;width:100%;height:460px;touch-action:none}
+@media (max-width:600px){.stage canvas{height:330px}}
+.tip{position:absolute;pointer-events:none;background:var(--panel);color:var(--ink);border:1px solid var(--line);font:12px var(--f-mono);padding:3px 7px;border-radius:4px;white-space:nowrap}
+.legend{display:flex;align-items:center;gap:10px;font:11px var(--f-mono);color:var(--muted)}
+.legend .bar{flex:1;height:10px;border-radius:3px;position:relative}
+.legend .ticks{display:flex;justify-content:space-between;flex:1}
+.lgwrap{flex:1;display:grid;gap:3px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;min-width:0}
+.card h4{margin:0 0 8px;font:600 15px var(--f-disp);letter-spacing:.02em}
+.tw{overflow-x:auto}
+table.t{width:100%;border-collapse:collapse;font-size:13px}
+.t th,.t td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.t th{font-weight:600;color:var(--muted);font-size:12px}
+.t td.n,.t th.n{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.t tr.tot td{font-weight:600;border-top:2px solid var(--ink)}
+.t input{width:90px;font:13px var(--f-mono);padding:4px 6px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--ink);text-align:right}
+.note{font-size:12px;color:var(--muted)}
+.notes{margin:0;padding-left:18px;font-size:13px;display:grid;gap:4px}
+.sug{display:grid;gap:6px}
+.sug .row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:8px}
+.sug .row b{font-weight:600}
+.sug .row span{display:block;font-size:12px;color:var(--muted)}
+.src{display:flex;flex-wrap:wrap;gap:6px}
+.src a{font-size:12px;padding:5px 9px;border:1px solid var(--line);border-radius:999px;color:var(--ink);text-decoration:none;background:var(--bg)}
+.src a:hover{border-color:var(--accent)}
+.drop{border:2px dashed var(--line);border-radius:10px;padding:16px;text-align:center;color:var(--muted)}
+.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+textarea{width:100%;min-height:90px;font:12px var(--f-mono);background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:8px}
+.mbar{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:4px;align-items:end;height:90px}
+.mbar div{background:var(--accent);border-radius:3px 3px 0 0;min-height:2px}
+.mlab{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:4px;font:10px var(--f-mono);color:var(--muted);text-align:center}
+footer{margin-top:28px;font-size:12px;color:var(--muted);max-width:90ch}
+.tab[hidden]{display:none!important}
+.obs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;padding:8px;border:1px solid var(--line);border-radius:8px;margin-bottom:6px;background:var(--bg)}
+.obs .w3{grid-column:1/-1}
+.repmsg{font-size:12px;color:var(--warn);margin:0}
+/* Memoria de cálculo: hoja carta blanca, solo al imprimir */
+#report{display:none}
+#report{--line:#c9ced6;--ink:#111;--muted:#555;--bg:#fff;--panel:#fff;--ok:#1d6b3c;--bad:#a82a20;--warn:#8a5a0c;--accent:#8a5200;color:#111;background:#fff;font:10.5px/1.4 var(--f-body)}
+#report .rh{display:flex;justify-content:space-between;gap:16px;border-bottom:2px solid #152030;padding-bottom:6px;margin-bottom:8px}
+#report .rh small{color:#555}
+#report h1{font:700 20px/1.1 var(--f-disp);margin:2px 0}
+#report h2{font:600 12px var(--f-disp);text-transform:uppercase;letter-spacing:.08em;color:#8a5200;margin:12px 0 5px;border-bottom:1px solid #c9ced6;padding-bottom:2px}
+#report .kp{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+#report .kp div{border:1px solid #c9ced6;border-radius:4px;padding:4px 6px}
+#report .kp small{display:block;color:#555;font-size:9px;text-transform:uppercase;letter-spacing:.05em}
+#report .kp b{font:600 14px var(--f-disp)}
+#report .kp em{display:block;font-style:normal;font-size:9px;font-weight:600}
+#report .kp em.ok{color:#1d6b3c}#report .kp em.bad{color:#a82a20}#report .kp em.warn{color:#8a5a0c}
+#report img{width:100%;border:1px solid #c9ced6;border-radius:4px;display:block}
+#report .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+#report .t th,#report .t td{padding:3px 5px;font-size:10px}
+#report ul{margin:0;padding-left:16px}
+#report .firmas{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:40px;text-align:center;font-size:10px}
+#report .firmas div{border-top:1px solid #111;padding-top:4px}
+#report .pb{break-before:page}
+#report .avoid{break-inside:avoid}
+@media print{
+  @page{size:letter;margin:12mm}
+  html,body{background:#fff!important}
+  body{padding:0!important}
+  body::before{display:none!important}
+  body>*:not(#report){display:none!important}
+  #report{display:block!important}
+}
+.err{color:var(--bad);font-size:13px}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><rect width="34" height="34" rx="7" fill="var(--ink)"/><path d="M9 11h16l-3 6H12z" fill="var(--accent)"/><path d="M12 17l-5 11h20l-5-11z" fill="var(--accent)" opacity=".28"/></svg>
+    <div><b>LuxPlan</b><span>Línea Italia · Mantenimiento · cálculo de alumbrado</span></div>
+  </div>
+  <nav class="tabs" role="tablist" id="tabs"></nav>
+</header>
+
+<main>
+  <section class="tab" id="t-interior" role="tabpanel">
+    <p class="intro">Naves, oficinas, almacenes y talleres. Cálculo punto por punto con la curva fotométrica de la luminaria más la luz reflejada en techo, muros y piso. Niveles de la NOM-025-STPS-2008. Pasa el cursor por el plano para leer los lux en cualquier punto.</p>
+    <div class="work"><form class="side" id="f-i" onsubmit="return false"></form><div class="res" id="r-i"></div></div>
+  </section>
+  <section class="tab" id="t-exterior" role="tabpanel" hidden>
+    <p class="intro">Patios de maniobras, estacionamientos, andenes y áreas exteriores con reflectores en poste. Sin reflexiones (cielo abierto).</p>
+    <div class="work"><form class="side" id="f-x" onsubmit="return false"></form><div class="res" id="r-x"></div></div>
+  </section>
+  <section class="tab" id="t-vial" role="tabpanel" hidden>
+    <p class="intro">Vialidades internas y calles. Se calcula el tramo entre dos postes, como lo pide el método de EN 13201-3, sobre el arroyo vehicular.</p>
+    <div class="work"><form class="side" id="f-v" onsubmit="return false"></form><div class="res" id="r-v"></div></div>
+  </section>
+  <section class="tab" id="t-emergencia" role="tabpanel" hidden>
+    <p class="intro">Rutas de evacuación y áreas abiertas (antipánico) con criterio EN 1838 o NFPA 101. Solo luz directa, sin reflexiones, como piden las normas.</p>
+    <div class="work"><form class="side" id="f-e" onsubmit="return false"></form><div class="res" id="r-e"></div></div>
+  </section>
+  <section class="tab" id="t-diurna" role="tabpanel" hidden>
+    <p class="intro">Aporte de luz natural por láminas traslúcidas y ventanas, hora por hora y a lo largo del año, con el ahorro de energía si se controla el alumbrado por fotocelda o dimeo.</p>
+    <div class="work"><form class="side" id="f-d" onsubmit="return false"></form><div class="res" id="r-d"></div></div>
+  </section>
+  <section class="tab" id="t-catalogo" role="tabpanel" hidden>
+    <div class="work" style="grid-template-columns:minmax(0,1fr)">
+      <div class="res" id="r-c"></div>
+    </div>
+  </section>
+  <section class="tab" id="t-proyecto" role="tabpanel" hidden>
+    <div class="work" style="grid-template-columns:minmax(0,1fr)">
+      <div class="res" id="r-p"></div>
+    </div>
+  </section>
+</main>
+
+<div id="report" aria-hidden="true"></div>
+
+<footer>
+  Cálculo de pre-diseño: punto por punto (ley del inverso del cuadrado y del coseno) con la curva de intensidad de cada luminaria, más una componente reflejada promedio en interiores. Las luminarias genéricas usan curvas y eficacias típicas del mercado. Para comprar o para la memoria oficial, sube el archivo .IES/.LDT del modelo exacto. El deslumbramiento (UGR) no se calcula: tómalo de la ficha (industria ≤ 22–25, oficina ≤ 19). Todo trabajo en luminarias se hace con LOTO del circuito (NOM-029-STPS) y equipo para trabajo en altura (NOM-009-STPS).
+</footer>
+
+<script>
+/* =================== utilidades =================== */
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const D2R=Math.PI/180;
+const clamp=(v,a,b)=>v<a?a:v>b?b:v;
+const num=id=>{const el=$('#'+id); if(!el)return 0; const v=parseFloat(String(el.value).replace(',','.')); return isFinite(v)?v:0};
+const val=id=>{const el=$('#'+id); return el?el.value:''};
+const fmt=(v,d=0)=>(v===null||v===undefined||!isFinite(v))?'—':v.toLocaleString('es-MX',{minimumFractionDigits:d,maximumFractionDigits:d});
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const store={get(k,d){try{const v=localStorage.getItem('luxplan.'+k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem('luxplan.'+k,JSON.stringify(v));return true}catch(e){return false}}};
+function niceStep(x){if(!(x>0))return 1;const e=Math.floor(Math.log10(x)),f=x/10**e;const nf=f<=1?1:f<=2?2:f<=2.5?2.5:f<=5?5:10;return nf*10**e}
+function niceCeil(x){const s=niceStep(x/4);return Math.max(s,Math.ceil(x/s)*s)}
+let debT={};const deb=(k,fn,ms=220)=>{clearTimeout(debT[k]);debT[k]=setTimeout(fn,ms)};
+
+/* =================== fotometría =================== */
+const CS=5,GS=1,NC=73,NG=181;
+function makePhoto(look){
+  const t=new Float32Array(NC*NG);
+  for(let i=0;i<NC;i++)for(let j=0;j<NG;j++){const v=look(i*CS,j*GS);t[i*NG+j]=v>0&&isFinite(v)?v:0}
+  let F=0;const dC=CS*D2R,dG=GS*D2R;
+  for(let i=0;i<NC-1;i++)for(let j=0;j<NG;j++){const w=(j===0||j===NG-1)?.5:1;F+=t[i*NG+j]*Math.sin(j*dG)*w*dG*dC}
+  const k=F>0?1000/F:0;for(let n=0;n<t.length;n++)t[n]*=k;
+  return {t,flux:F};
+}
+function Irel(P,C,g){
+  const ci=C/CS,gi=g/GS;let i0=ci|0,j0=gi|0;
+  if(i0>NC-2)i0=NC-2;if(j0>NG-2)j0=NG-2;if(i0<0)i0=0;if(j0<0)j0=0;
+  const fc=ci-i0,fg=gi-j0,t=P.t,a=i0*NG+j0,b=a+NG;
+  return (t[a]*(1-fg)+t[a+1]*fg)*(1-fc)+(t[b]*(1-fg)+t[b+1]*fg)*fc;
+}
+const cosn=n=>(C,g)=>g<90?Math.pow(Math.cos(g*D2R),n):0;
+const nFor=half=>Math.log(.5)/Math.log(Math.cos(half*D2R));
+const adiff=(a,b)=>{let d=Math.abs(a-b)%360;return d>180?360-d:d};
+const streetFn=phi=>(C,g)=>{if(g>=89)return 0;const side=Math.sin(C*D2R)>=0?1:.35;
+  const lobeC=Math.exp(-1*(adiff(C,phi)/38)**2)+Math.exp(-1*(adiff(C,180-phi)/38)**2);
+  return side*(.45*Math.cos(g*D2R)**1.5+1.15*lobeC*Math.exp(-1*((g-66)/12)**2))};
+const GEN={
+  hb60:cosn(nFor(30)), hb90:cosn(2), hb120:cosn(1), down:cosn(nFor(35)),
+  fl30:cosn(nFor(15)), fl60:cosn(nFor(30)), fl90:cosn(2),
+  linear:(C,g)=>{if(g>=90)return 0;const c=Math.cos(C*D2R)**2;return Math.cos(g*D2R)**(1*c+2.2*(1-c))},
+  panel:(C,g)=>g<88?Math.cos(g*D2R)*(1+.35*Math.sin(g*D2R)**2):0,
+  strip:(C,g)=>{if(g>=100)return 0;if(g>=90)return .04*(100-g)/10;const s=Math.sin(C*D2R)**2;return Math.cos(g*D2R)**(.7*s+1.2*(1-s))+.04},
+  st2:streetFn(14), st3:streetFn(32),
+  wall:(C,g)=>g<92?(.35*Math.max(0,Math.cos(g*D2R))**1.2+1.0*Math.exp(-1*((g-52)/18)**2)*Math.max(0,Math.sin(C*D2R))**1.2):0,
+  em:(C,g)=>g<90?(Math.cos(g*D2R)+.9*Math.exp(-1*((g-62)/14)**2)*Math.cos(C*D2R)**2):0
+};
+const BEAM={hb60:'60°',hb90:'90°',hb120:'120°',down:'70°',fl30:'30°',fl60:'60°',fl90:'90°',linear:'90° × 120°',panel:'120° (ala de murciélago)',strip:'120° amplio',st2:'Vial tipo II',st3:'Vial tipo III',wall:'Proyección frontal',em:'Lente de pasillo'};
+
+/* Tabla con simetrías (IES tipo C y EULUMDAT) */
+function interp1(arr,x){const n=arr.length;if(n<2||x<=arr[0])return [0,0];if(x>=arr[n-1])return [n-2,1];let lo=0,hi=n-1;while(hi-lo>1){const m=(lo+hi)>>1;if(arr[m]<=x)lo=m;else hi=m}return [lo,(x-arr[lo])/((arr[lo+1]-arr[lo])||1)]}
+function tableLook(H,V,d,mapOverride){
+  const h0=H[0],h1=H[H.length-1];
+  const mapC=mapOverride||(C=>{
+    if(H.length===1)return h0;
+    if(h0===0&&h1===90){if(C>270)return 360-C;if(C>180)return C-180;if(C>90)return 180-C;return C}
+    if(h0===0&&h1===180)return C>180?360-C:C;
+    if(h0===90&&h1===270){if(C<90)return 180-C;if(C>270)return 540-C;return C}
+    return C});
+  return (C,g)=>{
+    if(g<V[0]||g>V[V.length-1])return 0;
+    const [vi,vf]=interp1(V,g);
+    const row=r=>{const a=d[r];return V.length===1?a[0]:a[vi]*(1-vf)+a[vi+1]*vf};
+    if(H.length===1)return row(0);
+    const [ci,cf]=interp1(H,mapC(C));
+    return row(ci)*(1-cf)+row(Math.min(ci+1,H.length-1))*cf};
+}
+function parseIES(txt){
+  const lines=txt.split(/\r?\n/);let i=0;const meta={};
+  for(;i<lines.length;i++){const l=lines[i].trim();const m=l.match(/^\[([A-Za-z_]+)\]\s*(.*)$/);if(m)meta[m[1].toUpperCase()]=m[2];if(/^TILT\s*=/i.test(l))break}
+  if(i>=lines.length)throw new Error('No encontré la línea TILT=. No parece un archivo IES.');
+  const tilt=lines[i].split('=')[1].trim().toUpperCase();
+  const tk=lines.slice(i+1).join(' ').trim().split(/[\s,]+/).filter(Boolean).map(Number);
+  let k=0;if(tilt==='INCLUDE'){k++;const n=tk[k++];k+=2*n}
+  const nL=tk[k++],lmL=tk[k++],mult=tk[k++],nV=tk[k++],nH=tk[k++],ptype=tk[k++],units=tk[k++],w=tk[k++],l=tk[k++];k++;const bf=tk[k++];k++;const watts=tk[k++];
+  if(!(nV>0&&nH>0))throw new Error('El encabezado numérico del IES está incompleto.');
+  const V=tk.slice(k,k+nV);k+=nV;const H=tk.slice(k,k+nH);k+=nH;
+  const cd=[];for(let a=0;a<nH;a++){cd.push(tk.slice(k,k+nV).map(x=>x*mult*(bf||1)));k+=nV}
+  if(cd[nH-1].length<nV||cd[nH-1].some(x=>!isFinite(x)))throw new Error('Faltan valores de intensidad en el IES.');
+  const ph=makePhoto(tableLook(H,V,cd));
+  const f=units===1?.3048:1;const W2=Math.abs(w*f),L2=Math.abs(l*f);
+  return {ph,flux:ph.flux,W:watts||0,name:meta.LUMINAIRE||meta.LUMCAT||meta.TEST||'Luminaria IES',brand:meta.MANUFAC||'',
+    shape:(w<0||(L2>0&&L2<W2*1.6&&W2<L2*1.6&&W2<.7))?'round':(L2>W2*2.5||W2>L2*2.5)?'lin':'sq',cct:'',cri:'',warn:ptype!==1?'El archivo es fotometría tipo '+(ptype===2?'B':'A')+'; se interpretó como tipo C.':''};
+}
+function parseLDT(txt){
+  const L=txt.split(/\r?\n/);const g=i=>(L[i]||'').trim();const n=i=>parseFloat(g(i).replace(',','.'));
+  const Isym=n(2),Mc=n(3),Ng=n(5),ns=Math.max(1,n(25)||1);
+  if(!(Mc>0&&Ng>0))throw new Error('No parece un archivo EULUMDAT (.ldt).');
+  const s0=26;const flux=n(s0+2),cct=g(s0+3),cri=g(s0+4),W=n(s0+5),conv=n(23)||1;
+  let k=26+6*ns+10;
+  const tk=L.slice(k).join(' ').trim().split(/\s+/).filter(Boolean).map(x=>parseFloat(x.replace(',','.')));
+  let p=0;const Cang=tk.slice(p,p+Mc);p+=Mc;const Gang=tk.slice(p,p+Ng);p+=Ng;
+  const nC=Isym===1?1:(Isym===2||Isym===3)?Mc/2+1:Isym===4?Mc/4+1:Mc;
+  const vals=[];for(let a=0;a<nC;a++){vals.push(tk.slice(p,p+Ng).map(x=>x*(flux||1000)/1000*conv));p+=Ng}
+  if(!vals.length||vals[nC-1].length<Ng||vals[nC-1].some(x=>!isFinite(x)))throw new Error('Faltan valores de intensidad en el LDT.');
+  let look;
+  if(Isym===1)look=tableLook([0],Gang,vals);
+  else if(Isym===3){const Dc=360/Mc;const H=vals.map((_,a)=>a*Dc);
+    look=tableLook(H,Gang,vals,C=>{if(C>90&&C<270)C=(540-C)%360;return (C+90)%360})}
+  else look=tableLook(Cang.slice(0,nC),Gang,vals);
+  const ph=makePhoto(look);const Lm=n(12)/1000,Bm=n(13)/1000;
+  return {ph,flux:ph.flux,W:W||0,name:g(8)||'Luminaria LDT',brand:g(0),cct,cri,shape:Bm===0?'round':(Lm>Bm*2.5||Bm>Lm*2.5)?'lin':'sq',warn:''};
+}
+
+/* =================== catálogo =================== */
+const CN='China genérico (típico)',MK='Marca reconocida (típico)';
+const CAT=[
+ {id:'hb100c',name:'Campana LED tipo UFO 100 W · 90°',fam:'Campana industrial',use:'int',dist:'hb90',W:100,lm:13000,cct:5000,cri:80,ip:65,org:CN,shape:'round'},
+ {id:'hb150c',name:'Campana LED tipo UFO 150 W · 90°',fam:'Campana industrial',use:'int',dist:'hb90',W:150,lm:19500,cct:5000,cri:80,ip:65,org:CN,shape:'round'},
+ {id:'hb150c60',name:'Campana LED tipo UFO 150 W · 60°',fam:'Campana industrial',use:'int',dist:'hb60',W:150,lm:19500,cct:5000,cri:80,ip:65,org:CN,shape:'round'},
+ {id:'hb200c',name:'Campana LED tipo UFO 200 W · 90°',fam:'Campana industrial',use:'int',dist:'hb90',W:200,lm:26000,cct:5000,cri:80,ip:65,org:CN,shape:'round'},
+ {id:'hb200c120',name:'Campana LED tipo UFO 200 W · 120°',fam:'Campana industrial',use:'int',dist:'hb120',W:200,lm:26000,cct:5000,cri:80,ip:65,org:CN,shape:'round'},
+ {id:'hb240c',name:'Campana LED tipo UFO 240 W · 60°',fam:'Campana industrial',use:'int',dist:'hb60',W:240,lm:31200,cct:5000,cri:80,ip:65,org:CN,shape:'round'},
+ {id:'hb150m',name:'Campana LED 150 W · 90° (marca)',fam:'Campana industrial',use:'int',dist:'hb90',W:150,lm:24000,cct:5000,cri:80,ip:65,org:MK,shape:'round'},
+ {id:'hb200m',name:'Campana LED 200 W · 90° (marca)',fam:'Campana industrial',use:'int',dist:'hb90',W:200,lm:32000,cct:5000,cri:80,ip:65,org:MK,shape:'round'},
+ {id:'lin150c',name:'Campana lineal LED 150 W · 90×120°',fam:'Campana lineal',use:'int',dist:'linear',W:150,lm:21000,cct:5000,cri:80,ip:65,org:CN,shape:'lin'},
+ {id:'lin200c',name:'Campana lineal LED 200 W · 90×120°',fam:'Campana lineal',use:'int',dist:'linear',W:200,lm:28000,cct:5000,cri:80,ip:65,org:CN,shape:'lin'},
+ {id:'strip36c',name:'Hermética IP65 LED 1.2 m 36 W',fam:'Lineal / hermética',use:'int',dist:'strip',W:36,lm:4300,cct:4000,cri:80,ip:65,org:CN,shape:'lin'},
+ {id:'strip50c',name:'Hermética IP65 LED 1.5 m 50 W',fam:'Lineal / hermética',use:'int',dist:'strip',W:50,lm:6500,cct:4000,cri:80,ip:65,org:CN,shape:'lin'},
+ {id:'tube2x18',name:'Gabinete 2 × tubo T8 LED 18 W, 1.2 m',fam:'Lineal / hermética',use:'int',dist:'strip',W:36,lm:3600,cct:6500,cri:80,ip:20,org:CN,shape:'lin'},
+ {id:'panel40c',name:'Panel LED 60 × 60 40 W',fam:'Panel / oficina',use:'int',dist:'panel',W:40,lm:4000,cct:4000,cri:80,ip:40,org:CN,shape:'sq'},
+ {id:'panel36m',name:'Panel LED 60 × 60 36 W UGR<19 (marca)',fam:'Panel / oficina',use:'int',dist:'panel',W:36,lm:4300,cct:4000,cri:80,ip:40,org:MK,shape:'sq'},
+ {id:'down18c',name:'Downlight LED 18 W',fam:'Panel / oficina',use:'int',dist:'down',W:18,lm:1600,cct:4000,cri:80,ip:20,org:CN,shape:'round'},
+ {id:'down24c',name:'Downlight LED 24 W',fam:'Panel / oficina',use:'int',dist:'down',W:24,lm:2200,cct:4000,cri:80,ip:20,org:CN,shape:'round'},
+ {id:'fl100c',name:'Reflector LED 100 W · 60°',fam:'Reflector exterior',use:'ext',dist:'fl60',W:100,lm:11000,cct:5000,cri:70,ip:65,org:CN,shape:'flood'},
+ {id:'fl200c',name:'Reflector LED 200 W · 60°',fam:'Reflector exterior',use:'ext',dist:'fl60',W:200,lm:22000,cct:5000,cri:70,ip:65,org:CN,shape:'flood'},
+ {id:'fl200c90',name:'Reflector LED 200 W · 90°',fam:'Reflector exterior',use:'ext',dist:'fl90',W:200,lm:22000,cct:5000,cri:70,ip:65,org:CN,shape:'flood'},
+ {id:'fl300c',name:'Reflector LED 300 W · 30°',fam:'Reflector exterior',use:'ext',dist:'fl30',W:300,lm:33000,cct:5000,cri:70,ip:65,org:CN,shape:'flood'},
+ {id:'fl200m',name:'Reflector LED 200 W · 60° (marca)',fam:'Reflector exterior',use:'ext',dist:'fl60',W:200,lm:28000,cct:4000,cri:70,ip:66,org:MK,shape:'flood'},
+ {id:'wall50c',name:'Wall pack LED 50 W',fam:'Reflector exterior',use:'ext',dist:'wall',W:50,lm:6000,cct:5000,cri:70,ip:65,org:CN,shape:'flood'},
+ {id:'st60c',name:'Luminaria vial LED 60 W · tipo II',fam:'Alumbrado vial',use:'vial',dist:'st2',W:60,lm:7800,cct:4000,cri:70,ip:66,org:CN,shape:'street'},
+ {id:'st100c',name:'Luminaria vial LED 100 W · tipo III',fam:'Alumbrado vial',use:'vial',dist:'st3',W:100,lm:13000,cct:4000,cri:70,ip:66,org:CN,shape:'street'},
+ {id:'st150c',name:'Luminaria vial LED 150 W · tipo III',fam:'Alumbrado vial',use:'vial',dist:'st3',W:150,lm:19500,cct:4000,cri:70,ip:66,org:CN,shape:'street'},
+ {id:'st100m',name:'Luminaria vial LED 100 W · tipo III (marca)',fam:'Alumbrado vial',use:'vial',dist:'st3',W:100,lm:16000,cct:4000,cri:70,ip:66,org:MK,shape:'street'},
+ {id:'em2h',name:'Unidad de emergencia 2 faros LED (modo emergencia)',fam:'Emergencia',use:'em',dist:'em',W:4,lm:300,cct:6000,cri:70,ip:20,org:CN,shape:'em'},
+ {id:'emap',name:'Emergencia antipánico LED 3 W (modo emergencia)',fam:'Emergencia',use:'em',dist:'hb120',W:3,lm:250,cct:6000,cri:70,ip:42,org:CN,shape:'em'},
+ {id:'emkit',name:'Hermética LED con kit de emergencia (modo emergencia)',fam:'Emergencia',use:'em',dist:'strip',W:8,lm:600,cct:4000,cri:80,ip:65,org:CN,shape:'lin'}
+];
+let CUSTOM=store.get('custom',[]);
+const PH={};
+function customLum(c){try{const r=c.fmt==='ldt'?parseLDT(c.raw):parseIES(c.raw);PH[c.id]=r.ph;
+  return {id:c.id,name:c.name||r.name,fam:'Importadas (fotometría real)',use:'all',dist:null,W:+c.W||r.W||0,lm:Math.round(r.flux),cct:c.cct||r.cct||'',cri:c.cri||r.cri||'',ip:c.ip||'',org:(r.brand?r.brand+' · ':'')+'archivo '+c.fmt.toUpperCase(),shape:r.shape||'sq',custom:true}}catch(e){return null}}
+let CUSTOM_L=CUSTOM.map(customLum).filter(Boolean);
+const allLums=()=>CAT.concat(CUSTOM_L);
+const getLum=id=>allLums().find(l=>l.id===id)||CAT[0];
+const photo=l=>PH[l.id]||(PH[l.id]=makePhoto(GEN[l.dist]));
+function saveCustom(){const ok=store.set('custom',CUSTOM);CUSTOM_L=CUSTOM.map(customLum).filter(Boolean);refreshLumSelects();return ok}
+
+/* =================== normas =================== */
+// [id, nombre, lux, U0, referencia, polvo]
+const AREAS=[
+ ['pasillo','Pasillos, escaleras, almacén de poco movimiento',50,.4,'NOM-025-STPS, Tabla 1',0],
+ ['circ','Circulación, salas de espera y descanso, cuarto de almacén',100,.4,'NOM-025-STPS, Tabla 1',0],
+ ['bano','Baños y vestidores',100,.4,'NOM-025 (circulación); EN 12464-1 sugiere 200',0],
+ ['comedor','Comedor',200,.4,'EN 12464-1 (la NOM-025 no lo nombra)',0],
+ ['despacho','Almacén de producto terminado, recepción y despacho',200,.4,'NOM-025-STPS, Tabla 1',0],
+ ['compresores','Cuarto de compresores, caseta de vigilancia',200,.4,'NOM-025-STPS, Tabla 1',1],
+ ['electrico','Cuarto eléctrico / subestación interior',200,.4,'Criterio de planta (EN 12464-1: 200)',0],
+ ['corte','Corte y seccionado (seccionadora, sierras)',300,.6,'NOM-025: trabajo medio en máquina',1],
+ ['cnc','CNC / router (Selexx, Gabbiani)',300,.6,'NOM-025: trabajo medio en máquina',1],
+ ['enchapado','Enchapado / cubrecanto',300,.6,'NOM-025: trabajo medio en máquina',1],
+ ['lijado','Lijado y preparación',300,.6,'NOM-025: trabajo medio en banco',1],
+ ['ensamble','Ensamble simple',300,.6,'NOM-025-STPS, Tabla 1',0],
+ ['empaque','Empaque',300,.6,'NOM-025-STPS, Tabla 1',0],
+ ['oficina','Oficinas (trabajo de oficina)',300,.6,'NOM-025; EN 12464-1 pide 500 con pantallas',0],
+ ['taller','Taller de mantenimiento (banco y máquina)',300,.6,'NOM-025-STPS, Tabla 1',1],
+ ['pintura','Pintura y acabados / revisión de acabados',500,.7,'NOM-025: acabados delicados',1],
+ ['captura','Captura de información, laboratorio',500,.6,'NOM-025-STPS, Tabla 1',0],
+ ['inspeccion','Inspección de calidad fina, trabajos delicados',750,.7,'NOM-025-STPS, Tabla 1',0],
+ ['precision','Maquinado de precisión, piezas pequeñas',750,.7,'NOM-025-STPS, Tabla 1',0],
+ ['alta','Alta exactitud: piezas complejas, pulido fino',1000,.7,'NOM-025-STPS, Tabla 1',0],
+ ['especial','Alto grado de especialización',2000,.7,'NOM-025-STPS, Tabla 1',0]
+];
+const EXT=[
+ ['patio','Patio de maniobras',20,.25,'NOM-025: patios y estacionamientos'],
+ ['estac','Estacionamiento',20,.25,'NOM-025: patios y estacionamientos'],
+ ['anden','Andén / zona de carga exterior',50,.4,'EN 12464-2 (referencia)'],
+ ['materia','Patio de almacenamiento de material',20,.25,'NOM-025: exteriores generales'],
+ ['peatonal','Acceso peatonal y banquetas',20,.25,'NOM-025: exteriores generales'],
+ ['seguridad','Perímetro de seguridad / cámaras',30,.25,'Criterio de planta (CCTV)']
+];
+const VIAL=[
+ ['nom','Vialidad interna de planta (NOM-025: 20 lux)',20,5],
+ ['P1','Clase P1 · EN 13201-2',15,3],['P2','Clase P2 · EN 13201-2',10,2],['P3','Clase P3 · EN 13201-2',7.5,1.5],
+ ['P4','Clase P4 · EN 13201-2',5,1],['P5','Clase P5 · EN 13201-2',3,.6],['P6','Clase P6 · EN 13201-2',2,.4]
+];
+
+/* =================== motor de cálculo =================== */
+function prep(o,P,lm,mf){const r=(o.rot||0)*D2R,t=(o.tilt||0)*D2R;return Object.assign({},o,{cr:Math.cos(-r),sr:Math.sin(-r),ct:Math.cos(-t),st:Math.sin(-t),P,k:lm*mf/1000})}
+function Ept(L,px,py,pz){
+  const vx=px-L.x,vy=py-L.y,vz=pz-L.z;if(vz>=-1e-6)return 0;
+  const d2=vx*vx+vy*vy+vz*vz,d=Math.sqrt(d2);
+  const lx=L.cr*vx-L.sr*vy,ly=L.sr*vx+L.cr*vy;
+  const ly2=L.ct*ly-L.st*vz,lz2=L.st*ly+L.ct*vz;
+  let cg=-lz2/d;cg=cg>1?1:cg<-1?-1:cg;
+  const g=Math.acos(cg)/D2R;let C=Math.atan2(ly2,lx)/D2R;if(C<0)C+=360;
+  return L.k*Irel(L.P,C,g)*(-vz/d)/d2;
+}
+/* Obstáculos (racks, máquinas): cajas que tapan la luz directa */
+function inObs(obs,px,py,pz){for(const o of obs)if(o.h>pz&&px>=o.x&&px<=o.x+o.w&&py>=o.y&&py<=o.y+o.d)return true;return false}
+function blocked(obs,px,py,pz,L){
+  const dx=L.x-px,dy=L.y-py,dz=L.z-pz;
+  for(const o of obs){let t0=1e-4,t1=1-1e-4,hit=true;
+    for(const [p,d,mn,mx] of [[px,dx,o.x,o.x+o.w],[py,dy,o.y,o.y+o.d],[pz,dz,0,o.h]]){
+      if(Math.abs(d)<1e-12){if(p<mn||p>mx){hit=false;break}continue}
+      let a=(mn-p)/d,b=(mx-p)/d;if(a>b){const tt=a;a=b;b=tt}
+      if(a>t0)t0=a;if(b<t1)t1=b;if(t0>t1){hit=false;break}}
+    if(hit)return true}
+  return false;
+}
+function calcGrid(Ls,X0,Y0,X1,Y1,zp,nx,ny,Eind,obs){
+  nx=Math.max(1,nx|0);ny=Math.max(1,ny|0);Eind=Eind||0;obs=obs||[];
+  const v=new Float32Array(nx*ny),dx=(X1-X0)/nx,dy=(Y1-Y0)/ny;let s=0,mn=Infinity,mx=0,cnt=0;
+  for(let j=0;j<ny;j++){const py=Y0+(j+.5)*dy;for(let i=0;i<nx;i++){const px=X0+(i+.5)*dx;
+    if(obs.length&&inObs(obs,px,py,zp)){v[j*nx+i]=NaN;continue}
+    let e=Eind;for(let q=0;q<Ls.length;q++){if(obs.length&&blocked(obs,px,py,zp,Ls[q]))continue;e+=Ept(Ls[q],px,py,zp)}
+    v[j*nx+i]=e;s+=e;cnt++;if(e<mn)mn=e;if(e>mx)mx=e}}
+  if(!cnt)mn=0;const avg=cnt?s/cnt:0;return {v,nx,ny,X0,Y0,X1,Y1,avg,min:mn,max:mx,u0:avg>0?mn/avg:0};
+}
+/* Deslumbramiento UGR (CIE 117, índice de posición de Guth) */
+const LUMA={round:Math.PI*.18*.18,lin:1.1*.12,sq:.58*.58,flood:.3*.25,street:.5*.2,em:.3*.1};
+const UGRL={pasillo:28,circ:28,bano:25,comedor:22,despacho:25,compresores:25,electrico:25,corte:25,cnc:25,enchapado:25,lijado:25,ensamble:25,empaque:25,oficina:19,taller:25,pintura:22,captura:19,inspeccion:22,precision:22,alta:19,especial:16};
+function ugrCalc(insts,q,eye,lm,shape,Eind){
+  const A=LUMA[shape]||.1,Lb=Math.max(Eind,5)/Math.PI;let worst=0;
+  for(const [ox,oy,vx,vy] of [[0,q.W/2,1,0],[q.L,q.W/2,-1,0],[q.L/2,0,0,1],[q.L/2,q.W,0,-1]]){let sum=0;
+    for(const L of insts){const dx=L.x-ox,dy=L.y-oy;const R=dx*vx+dy*vy,T=-dx*vy+dy*vx,H=L.z-eye;if(R<=.1||H<=.05)continue;
+      const d2=R*R+T*T+H*H,d=Math.sqrt(d2);const lx=L.cr*-dx-L.sr*-dy,ly=L.sr*-dx+L.cr*-dy;let C=Math.atan2(ly,lx)/D2R;if(C<0)C+=360;
+      const cg=H/d,g=Math.acos(cg)/D2R;const I=Irel(L.P,C,g)*lm/1000;const Ap=A*cg;if(I<=0||Ap<=1e-6)continue;
+      const al=Math.atan(Math.abs(T)/H)/D2R,be=Math.atan(Math.sqrt(T*T+H*H)/R)/D2R;
+      const p=Math.exp((35.2-.31889*al-1.22*Math.exp(-2*al/9))*1e-3*be+(21+.26667*al-.002963*al*al)*1e-5*be*be);
+      sum+=I*I/(Ap*d2*p*p)}
+    if(sum>0)worst=Math.max(worst,8*Math.log10(.25/Lb*sum))}
+  return worst;
+}
+function arrange(N,L,W){let nx=Math.max(1,Math.round(Math.sqrt(N*L/W)));nx=Math.min(nx,N);return [nx,Math.max(1,Math.ceil(N/nx))]}
+function gridLayout(L,W,nx,ny,z,rot){const a=[];for(let j=0;j<ny;j++)for(let i=0;i<nx;i++)a.push({x:(i+.5)*L/nx,y:(j+.5)*W/ny,z,rot,tilt:0});return a}
+const resFor=(L,W,maxN)=>{const st=Math.max(L,W)/maxN;return [clamp(Math.round(L/Math.max(st,.35)),8,maxN),clamp(Math.round(W/Math.max(st,.35)),8,maxN)]};
+
+/* =================== dibujo =================== */
+const FC=[[0,[30,34,120]],[.16,[33,84,204]],[.33,[16,168,200]],[.5,[52,190,100]],[.66,[226,212,58]],[.83,[240,138,36]],[1,[222,50,44]]];
+function fc(t){t=clamp(t,0,1);for(let i=1;i<FC.length;i++)if(t<=FC[i][0]){const a=FC[i-1],b=FC[i],f=(t-a[0])/(b[0]-a[0]);return [0,1,2].map(k=>Math.round(a[1][k]+(b[1][k]-a[1][k])*f))}return FC[FC.length-1][1]}
+const fcCss=t=>'rgb('+fc(t).join(',')+')';
+const GRAD='linear-gradient(90deg,'+FC.map(s=>`rgb(${s[1].join(',')}) ${s[0]*100}%`).join(',')+')';
+function sizeCanvas(cv){const r=cv.getBoundingClientRect();if(!r.width)return [0,0,null];const dpr=Math.min(2,window.devicePixelRatio||1);cv.width=Math.round(r.width*dpr);cv.height=Math.round(r.height*dpr);const x=cv.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);return [r.width,r.height,x]}
+const K=()=>({bg:css('--cv-bg'),ink:css('--cv-ink'),grid:css('--cv-grid'),acc:css('--accent'),floor:css('--cv-floor'),wall:css('--cv-wall'),muted:css('--muted')});
+const SHAPE={round:[.45,.45],lin:[1.2,.18],sq:[.6,.6],flood:[.42,.32],street:[.7,.3],em:[.35,.12]};
+
+function contour(g,lv){
+  const {nx,ny,v}=g,segs=[];const t=(p,q)=>(lv-p)/((q-p)||1e-9);
+  for(let j=0;j<ny-1;j++)for(let i=0;i<nx-1;i++){
+    const a=v[j*nx+i],b=v[j*nx+i+1],c=v[(j+1)*nx+i+1],d=v[(j+1)*nx+i];
+    if(a!==a||b!==b||c!==c||d!==d)continue;
+    const idx=(a>lv?8:0)|(b>lv?4:0)|(c>lv?2:0)|(d>lv?1:0);if(idx===0||idx===15)continue;
+    const T=[i+t(a,b),j],R=[i+1,j+t(b,c)],B=[i+t(d,c),j+1],Lf=[i,j+t(a,d)];
+    switch(idx){case 1:case 14:segs.push([Lf,B]);break;case 2:case 13:segs.push([B,R]);break;case 3:case 12:segs.push([Lf,R]);break;
+      case 4:case 11:segs.push([T,R]);break;case 6:case 9:segs.push([T,B]);break;case 7:case 8:segs.push([Lf,T]);break;
+      case 5:segs.push([T,R],[Lf,B]);break;case 10:segs.push([Lf,T],[B,R]);break}
+  }return segs;
+}
+function drawPlan(cv,R){
+  const [w,h,x]=sizeCanvas(cv);if(!x)return;const k=K();
+  x.fillStyle=k.bg;x.fillRect(0,0,w,h);
+  const pad=40,bw=R.X1-R.X0,bh=R.Y1-R.Y0,s=Math.min((w-2*pad)/bw,(h-2*pad)/bh);
+  const ox=(w-bw*s)/2-R.X0*s,oy=(h-bh*s)/2-R.Y0*s;cv._tf={s,ox,oy};
+  const X=v=>ox+v*s,Y=v=>oy+v*s;
+  if(R.road){x.fillStyle=k.floor;x.fillRect(X(R.X0),Y(0),bw*s,R.road.Wr*s)}
+  const g=R.g,off=document.createElement('canvas');off.width=g.nx;off.height=g.ny;const oc=off.getContext('2d'),im=oc.createImageData(g.nx,g.ny);
+  for(let n=0;n<g.nx*g.ny;n++){const vv=g.v[n];const c=vv===vv?fc(vv/R.scaleMax):[128,132,140];im.data[4*n]=c[0];im.data[4*n+1]=c[1];im.data[4*n+2]=c[2];im.data[4*n+3]=255}
+  oc.putImageData(im,0,0);x.imageSmoothingEnabled=true;x.drawImage(off,X(g.X0),Y(g.Y0),(g.X1-g.X0)*s,(g.Y1-g.Y0)*s);
+  // isolíneas
+  const dx=(g.X1-g.X0)/g.nx,dy=(g.Y1-g.Y0)/g.ny,gx=i=>X(g.X0+(i+.5)*dx),gy=j=>Y(g.Y0+(j+.5)*dy);
+  const step=R.isoStep||niceStep(R.scaleMax/6);x.lineWidth=1;x.font='600 10px "IBM Plex Mono",monospace';
+  let nlev=0;
+  for(let lv=step;lv<g.max&&nlev<14;lv+=step,nlev++){
+    const segs=contour(g,lv);if(!segs.length)continue;
+    x.strokeStyle='rgba(8,12,20,.55)';x.beginPath();for(const [a,b] of segs){x.moveTo(gx(a[0]),gy(a[1]));x.lineTo(gx(b[0]),gy(b[1]))}x.stroke();
+    const m=segs[Math.floor(segs.length*.37)][0];const lx=gx(m[0]),ly=gy(m[1]);const txt=fmt(lv,lv<10?1:0);
+    x.lineWidth=3;x.strokeStyle='rgba(8,12,20,.75)';x.strokeText(txt,lx+2,ly-2);x.fillStyle='#fff';x.fillText(txt,lx+2,ly-2);x.lineWidth=1;
+  }
+  if(R.road){x.strokeStyle=k.ink;x.lineWidth=1.5;x.beginPath();x.moveTo(X(R.X0),Y(0));x.lineTo(X(R.X1),Y(0));x.moveTo(X(R.X0),Y(R.road.Wr));x.lineTo(X(R.X1),Y(R.road.Wr));x.stroke();
+    x.setLineDash([8,8]);x.strokeStyle='rgba(255,255,255,.75)';x.lineWidth=1.2;for(let l=1;l<R.road.lanes;l++){const yy=Y(R.road.Wr*l/R.road.lanes);x.beginPath();x.moveTo(X(R.X0),yy);x.lineTo(X(R.X1),yy);x.stroke()}x.setLineDash([]);
+    if(R.span){x.strokeStyle=k.acc;x.lineWidth=2;x.setLineDash([4,4]);x.strokeRect(X(R.span[0]),Y(0),(R.span[1]-R.span[0])*s,R.road.Wr*s);x.setLineDash([])}}
+  if(R.area){x.strokeStyle=k.ink;x.lineWidth=1.5;x.strokeRect(X(R.area[0]),Y(R.area[1]),(R.area[2]-R.area[0])*s,(R.area[3]-R.area[1])*s)}
+  // obstáculos
+  if(R.obs)for(const o of R.obs){x.globalAlpha=.9;x.fillStyle=k.wall;x.fillRect(X(o.x),Y(o.y),o.w*s,o.d*s);x.globalAlpha=1;x.strokeStyle=k.ink;x.lineWidth=1;x.strokeRect(X(o.x),Y(o.y),o.w*s,o.d*s);
+    x.beginPath();x.moveTo(X(o.x),Y(o.y));x.lineTo(X(o.x+o.w),Y(o.y+o.d));x.moveTo(X(o.x+o.w),Y(o.y));x.lineTo(X(o.x),Y(o.y+o.d));x.globalAlpha=.25;x.stroke();x.globalAlpha=1;
+    x.fillStyle=k.ink;x.font='600 11px "IBM Plex Sans",sans-serif';x.textAlign='center';x.fillText(o.n+' · '+fmt(o.h,1)+' m',X(o.x+o.w/2),Y(o.y+o.d/2)+4);x.textAlign='left'}
+  // luminarias
+  const [sw,sh]=SHAPE[R.shape]||SHAPE.sq;
+  for(const L of R.insts){
+    if(L.x<R.X0-.5||L.x>R.X1+.5)continue;
+    if(L.px!==undefined){x.strokeStyle=k.ink;x.lineWidth=1;x.beginPath();x.moveTo(X(L.px),Y(L.py));x.lineTo(X(L.x),Y(L.y));x.stroke();x.fillStyle=k.ink;x.beginPath();x.arc(X(L.px),Y(L.py),3,0,7);x.fill()}
+    x.save();x.translate(X(L.x),Y(L.y));x.rotate((L.rot||0)*D2R);
+    const pw=Math.max(sw*s,6),ph=Math.max(sh*s,R.shape==='lin'?3:6);
+    x.fillStyle='#fff6dc';x.strokeStyle='#1a1206';x.lineWidth=1;
+    if(R.shape==='round'){x.beginPath();x.arc(0,0,pw/2,0,7);x.fill();x.stroke()}else{x.fillRect(-pw/2,-ph/2,pw,ph);x.strokeRect(-pw/2,-ph/2,pw,ph)}
+    if(L.tilt){const len=Math.min(60,Math.max(10,Math.tan(L.tilt*D2R)*L.z*s));x.strokeStyle=k.acc;x.lineWidth=2;x.beginPath();x.moveTo(0,0);x.lineTo(0,len);x.stroke();x.beginPath();x.moveTo(-4,len-5);x.lineTo(0,len);x.lineTo(4,len-5);x.stroke()}
+    x.restore();
+  }
+  // cotas
+  x.fillStyle=k.ink;x.font='12px "IBM Plex Mono",monospace';x.textAlign='center';
+  const A=R.area||[R.X0,R.Y0,R.X1,R.Y1];
+  if(R.dimLabel!==false){x.fillText(fmt(A[2]-A[0],1)+' m',X((A[0]+A[2])/2),Y(A[1])-10);
+    x.save();x.translate(X(A[0])-12,Y((A[1]+A[3])/2));x.rotate(-Math.PI/2);x.fillText(fmt(A[3]-A[1],1)+' m',0,0);x.restore()}
+  // barra de escala
+  const sl=niceStep(bw/5);x.textAlign='left';x.strokeStyle=k.ink;x.lineWidth=2;x.beginPath();x.moveTo(12,h-14);x.lineTo(12+sl*s,h-14);x.stroke();x.fillText(fmt(sl,sl<1?1:0)+' m',16+sl*s,h-10);
+  x.textAlign='right';x.fillStyle=k.muted;x.fillText('isolíneas cada '+fmt(step,step<10?1:0)+' lux',w-10,h-10);x.textAlign='left';
+}
+const V3={yaw:-.65,pitch:.95};
+function draw3D(cv,R){
+  const [w,h,x]=sizeCanvas(cv);if(!x||!R.room)return;const k=K();x.fillStyle=k.bg;x.fillRect(0,0,w,h);
+  const {L,W,H,wp,hm}=R.room;const cy=Math.cos(V3.yaw),sy=Math.sin(V3.yaw),cp=Math.cos(V3.pitch),sp=Math.sin(V3.pitch);
+  const pr=(a,b,c)=>{const ax=a-L/2,by=b-W/2;const xr=ax*cy-by*sy,yr=ax*sy+by*cy;return [xr,yr*sp-(c-H/2)*cp,yr]};
+  let mnx=1e9,mxx=-1e9,mny=1e9,mxy=-1e9;for(const a of [0,L])for(const b of [0,W])for(const c of [0,H]){const q=pr(a,b,c);mnx=Math.min(mnx,q[0]);mxx=Math.max(mxx,q[0]);mny=Math.min(mny,q[1]);mxy=Math.max(mxy,q[1])}
+  const s=Math.min((w-50)/(mxx-mnx),(h-50)/(mxy-mny)),ox=w/2-(mnx+mxx)/2*s,oy=h/2-(mny+mxy)/2*s;
+  const P=(a,b,c)=>{const q=pr(a,b,c);return [ox+q[0]*s,oy+q[1]*s]};
+  const poly=(pts,fill,stroke)=>{x.beginPath();pts.forEach((p,i)=>{const q=P(...p);i?x.lineTo(q[0],q[1]):x.moveTo(q[0],q[1])});x.closePath();if(fill){x.fillStyle=fill;x.fill()}if(stroke){x.strokeStyle=stroke;x.stroke()}};
+  poly([[0,0,0],[L,0,0],[L,W,0],[0,W,0]],k.floor,k.grid);
+  const walls=[[[0,0],[L,0]],[[L,0],[L,W]],[[L,W],[0,W]],[[0,W],[0,0]]];
+  const wallTone=fcCss(clamp((R.Eind||0)/R.scaleMax,0,1));
+  for(const [a,b] of walls){const m=pr((a[0]+b[0])/2,(a[1]+b[1])/2,H/2);if(m[2]<0){x.globalAlpha=.55;poly([[a[0],a[1],0],[b[0],b[1],0],[b[0],b[1],H],[a[0],a[1],H]],k.wall,k.grid);x.globalAlpha=.18;poly([[a[0],a[1],0],[b[0],b[1],0],[b[0],b[1],H],[a[0],a[1],H]],wallTone);x.globalAlpha=1}}
+  const g=R.g,dx=(g.X1-g.X0)/g.nx,dy=(g.Y1-g.Y0)/g.ny;x.lineWidth=.6;
+  for(let j=0;j<g.ny;j++)for(let i=0;i<g.nx;i++){const vv=g.v[j*g.nx+i];const c=vv===vv?fcCss(vv/R.scaleMax):k.wall;const x0=g.X0+i*dx,y0=g.Y0+j*dy;poly([[x0,y0,wp],[x0+dx,y0,wp],[x0+dx,y0+dy,wp],[x0,y0+dy,wp]],c,c)}
+  x.lineWidth=1;
+  if(R.obs&&R.obs.length){const faces=[];
+    for(const o of R.obs){const x0=o.x,x1=o.x+o.w,y0=o.y,y1=o.y+o.d,hh=o.h;
+      faces.push([[x0,y0,hh],[x1,y0,hh],[x1,y1,hh],[x0,y1,hh]],[[x0,y0,0],[x1,y0,0],[x1,y0,hh],[x0,y0,hh]],[[x1,y0,0],[x1,y1,0],[x1,y1,hh],[x1,y0,hh]],[[x1,y1,0],[x0,y1,0],[x0,y1,hh],[x1,y1,hh]],[[x0,y1,0],[x0,y0,0],[x0,y0,hh],[x0,y1,hh]])}
+    const dep=f=>{let s2=0;for(const p of f)s2+=pr(...p)[2];return s2/f.length};
+    faces.sort((a,b)=>dep(a)-dep(b)).forEach(f=>poly(f,k.wall,k.ink))}
+  const [sw,sh]=SHAPE[R.shape]||SHAPE.sq;
+  const ins=R.insts.slice().sort((a,b)=>pr(a.x,a.y,a.z)[2]-pr(b.x,b.y,b.z)[2]);
+  for(const Lm of ins){const q=P(Lm.x,Lm.y,Lm.z);const gr=x.createRadialGradient(q[0],q[1],0,q[0],q[1],22);gr.addColorStop(0,'rgba(255,236,170,.9)');gr.addColorStop(1,'rgba(255,236,170,0)');x.fillStyle=gr;x.beginPath();x.arc(q[0],q[1],22,0,7);x.fill();
+    const r=(Lm.rot||0)*D2R,ca=Math.cos(r),sa=Math.sin(r),hw=sw/2,hh=sh/2;const cn=[[-hw,-hh],[hw,-hh],[hw,hh],[-hw,hh]].map(([u,v])=>[Lm.x+u*ca-v*sa,Lm.y+u*sa+v*ca,Lm.z]);poly(cn,'#fff6dc','#1a1206')}
+  x.strokeStyle=k.ink;x.globalAlpha=.7;for(const [a,b] of walls){const m=pr((a[0]+b[0])/2,(a[1]+b[1])/2,H/2);x.beginPath();const p1=P(a[0],a[1],0),p2=P(b[0],b[1],0),p3=P(b[0],b[1],H),p4=P(a[0],a[1],H);x.moveTo(...p1);x.lineTo(...p2);x.moveTo(...p4);x.lineTo(...p3);x.moveTo(...p1);x.lineTo(...p4);x.stroke()}x.globalAlpha=1;
+  x.fillStyle=k.muted;x.font='12px "IBM Plex Sans",sans-serif';x.fillText('Arrastra para girar · plano de trabajo a '+fmt(wp,2)+' m · luminarias a '+fmt(hm,2)+' m',12,h-12);
+}
+function drawPolar(cv,P,lum){
+  const [w,h,x]=sizeCanvas(cv);if(!x)return;const k=K();x.fillStyle=k.bg;x.fillRect(0,0,w,h);
+  const cx=w/2,cy=h/2+6,R=Math.min(w,h)/2-34;let mx=0;
+  for(let g=0;g<=180;g++)for(const C of [0,90,180,270])mx=Math.max(mx,Irel(P,C,g));
+  const top=niceCeil(mx||1);x.strokeStyle=k.grid;x.fillStyle=k.muted;x.font='10px "IBM Plex Mono",monospace';x.lineWidth=1;
+  for(let i=1;i<=4;i++){x.beginPath();x.arc(cx,cy,R*i/4,0,7);x.stroke();x.fillText(fmt(top*i/4),cx+3,cy+R*i/4-3)}
+  for(let a=0;a<360;a+=30){x.beginPath();x.moveTo(cx,cy);x.lineTo(cx+R*Math.sin(a*D2R),cy+R*Math.cos(a*D2R));x.stroke()}
+  x.textAlign='center';[0,30,60,90,120,150,180].forEach(a=>{x.fillText(a+'°',cx+(R+14)*Math.sin(a*D2R),cy+(R+14)*Math.cos(a*D2R)+3)});
+  const curve=(cR,cL,col,dash)=>{x.beginPath();for(let g=180;g>=0;g-=2){const r=R*Irel(P,cL,g)/top;const px=cx-r*Math.sin(g*D2R),py=cy+r*Math.cos(g*D2R);g===180?x.moveTo(px,py):x.lineTo(px,py)}
+    for(let g=0;g<=180;g+=2){const r=R*Irel(P,cR,g)/top;x.lineTo(cx+r*Math.sin(g*D2R),cy+r*Math.cos(g*D2R))}x.setLineDash(dash);x.strokeStyle=col;x.lineWidth=2.2;x.stroke();x.setLineDash([])};
+  curve(0,180,k.acc,[]);curve(90,270,k.ink,[6,4]);
+  const beam=C=>{let m=0;for(let g=0;g<=90;g++)m=Math.max(m,Irel(P,C,g));for(let g=90;g>=0;g--)if(Irel(P,C,g)>=m/2)return 2*g;return 0};
+  x.textAlign='left';x.fillStyle=k.ink;x.font='600 13px "IBM Plex Sans",sans-serif';x.fillText(lum.name,12,20);
+  x.font='12px "IBM Plex Mono",monospace';x.fillStyle=k.muted;
+  x.fillText('cd/klm · '+fmt(lum.lm)+' lm · '+fmt(lum.W)+' W',12,38);
+  x.fillStyle=k.acc;x.fillText('━ C0–C180  haz '+beam(0)+'°',12,h-30);x.fillStyle=k.ink;x.fillText('╍ C90–C270 haz '+beam(90)+'°',12,h-12);
+}
+function drawDay(cv,D){
+  const [w,h,x]=sizeCanvas(cv);if(!x)return;const k=K();x.fillStyle=k.bg;x.fillRect(0,0,w,h);
+  const l=52,r=16,t=26,b=36,W2=w-l-r,H2=h-t-b;const ymax=niceCeil(Math.max(D.target*1.6,...D.ein,1));
+  const X=hh=>l+(hh-D.h0)/(D.h1-D.h0)*W2,Y=v=>t+H2-v/ymax*H2;
+  x.strokeStyle=k.grid;x.fillStyle=k.muted;x.font='11px "IBM Plex Mono",monospace';x.lineWidth=1;
+  for(let i=0;i<=4;i++){const v=ymax*i/4;x.beginPath();x.moveTo(l,Y(v));x.lineTo(w-r,Y(v));x.stroke();x.textAlign='right';x.fillText(fmt(v),l-6,Y(v)+4)}
+  x.textAlign='center';for(let hh=Math.ceil(D.h0);hh<=D.h1;hh++){if((hh-Math.ceil(D.h0))%2===0||D.h1-D.h0<9)x.fillText(hh+':00',X(hh),h-14)}
+  x.beginPath();D.hours.forEach((hh,i)=>{const px=X(hh),py=Y(D.ein[i]);i?x.lineTo(px,py):x.moveTo(px,py)});x.lineTo(X(D.hours[D.hours.length-1]),Y(0));x.lineTo(X(D.hours[0]),Y(0));x.closePath();
+  x.globalAlpha=.25;x.fillStyle=k.acc;x.fill();x.globalAlpha=1;
+  x.beginPath();D.hours.forEach((hh,i)=>{const px=X(hh),py=Y(D.ein[i]);i?x.lineTo(px,py):x.moveTo(px,py)});x.strokeStyle=k.acc;x.lineWidth=2.2;x.stroke();
+  x.setLineDash([6,4]);x.strokeStyle=k.ink;x.lineWidth=1.5;x.beginPath();x.moveTo(l,Y(D.target));x.lineTo(w-r,Y(D.target));x.stroke();x.setLineDash([]);
+  x.textAlign='left';x.fillStyle=k.ink;x.font='12px "IBM Plex Sans",sans-serif';x.fillText('Objetivo '+fmt(D.target)+' lux',l+6,Y(D.target)-6);
+  x.fillStyle=k.muted;x.fillText('Lux en el plano de trabajo solo con luz natural',l,16);
+}
+
+/* =================== formularios =================== */
+const F=(id,lab,v,u,cls)=>`<label class="fld ${cls||''}" for="${id}"><span>${lab}</span><div class="in"><input id="${id}" type="number" step="any" inputmode="decimal" value="${v}">${u?`<em>${u}</em>`:''}</div></label>`;
+const T=(id,lab,v,cls)=>`<label class="fld ${cls||'w2'}" for="${id}"><span>${lab}</span><div class="in"><input id="${id}" type="text" value="${esc(v)}"></div></label>`;
+const S=(id,lab,opts,v,cls)=>`<label class="fld ${cls||''}" for="${id}"><span>${lab}</span><div class="in"><select id="${id}">${opts.map(o=>`<option value="${esc(o[0])}"${String(o[0])===String(v)?' selected':''}>${esc(o[1])}</option>`).join('')}</select></div></label>`;
+const G=(t,inner)=>`<div class="grp"><h3>${t}</h3>${inner}</div>`;
+const LUMF=(p,def,lmLabel)=>G('Luminaria',`<label class="fld w2" for="${p}-lum"><span>Modelo</span><div class="in"><select id="${p}-lum" data-def="${def}"></select></div></label><div class="lumcard w2" id="${p}-card"></div>${F(p+'-lm',lmLabel||'Lúmenes por luminaria','','lm')}${F(p+'-Wl','Watts por luminaria','','W')}`);
+const PREF={i:['int'],x:['ext'],v:['vial','ext'],e:['em']};
+function fillLumSelect(p){
+  const sel=$('#'+p+'-lum');if(!sel)return;const cur=sel.value||sel.dataset.def;const pref=PREF[p];
+  const fams={};for(const l of allLums())(fams[l.fam]=fams[l.fam]||[]).push(l);
+  const order=Object.keys(fams).sort((a,b)=>{const pa=fams[a].some(l=>pref.includes(l.use)||l.custom)?0:1,pb=fams[b].some(l=>pref.includes(l.use)||l.custom)?0:1;return pa-pb});
+  sel.innerHTML=order.map(f=>`<optgroup label="${esc(f)}">${fams[f].map(l=>`<option value="${l.id}">${esc(l.name)}</option>`).join('')}</optgroup>`).join('');
+  sel.value=allLums().some(l=>l.id===cur)?cur:sel.dataset.def;
+}
+function refreshLumSelects(){['i','x','v','e'].forEach(fillLumSelect)}
+function lumCard(p,setVals){const l=getLum(val(p+'-lum'));if(setVals){$('#'+p+'-lm').value=l.lm;$('#'+p+'-Wl').value=l.W}
+  $('#'+p+'-card').innerHTML=`<b>${esc(l.org)}</b><br>${fmt(l.W)} W · ${fmt(l.lm)} lm · <b>${l.W?fmt(l.lm/l.W):'—'} lm/W</b><br>${l.cct?l.cct+' K · ':''}${l.cri?'CRI '+l.cri+' · ':''}${l.ip?'IP'+l.ip+' · ':''}${l.dist?BEAM[l.dist]:'curva del archivo'}`}
+
+function buildForms(){
+  $('#f-i').innerHTML=
+   G('Espacio',T('i-name','Nombre del espacio','Nave de corte y CNC')+T('i-zone','Edificio / zona','Planta')+S('i-area','Tipo de área de trabajo',AREAS.map(a=>[a[0],a[1]+' · '+a[2]+' lux']),'cnc','w2')+F('i-E','Lux objetivo',300,'lux')+F('i-U0','Uniformidad mín. U0',.6))
+  +G('Dimensiones',F('i-L','Largo',30,'m')+F('i-W','Ancho',18,'m')+F('i-H','Altura libre',7,'m')+F('i-hm','Altura de montaje',6.5,'m')+F('i-wp','Plano de trabajo',.85,'m')+`<label class="chk w2" for="i-marg"><input type="checkbox" id="i-marg" checked> Excluir franja de 0.5 m junto a muros</label>`)
+  +G('Superficies y mantenimiento',S('i-rc','Techo',[[.8,'Blanco 80 %'],[.7,'Claro 70 %'],[.5,'Lámina / medio 50 %'],[.3,'Oscuro 30 %']],.5)+S('i-rw','Muros',[[.7,'Claro 70 %'],[.5,'Medio 50 %'],[.3,'Oscuro 30 %']],.5)+S('i-rf','Piso',[[.3,'Claro 30 %'],[.2,'Concreto 20 %'],[.1,'Oscuro 10 %']],.2)+S('i-mf','Factor de mantenimiento',[[.8,'0.80 limpio'],[.7,'0.70 normal'],[.6,'0.60 con polvo'],[.5,'0.50 mucho polvo']],.6))
+  +LUMF('i','hb150c')
+  +G('Distribución',S('i-auto','Cantidad de luminarias',[[1,'Automática (cumplir lux)'],[0,'Manual']],1,'w2')+F('i-nx','Columnas (a lo largo)',4)+F('i-ny','Filas (a lo ancho)',3)+S('i-rot','Orientación',[[0,'A lo largo'],[90,'A lo ancho']],0,'w2'))
+  +G('Obstáculos que hacen sombra',`<div class="w2" id="i-obs"></div><div class="btns w2"><button class="btn sm" type="button" data-addobs="rack">+ Rack</button><button class="btn sm" type="button" data-addobs="maq">+ Máquina</button><button class="btn sm" type="button" data-addobs="otro">+ Otro</button></div>`)
+  +G('Energía',F('i-hrs','Horas al día',16,'h')+F('i-days','Días al año',300,'d')+F('i-Wact','Instalado hoy (total)','','W')+F('i-dpea','DPEA máx. (si aplica)','','W/m²'))
+  +`<div class="btns"><button class="btn" type="button" id="i-sugb">Sugerir luminarias</button><button class="btn pri" type="button" data-save="i">Guardar en el proyecto</button></div>`;
+
+  $('#f-x').innerHTML=
+   G('Espacio',T('x-name','Nombre','Patio de maniobras')+T('x-zone','Edificio / zona','Exterior')+S('x-type','Tipo de área',EXT.map(a=>[a[0],a[1]+' · '+a[2]+' lux']),'patio','w2')+F('x-E','Lux objetivo',20,'lux')+F('x-U0','Uniformidad mín. U0',.25))
+  +G('Área',F('x-L','Largo',60,'m')+F('x-W','Ancho',30,'m'))
+  +G('Postes',S('x-arr','Acomodo',[['perim1','En un lado largo'],['perim2','En ambos lados largos'],['grid','Retícula al centro']],'perim2','w2')+F('x-n','Postes por lado / columnas',3)+F('x-ny','Filas (retícula)',2)+F('x-h','Altura de montaje',9,'m')+F('x-heads','Reflectores por poste',1)+F('x-tilt','Inclinación',20,'°')+F('x-set','Poste fuera de la orilla',1,'m'))
+  +LUMF('x','fl200c')
+  +G('Mantenimiento y energía',S('x-mf','Factor de mantenimiento',[[.8,'0.80'],[.7,'0.70'],[.6,'0.60']],.7)+F('x-hrs','Horas al día',12,'h')+F('x-days','Días al año',365,'d')+F('x-Wact','Instalado hoy (total)','','W'))
+  +`<div class="btns"><button class="btn pri" type="button" data-save="x">Guardar en el proyecto</button></div>`;
+
+  $('#f-v').innerHTML=
+   G('Vialidad',T('v-name','Nombre','Vialidad interna acceso')+T('v-zone','Edificio / zona','Exterior')+S('v-cls','Clase de alumbrado',VIAL.map(a=>[a[0],a[1]]),'nom','w2')+F('v-E','Lux promedio mín.',20,'lux')+F('v-Emin','Lux mínimo',5,'lux'))
+  +G('Sección',F('v-Wr','Ancho del arroyo',7,'m')+F('v-lanes','Carriles',2)+F('v-len','Longitud total',200,'m','w2'))
+  +G('Postes',S('v-arr','Acomodo',[['uni','Unilateral'],['bi','Bilateral enfrentado'],['tres','Tresbolillo'],['cen','Camellón central (doble brazo)']],'uni','w2')+F('v-h','Altura de montaje',8,'m')+F('v-S','Separación',28,'m')+F('v-ov','Brazo (saliente)',1.5,'m')+F('v-tilt','Inclinación',10,'°')+F('v-set','Poste a la orilla',.5,'m'))
+  +LUMF('v','st100c')
+  +G('Mantenimiento y energía',S('v-mf','Factor de mantenimiento',[[.85,'0.85'],[.8,'0.80'],[.7,'0.70']],.8)+F('v-hrs','Horas al día',12,'h')+F('v-days','Días al año',365,'d')+F('v-Wact','Instalado hoy (total)','','W'))
+  +`<div class="btns"><button class="btn" type="button" id="v-max">Máxima separación que cumple</button><button class="btn pri" type="button" data-save="v">Guardar en el proyecto</button></div>`;
+
+  $('#f-e').innerHTML=
+   G('Emergencia',T('e-name','Nombre','Ruta de evacuación nave')+T('e-zone','Edificio / zona','Planta')+S('e-mode','Tipo',[['ruta','Ruta de evacuación'],['area','Área abierta (antipánico)']],'ruta')+S('e-crit','Criterio',[['en','EN 1838'],['nfpa','NFPA 101']],'en'))
+  +G('Geometría',F('e-L','Largo',40,'m')+F('e-w','Ancho de la ruta',2,'m')+F('e-Wa','Ancho del área (antipánico)',15,'m')+F('e-h','Altura de montaje',3,'m'))
+  +G('Distribución',F('e-S','Separación (ruta)',10,'m')+F('e-nx','Columnas (área)',4)+F('e-ny','Filas (área)',3))
+  +LUMF('e','em2h','Lúmenes en modo emergencia')
+  +G('Batería',S('e-mf','Factor por envejecimiento',[[1,'1.00'],[.9,'0.90'],[.8,'0.80']],.8)+S('e-dur','Autonomía de batería',[[1,'1 h'],[1.5,'1.5 h'],[3,'3 h']],1.5))
+  +`<div class="btns"><button class="btn" type="button" id="e-max">Máxima separación que cumple</button><button class="btn pri" type="button" data-save="e">Guardar en el proyecto</button></div>`;
+
+  const today=new Date();const iso=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+  $('#f-d').innerHTML=
+   G('Local',`<label class="chk w2" for="d-link"><input type="checkbox" id="d-link" checked> Usar medidas, lux y potencia de la pestaña Interior</label>`+F('d-L','Largo',30,'m')+F('d-W','Ancho',18,'m')+F('d-H','Altura',7,'m')+F('d-E','Lux objetivo',300,'lux')+F('d-P','Alumbrado instalado',0,'kW')+F('d-R','Reflectancia promedio',.45))
+  +G('Láminas traslúcidas (techo)',F('d-nsk','Número de láminas',12)+F('d-ask','Área de cada una',3,'m²')+S('d-T','Material',[[.8,'Policarbonato nuevo 0.80'],[.65,'Policarbonato usado 0.65'],[.5,'Fibra de vidrio amarillenta 0.50'],[.35,'Muy sucia / opaca 0.35']],.65)+F('d-cu','Aprovechamiento (CU)',.7)+F('d-dirt','Factor de suciedad',.8,'','w2'))
+  +G('Ventanas',F('d-aw','Área de vidrio',0,'m²')+F('d-tw','Transmisión vidrio',.75)+F('d-th','Ángulo de cielo visible',65,'°','w2'))
+  +G('Sitio y horario',F('d-lat','Latitud',25.7,'°')+F('d-noon','Mediodía solar (hora local)',12.75,'h')+`<label class="fld w2" for="d-date"><span>Fecha a revisar</span><div class="in"><input id="d-date" type="date" value="${iso}"></div></label>`+F('d-h0','Entrada',7,'h')+F('d-h1','Salida',23,'h')+S('d-sky','Cielo',[['nub','Nublado (conservador)'],['mix','Mixto'],['desp','Despejado']],'mix')+S('d-ctrl','Control',[['dim','Dimeo continuo'],['onoff','Fotocelda encendido/apagado']],'dim')+F('d-days','Días laborables al año',300,'d','w2'))
+  +`<p class="note">La latitud 25.7° y el mediodía solar 12:45 corresponden a Monterrey (supuesto): ajústalos a la ubicación real de la planta.</p>`;
+}
+
+/* =================== bloques de resultado =================== */
+const CTX={},VIEW={i:'plan',x:'plan',v:'plan',e:'plan'};
+function setupRes(p,has3d){
+  $('#r-'+p).innerHTML=`<div class="kpis" id="${p}-kpis"></div>
+   <div class="viewbar"><button type="button" data-v="plan" class="on">Plano isolux</button>${has3d?'<button type="button" data-v="3d">Vista 3D</button>':''}<button type="button" data-v="polar">Curva fotométrica</button><span class="hint">Cursor sobre el plano: lux en ese punto</span></div>
+   <div class="stage"><canvas id="${p}-plan" aria-label="Plano de iluminancias"></canvas>${has3d?`<canvas id="${p}-3d" hidden aria-label="Vista 3D"></canvas>`:''}<canvas id="${p}-polar" hidden aria-label="Curva fotométrica"></canvas><div class="tip" id="${p}-tip" hidden></div></div>
+   <div class="legend" id="${p}-legend"></div>
+   <div class="card" id="${p}-det"></div>${p==='i'?'<div class="card" id="i-sug" hidden></div>':''}`;
+  $$('#r-'+p+' .viewbar button').forEach(b=>b.onclick=()=>{VIEW[p]=b.dataset.v;$$('#r-'+p+' .viewbar button').forEach(z=>z.classList.toggle('on',z===b));showView(p)});
+  const cv=$('#'+p+'-plan');cv.addEventListener('pointermove',ev=>tip(p,ev));cv.addEventListener('pointerleave',()=>{$('#'+p+'-tip').hidden=true});
+  if(has3d){const c3=$('#'+p+'-3d');let dr=null;
+    c3.addEventListener('pointerdown',e=>{dr=[e.clientX,e.clientY,V3.yaw,V3.pitch];c3.setPointerCapture(e.pointerId)});
+    c3.addEventListener('pointermove',e=>{if(!dr)return;V3.yaw=dr[2]+(e.clientX-dr[0])*.01;V3.pitch=clamp(dr[3]+(e.clientY-dr[1])*.008,.12,1.55);draw(p)});
+    c3.addEventListener('pointerup',()=>{dr=null});}
+}
+function showView(p){['plan','3d','polar'].forEach(v=>{const c=$('#'+p+'-'+v);if(c)c.hidden=VIEW[p]!==v});$('#'+p+'-legend').hidden=VIEW[p]==='polar';if(VIEW[p]!=='plan')$('#'+p+'-tip').hidden=true;draw(p)}
+function draw(p){const c=CTX[p];if(!c)return;if(VIEW[p]==='plan')drawPlan($('#'+p+'-plan'),c);else if(VIEW[p]==='3d')draw3D($('#'+p+'-3d'),c);else drawPolar($('#'+p+'-polar'),c.P,c.lumShow)}
+function legend(p){const c=CTX[p];const m=c.scaleMax;$('#'+p+'-legend').innerHTML=`<span>lux</span><div class="lgwrap"><div class="bar" style="background:${GRAD}"></div><div class="ticks">${[0,.25,.5,.75,1].map(f=>`<span>${fmt(m*f,m*f<10&&f?1:0)}</span>`).join('')}</div></div>`}
+function tip(p,ev){const c=CTX[p],cv=$('#'+p+'-plan');if(!c||!cv._tf)return;const r=cv.getBoundingClientRect();const mx=ev.clientX-r.left,my=ev.clientY-r.top;
+  const X=(mx-cv._tf.ox)/cv._tf.s,Y=(my-cv._tf.oy)/cv._tf.s;const t=$('#'+p+'-tip');const B=c.tipArea||c.area;
+  if(!B||X<B[0]||X>B[2]||Y<B[1]||Y>B[3]){t.hidden=true;return}
+  const ob=c.obs||[];
+  if(ob.length&&inObs(ob,X,Y,c.zp)){t.hidden=false;t.textContent='Obstáculo';t.style.left=Math.min(mx+14,r.width-170)+'px';t.style.top=(my+14)+'px';return}
+  let e=c.Eind||0;for(const L of c.insts){if(ob.length&&blocked(ob,X,Y,c.zp,L))continue;e+=Ept(L,X,Y,c.zp)}
+  t.hidden=false;t.textContent=`${fmt(e,e<10?1:0)} lux · x ${fmt(X,1)} m, y ${fmt(Y,1)} m`;t.style.left=Math.min(mx+14,r.width-170)+'px';t.style.top=(my+14)+'px'}
+const LASTK={};
+function kpis(p,list){LASTK[p]=list;$('#'+p+'-kpis').innerHTML=list.map(k=>`<div class="kpi"><small>${k.l}</small><b>${k.v}</b><i>${k.u||''}</i>${k.st?`<div><span class="pill ${k.st}">${k.stt}</span></div>`:''}</div>`).join('')}
+const okp=(c,t1,t2)=>c?{st:'ok',stt:t1||'Cumple'}:{st:'bad',stt:t2||'No cumple'};
+const rows=r=>`<div class="tw"><table class="t"><tbody>${r.map(x=>`<tr><th>${x[0]}</th><td class="n">${x[1]}</td><td>${x[2]||''}</td></tr>`).join('')}</tbody></table></div>`;
+function energyRows(Wtot,hrs,days,Wact){const kwh=Wtot*hrs*days/1000,pr=+val('p-kwh')||0;const r=[['Energía al año',fmt(kwh)+' kWh',`${fmt(hrs)} h × ${fmt(days)} días`],['Costo de energía al año','$'+fmt(kwh*pr,2),`a $${fmt(pr,3)}/kWh (pestaña Proyecto)`]];
+  if(Wact>0){const ka=Wact*hrs*days/1000;r.push(['Instalado hoy',fmt(Wact)+' W',fmt(ka)+' kWh/año'],['Ahorro contra lo actual',fmt(ka-kwh)+' kWh/año','$'+fmt((ka-kwh)*pr,2)+' al año · '+fmt((1-Wtot/Wact)*100)+' % menos'])}return r}
+
+/* =================== INTERIOR =================== */
+function intParams(){return {L:num('i-L'),W:num('i-W'),H:num('i-H'),hm:Math.min(num('i-hm'),num('i-H')),wp:num('i-wp'),Et:num('i-E'),U0r:num('i-U0'),mf:+val('i-mf'),rc:+val('i-rc'),rw:+val('i-rw'),rf:+val('i-rf'),rot:+val('i-rot'),marg:$('#i-marg').checked?.5:0,auto:val('i-auto')==='1',nx:Math.max(1,Math.round(num('i-nx'))),ny:Math.max(1,Math.round(num('i-ny'))),obs:OBS.filter(o=>o.w>0&&o.d>0&&o.h>0)}}
+let OBS=store.get('obs',[]);
+const OBSP={rack:{n:'Rack',w:10,d:1.1,h:6},maq:{n:'Máquina',w:6,d:2.5,h:2.2},otro:{n:'Obstáculo',w:2,d:2,h:2}};
+const OBSL={x:'Desde x',y:'Desde y',w:'Largo',d:'Ancho',h:'Alto'};
+function renderObs(){
+  $('#i-obs').innerHTML=OBS.length?OBS.map((o,i)=>`<div class="obs"><label class="fld w3" for="o${i}n"><span>Nombre</span><div class="in"><input id="o${i}n" data-o="${i}" data-k="n" type="text" value="${esc(o.n)}"></div></label>${['x','y','w','d','h'].map(k=>`<label class="fld" for="o${i}${k}"><span>${OBSL[k]}</span><div class="in"><input id="o${i}${k}" data-o="${i}" data-k="${k}" type="number" step="any" inputmode="decimal" value="${o[k]}"><em>m</em></div></label>`).join('')}<div class="fld" style="align-self:end"><button class="btn sm" type="button" data-delobs="${i}">Quitar</button></div></div>`).join(''):'<p class="note" style="margin:0">Sin obstáculos. Agrega racks o máquinas altas para ver su sombra en el plano. x y y se miden desde la esquina superior izquierda del plano.</p>';
+  $$('#i-obs input').forEach(inp=>inp.addEventListener('input',()=>{const o=OBS[+inp.dataset.o];o[inp.dataset.k]=inp.dataset.k==='n'?inp.value:(parseFloat(inp.value)||0);store.set('obs',OBS)}));
+  $$('#i-obs [data-delobs]').forEach(b=>b.onclick=()=>{OBS.splice(+b.dataset.delobs,1);store.set('obs',OBS);renderObs();runInt()});
+}
+function intCalc(q,lum,lm,fine,forceAuto){
+  const P=photo(lum);const Atot=2*q.L*q.W+2*(q.L+q.W)*q.H;const rho=(q.L*q.W*(q.rc+q.rf)+2*(q.L+q.W)*q.H*q.rw)/Atot;const indF=rho/(Atot*(1-rho));
+  const m=Math.min(q.marg,q.L/4,q.W/4);
+  const ev=(nx,ny,res)=>{const insts=gridLayout(q.L,q.W,nx,ny,q.hm,q.rot).map(o=>prep(o,P,lm,q.mf));const Eind=nx*ny*lm*q.mf*indF;return {insts,Eind,g:calcGrid(insts,m,m,q.L-m,q.W-m,q.wp,res[0],res[1],Eind,q.obs)}};
+  const Kx=q.L*q.W/((q.hm-q.wp)*(q.L+q.W));let nx=q.nx,ny=q.ny;
+  if(q.auto||forceAuto){const UF0=Math.min(.8,.3+.1*Kx);let N=Math.max(1,Math.floor(q.Et*q.L*q.W/(lm*q.mf*UF0)*.7));let last=[1,1];
+    for(let it=0;it<80;it++){[nx,ny]=arrange(N,q.L,q.W);last=[nx,ny];const r=ev(nx,ny,[14,14]);if(r.g.avg>=q.Et)break;const Nn=nx*ny;N=Math.max(Nn+1,Math.ceil(Nn*q.Et/Math.max(r.g.avg,1e-6)*.97));if(N>3000)break}
+    [nx,ny]=last;
+    // si se pasó, quitar luminarias mientras siga cumpliendo
+    for(let N2=nx*ny-1;N2>=1;N2--){const [a,b]=arrange(N2,q.L,q.W);if(a*b>=nx*ny)continue;if(ev(a,b,[14,14]).g.avg>=q.Et){nx=a;ny=b}else break}}
+  const out=ev(nx,ny,fine?resFor(q.L-2*m,q.W-2*m,60):[14,14]);
+  return Object.assign(out,{nx,ny,P,rho,K:Kx,m});
+}
+function runInt(){
+  const q=intParams();const lum=getLum(val('i-lum'));const lm=num('i-lm')||lum.lm,Wl=num('i-Wl')||lum.W;
+  if(!(q.L>0&&q.W>0&&q.hm>q.wp)){$('#i-det').innerHTML='<p class="err">Revisa las medidas: la altura de montaje debe ser mayor que el plano de trabajo, y el largo y el ancho mayores que cero.</p>';return}
+  const r=intCalc(q,lum,lm,true);if(q.auto){$('#i-nx').value=r.nx;$('#i-ny').value=r.ny}
+  const N=r.nx*r.ny,A=q.L*q.W,Wtot=N*Wl,dens=Wtot/A,hrs=num('i-hrs'),days=num('i-days'),Wact=num('i-Wact'),dpea=num('i-dpea');
+  const ar=AREAS.find(a=>a[0]===val('i-area'))||AREAS[0];const g=r.g;const UF=g.avg*((q.L-2*r.m)*(q.W-2*r.m))/(N*lm*q.mf);
+  const sx=q.L/r.nx,sy=q.W/r.ny,hu=q.hm-q.wp;
+  const eye=['oficina','captura'].includes(ar[0])?1.2:1.5,ug=ugrCalc(r.insts,q,eye,lm,lum.shape,r.Eind),ugL=UGRL[ar[0]]||25;
+  kpis('i',[{l:'Iluminancia media',v:fmt(g.avg),u:'lux',...okp(g.avg>=q.Et,'Cumple '+fmt(q.Et),'Pide '+fmt(q.Et))},{l:'Mínima',v:fmt(g.min),u:'lux'},{l:'Máxima',v:fmt(g.max),u:'lux'},
+    {l:'Uniformidad U0',v:fmt(g.u0,2),...okp(g.u0>=q.U0r,'≥ '+fmt(q.U0r,2),'Pide '+fmt(q.U0r,2))},{l:'Luminarias',v:fmt(N),u:'('+r.nx+' × '+r.ny+')'},{l:'Potencia',v:fmt(Wtot/1000,2),u:'kW'},
+    {l:'Densidad',v:fmt(dens,2),u:'W/m²',...(dpea>0?okp(dens<=dpea,'≤ DPEA','> DPEA'):{})},
+    {l:'Deslumbramiento UGR',v:ug>=10?fmt(ug,1):'< 10',...okp(ug<=ugL,'≤ '+ugL,'Pide ≤ '+ugL)}]);
+  const notes=[];if(ar[5]&&!(+lum.ip>=65))notes.push('Área con polvo: usa luminaria IP65 o mayor (la elegida es '+(lum.ip?'IP'+lum.ip:'de IP desconocido')+').');
+  if(ar[2]>=500&&+lum.cri<90)notes.push('Revisión de acabados: conviene CRI ≥ 90 y 4000–5000 K para ver bien color y defectos.');
+  if(g.u0<q.U0r)notes.push('Uniformidad baja: acerca las filas a los muros, usa una óptica más abierta o más luminarias de menor potencia.');
+  if(Math.max(sx,sy)>1.5*hu)notes.push('La separación ('+fmt(Math.max(sx,sy),1)+' m) supera 1.5 veces la altura útil: habrá zonas oscuras entre luminarias.');
+  if(val('i-area')==='pintura')notes.push('Cabina o zona con solventes: verifica si es área clasificada (NOM-001-SEDE, art. 500–516); ahí la luminaria debe ser a prueba de explosión.');
+  if(ug>ugL)notes.push('UGR '+fmt(ug,1)+' arriba del límite '+ugL+': usa luminaria con difusor o reflector antideslumbrante, móntala más alta o usa más piezas de menor potencia.');
+  for(const o of q.obs){if(o.h>=q.hm-.3)notes.push('“'+esc(o.n)+'” mide '+fmt(o.h,1)+' m, casi la altura de montaje: pon luminarias en los pasillos entre racks, no encima.')}
+  if(q.obs.length)notes.push('Las zonas grises del plano son obstáculos; los lux se calculan en los pasillos con su sombra. Los racks altos piden óptica angosta (60°) alineada al pasillo.');
+  notes.push('Trabajo de instalación: LOTO del circuito, prueba de ausencia de tensión, plataforma de tijera o andamio y arnés (NOM-009-STPS).');
+  $('#i-det').innerHTML=`<h4>Detalle del cálculo</h4>`+rows([
+    ['Área de trabajo',esc(ar[1]),esc(ar[4])],['Nivel pedido',fmt(q.Et)+' lux · U0 ≥ '+fmt(q.U0r,2),'diseña 10–20 % arriba: la luz baja con el tiempo'],
+    ['Superficie',fmt(A,1)+' m²',fmt(q.L,1)+' × '+fmt(q.W,1)+' m'],['Índice del local K',fmt(r.K,2),'K = L·A / (h·(L+A)), h = '+fmt(hu,2)+' m'],
+    ['Factor de utilización (calculado)',fmt(UF,2),'luz que llega al plano / luz emitida (incluye la reflejada)'],['Luz reflejada promedio',fmt(r.Eind)+' lux','reflectancia media '+fmt(r.rho*100)+' %'],
+    ['Separación entre luminarias',fmt(sx,2)+' × '+fmt(sy,2)+' m','S/h = '+fmt(Math.max(sx,sy)/hu,2)],
+    ['Método de lúmenes (comprobación)',fmt(Math.ceil(q.Et*A/(lm*UF*q.mf)))+' luminarias','N = E·A / (Φ·CU·FM)'],
+    ['Luminaria',esc(lum.name),fmt(lm)+' lm · '+fmt(Wl)+' W · '+fmt(lm/Wl)+' lm/W'],
+    ['Eficacia del sistema',fmt(g.avg/dens,1)+' lux por W/m²',''],
+    ['Deslumbramiento UGR',ug>=10?fmt(ug,1):'< 10','CIE 117, observador a '+fmt(eye,1)+' m, peor de 4 direcciones; límite EN 12464-1: '+ugL+'. Aproximado: usa el área luminosa típica de la luminaria'],
+    ['Obstáculos',q.obs.length?fmt(q.obs.length):'ninguno',q.obs.map(o=>esc(o.n)+' '+fmt(o.w,1)+'×'+fmt(o.d,1)+'×'+fmt(o.h,1)+' m').join(' · ')],
+    ...energyRows(Wtot,hrs,days,Wact)])+`<h4 style="margin-top:12px">Notas</h4><ul class="notes">${notes.map(n=>`<li>${n}</li>`).join('')}</ul>`;
+  CTX.i={X0:-.5,Y0:-.5,X1:q.L+.5,Y1:q.W+.5,area:[0,0,q.L,q.W],g,insts:r.insts,shape:lum.shape,scaleMax:niceCeil(g.max),zp:q.wp,Eind:r.Eind,obs:q.obs,room:{L:q.L,W:q.W,H:q.H,wp:q.wp,hm:q.hm},P:r.P,lumShow:Object.assign({},lum,{lm,W:Wl}),
+    rec:{mod:'Interior',name:val('i-name'),zone:val('i-zone'),tipo:ar[1],area:A,Et:q.Et,Eavg:g.avg,Emin:g.min,U0:g.u0,lum:lum.name,N,Wl,Wtot,hrs,days,Wact}};
+  legend('i');draw('i');if($('#d-link')&&$('#d-link').checked)deb('d',runDay,50);
+}
+function suggestInt(){
+  const q=intParams();const ar=AREAS.find(a=>a[0]===val('i-area'))||AREAS[0];
+  const okD=q.hm>=8?['hb60','hb90','linear']:q.hm>=5?['hb90','hb120','linear','hb60']:q.hm>=3.2?['linear','strip','hb120','panel']:['panel','down','strip'];
+  const c=allLums().filter(l=>l.custom||(l.use==='int'&&okD.includes(l.dist))).filter(l=>!ar[5]||l.custom||+l.ip>=65);
+  const res=c.map(l=>{const r=intCalc(q,l,l.lm,false,true);return {l,N:r.nx*r.ny,nx:r.nx,ny:r.ny,W:r.nx*r.ny*l.W,avg:r.g.avg,u0:r.g.u0}}).sort((a,b)=>((a.u0>=q.U0r?0:1)-(b.u0>=q.U0r?0:1))||a.W-b.W).slice(0,6);
+  const el=$('#i-sug');el.hidden=false;
+  el.innerHTML=`<h4>Sugerencias para ${esc(ar[1].toLowerCase())} a ${fmt(q.hm,1)} m</h4><p class="note">Ordenadas por menor potencia total que cumple ${fmt(q.Et)} lux${ar[5]?' · solo IP65 o mayor por el polvo':''}. Cálculo rápido; al elegir una se recalcula fino.</p><div class="sug">${res.map((s,i)=>`<div class="row"><div><b>${esc(s.l.name)}</b><span>${fmt(s.N)} pzas (${s.nx}×${s.ny}) · ${fmt(s.W/1000,2)} kW · ${fmt(s.W/(q.L*q.W),1)} W/m² · ≈${fmt(s.avg)} lux · U0 ${fmt(s.u0,2)}${s.u0<q.U0r?' (baja)':''} · ${esc(s.l.org)}</span></div><button class="btn sm" type="button" data-use="${s.l.id}">Usar</button></div>`).join('')||'<p class="note">Ninguna luminaria del catálogo encaja con esta altura. Importa la fotometría del modelo que te interese en Catálogo.</p>'}</div>`;
+  el.querySelectorAll('[data-use]').forEach(b=>b.onclick=()=>{$('#i-lum').value=b.dataset.use;$('#i-auto').value='1';lumCard('i',true);runInt();$('#r-i').scrollIntoView({behavior:'smooth',block:'start'})});
+}
+
+/* =================== EXTERIOR =================== */
+function runExt(){
+  const L=num('x-L'),W=num('x-W'),h=num('x-h'),tilt=num('x-tilt'),set=num('x-set'),arr=val('x-arr'),n=Math.max(1,Math.round(num('x-n'))),ny=Math.max(1,Math.round(num('x-ny'))),heads=clamp(Math.round(num('x-heads')),1,4),mf=+val('x-mf');
+  const lum=getLum(val('x-lum')),lm=num('x-lm')||lum.lm,Wl=num('x-Wl')||lum.W,P=photo(lum),Et=num('x-E'),U0r=num('x-U0');
+  if(!(L>0&&W>0&&h>0)){$('#x-det').innerHTML='<p class="err">Revisa largo, ancho y altura.</p>';return}
+  const insts=[];let poles=0;
+  const pole=(px,py,base)=>{poles++;for(let k=0;k<heads;k++){const rot=arr==='grid'?base+k*360/heads:base+(k-(heads-1)/2)*30;insts.push(prep({x:px,y:py,z:h,rot,tilt,px,py},P,lm,mf))}};
+  if(arr==='grid'){for(let i=0;i<n;i++)for(let j=0;j<ny;j++)pole((i+.5)*L/n,(j+.5)*W/ny,0)}
+  else{for(let i=0;i<n;i++)pole((i+.5)*L/n,-set,0);if(arr==='perim2')for(let i=0;i<n;i++)pole((i+.5)*L/n,W+set,180)}
+  const [gx,gy]=resFor(L,W,70);const g=calcGrid(insts,0,0,L,W,0,gx,gy,0);
+  const N=insts.length,Wtot=N*Wl,A=L*W;const ar=EXT.find(a=>a[0]===val('x-type'))||EXT[0];
+  kpis('x',[{l:'Iluminancia media',v:fmt(g.avg,1),u:'lux',...okp(g.avg>=Et,'Cumple '+fmt(Et),'Pide '+fmt(Et))},{l:'Mínima',v:fmt(g.min,1),u:'lux'},{l:'Máxima',v:fmt(g.max,1),u:'lux'},{l:'Uniformidad U0',v:fmt(g.u0,2),...okp(g.u0>=U0r,'≥ '+fmt(U0r,2),'Pide '+fmt(U0r,2))},{l:'Postes',v:fmt(poles),u:'('+heads+' por poste)'},{l:'Potencia',v:fmt(Wtot/1000,2),u:'kW'},{l:'Densidad',v:fmt(Wtot/A,2),u:'W/m²'}]);
+  const notes=['Apunta el reflector a no más de 2/3 del ancho del área para limitar el deslumbramiento hacia choferes y vecinos.','Control con fotocelda o reloj astronómico; considera dimeo después de medianoche si no hay maniobras.','Postes: cimentación y tierra física en cada uno; cable en tubería subterránea con registros (NOM-001-SEDE).','Montaje con grúa o canastilla, LOTO del circuito de alumbrado y zona acordonada.'];
+  if(tilt>45)notes.unshift('Inclinación mayor a 45°: mucha luz se va al horizonte (deslumbramiento y contaminación lumínica).');
+  $('#x-det').innerHTML='<h4>Detalle del cálculo</h4>'+rows([['Área',esc(ar[1]),esc(ar[4])],['Superficie',fmt(A)+' m²',fmt(L,1)+' × '+fmt(W,1)+' m'],['Luminaria',esc(lum.name),fmt(lm)+' lm · '+fmt(Wl)+' W'],['Reflectores',fmt(N),fmt(poles)+' postes de '+fmt(h,1)+' m, inclinación '+fmt(tilt)+'°'],['Lux por W/m²',fmt(g.avg/(Wtot/A),1),''],...energyRows(Wtot,num('x-hrs'),num('x-days'),num('x-Wact'))])+`<h4 style="margin-top:12px">Notas</h4><ul class="notes">${notes.map(n=>`<li>${n}</li>`).join('')}</ul>`;
+  CTX.x={X0:-set-2,Y0:-set-2,X1:L+set+2,Y1:W+set+2,area:[0,0,L,W],g,insts,shape:lum.shape,scaleMax:niceCeil(g.max),zp:0,Eind:0,P,lumShow:Object.assign({},lum,{lm,W:Wl}),
+    rec:{mod:'Exterior',name:val('x-name'),zone:val('x-zone'),tipo:ar[1],area:A,Et,Eavg:g.avg,Emin:g.min,U0:g.u0,lum:lum.name,N,Wl,Wtot,hrs:num('x-hrs'),days:num('x-days'),Wact:num('x-Wact')}};
+  CTX.x.X0=-2;CTX.x.X1=L+2;legend('x');draw('x');
+}
+
+/* =================== VIAL =================== */
+function vialInsts(S,q,P,lm){const ins=[];const head=(x,side)=>{if(side===0)ins.push(prep({x,y:-q.set+q.ov,z:q.h,rot:0,tilt:q.tilt,px:x,py:-q.set},P,lm,q.mf));else ins.push(prep({x,y:q.Wr+q.set-q.ov,z:q.h,rot:180,tilt:q.tilt,px:x,py:q.Wr+q.set},P,lm,q.mf))};
+  for(let k=-2;k<=5;k++){const x=k*S;if(q.arr==='uni')head(x,0);else if(q.arr==='bi'){head(x,0);head(x,1)}else if(q.arr==='tres'){head(x,0);head(x+S/2,1)}else{ins.push(prep({x,y:q.Wr/2,z:q.h,rot:0,tilt:q.tilt,px:x,py:q.Wr/2},P,lm,q.mf),prep({x,y:q.Wr/2,z:q.h,rot:180,tilt:q.tilt,px:x,py:q.Wr/2},P,lm,q.mf))}}return ins}
+function vialQ(){return {Wr:num('v-Wr'),lanes:Math.max(1,Math.round(num('v-lanes'))),h:num('v-h'),ov:num('v-ov'),tilt:num('v-tilt'),set:num('v-set'),arr:val('v-arr'),mf:+val('v-mf')}}
+function vialStats(S,q,P,lm){const ins=vialInsts(S,q,P,lm);return calcGrid(ins,S,0,2*S,q.Wr,0,Math.max(10,Math.ceil(S/1.5)),Math.max(3*q.lanes,6),0)}
+function runVial(){
+  const q=vialQ(),S=num('v-S'),lum=getLum(val('v-lum')),lm=num('v-lm')||lum.lm,Wl=num('v-Wl')||lum.W,P=photo(lum),Et=num('v-E'),Em=num('v-Emin'),len=num('v-len');
+  if(!(S>0&&q.Wr>0&&q.h>0)){$('#v-det').innerHTML='<p class="err">Revisa separación, ancho y altura.</p>';return}
+  const ins=vialInsts(S,q,P,lm);const gD=calcGrid(ins,0,0,3*S,q.Wr,0,clamp(Math.round(3*S/.8),30,110),clamp(Math.round(q.Wr/.4),6,30),0);const gS=vialStats(S,q,P,lm);
+  const perSide=Math.ceil(len/S)+1;const heads=q.arr==='uni'?perSide:2*perSide;const poles=q.arr==='cen'?perSide:heads;const Wtot=heads*Wl;
+  kpis('v',[{l:'Lux promedio',v:fmt(gS.avg,1),u:'lux',...okp(gS.avg>=Et,'Cumple '+fmt(Et,1),'Pide '+fmt(Et,1))},{l:'Lux mínimo',v:fmt(gS.min,1),u:'lux',...okp(gS.min>=Em,'≥ '+fmt(Em,1),'Pide '+fmt(Em,1))},{l:'Uniformidad U0',v:fmt(gS.u0,2)},{l:'Separación',v:fmt(S,1),u:'m · S/h '+fmt(S/q.h,1)},{l:'Luminarias',v:fmt(heads),u:'('+fmt(poles)+' postes)'},{l:'Potencia',v:fmt(Wtot/1000,2),u:'kW'},{l:'Por kilómetro',v:fmt(Wtot/len,1),u:'kW/km'}]);
+  const notes=['Se evalúa el tramo entre dos postes (recuadro punteado) con 3 puntos o más por carril.','Si hay banquetas o cruces peatonales, revisa también ese ancho y refuerza en cruces.','Brazo y altura: más inclinación no siempre ayuda; arriba de 15° crece el deslumbramiento.','Montaje con canastilla, LOTO del circuito y señalización vial durante la obra.'];
+  $('#v-det').innerHTML='<h4>Detalle del cálculo</h4>'+rows([['Clase',esc((VIAL.find(a=>a[0]===val('v-cls'))||VIAL[0])[1]),'Em ≥ '+fmt(Et,1)+' lux, Emín ≥ '+fmt(Em,1)+' lux'],['Sección',fmt(q.Wr,1)+' m · '+q.lanes+' carriles',''],['Postes',esc($('#v-arr').selectedOptions[0].text),fmt(q.h,1)+' m de altura, brazo '+fmt(q.ov,1)+' m, '+fmt(q.tilt)+'°'],['Luminaria',esc(lum.name),fmt(lm)+' lm · '+fmt(Wl)+' W'],['Para '+fmt(len)+' m',fmt(heads)+' luminarias',fmt(poles)+' postes'],...energyRows(Wtot,num('v-hrs'),num('v-days'),num('v-Wact'))])+`<h4 style="margin-top:12px">Notas</h4><ul class="notes">${notes.map(n=>`<li>${n}</li>`).join('')}</ul>`;
+  CTX.v={X0:0,Y0:-q.set-2,X1:3*S,Y1:q.Wr+q.set+2,area:null,tipArea:[0,0,3*S,q.Wr],road:{Wr:q.Wr,lanes:q.lanes},span:[S,2*S],g:gD,insts:ins,shape:lum.shape,scaleMax:niceCeil(gD.max),zp:0,Eind:0,P,lumShow:Object.assign({},lum,{lm,W:Wl}),dimLabel:false,
+    rec:{mod:'Vialidad',name:val('v-name'),zone:val('v-zone'),tipo:(VIAL.find(a=>a[0]===val('v-cls'))||VIAL[0])[1],area:q.Wr*len,Et,Eavg:gS.avg,Emin:gS.min,U0:gS.u0,lum:lum.name,N:heads,Wl,Wtot,hrs:num('v-hrs'),days:num('v-days'),Wact:num('v-Wact')}};
+  legend('v');draw('v');
+}
+function maxVial(){const q=vialQ(),lum=getLum(val('v-lum')),lm=num('v-lm')||lum.lm,P=photo(lum),Et=num('v-E'),Em=num('v-Emin');
+  for(let S=Math.round(q.h*6);S>=4;S-=.5){const g=vialStats(S,q,P,lm);if(g.avg>=Et&&g.min>=Em){$('#v-S').value=S;runVial();return}}
+  $('#v-det').insertAdjacentHTML('afterbegin','<p class="err">Ninguna separación cumple con esta luminaria y altura. Prueba más lúmenes, otra óptica o acomodo bilateral.</p>')}
+
+/* =================== EMERGENCIA =================== */
+function emEval(S,o){
+  const P=photo(o.lum);const ins=[];
+  if(o.mode==='ruta'){const n=Math.max(1,Math.round(o.L/S));for(let k=0;k<n;k++)ins.push(prep({x:(k+.5)*o.L/n,y:o.w/2,z:o.h,rot:0,tilt:0},P,o.lm,o.mf));
+    const nx=clamp(Math.round(o.L/.25),40,400);const cl=calcGrid(ins,0,o.w/2-.01,o.L,o.w/2+.01,0,nx,1,0);const band=calcGrid(ins,0,o.w/4,o.L,3*o.w/4,0,nx,5,0);
+    const ratio=cl.max/Math.max(cl.min,1e-6);const pass=o.crit==='en'?(cl.min>=1&&ratio<=40&&band.min>=.5):(cl.avg>=10.8&&cl.min>=1.08&&ratio<=40);
+    return {ins,cl,band,ratio,pass,n,real:o.L/n}}
+  const nx=Math.max(1,Math.round(o.nx)),ny=Math.max(1,Math.round(o.ny));gridLayout(o.L,o.Wa,nx,ny,o.h,0).forEach(g=>ins.push(prep(g,P,o.lm,o.mf)));
+  const m=Math.min(.5,o.L/4,o.Wa/4);const [gx,gy]=resFor(o.L-2*m,o.Wa-2*m,50);const ar=calcGrid(ins,m,m,o.L-m,o.Wa-m,0,gx,gy,0);const ratio=ar.max/Math.max(ar.min,1e-6);
+  const pass=o.crit==='en'?(ar.min>=.5&&ratio<=40):(ar.avg>=10.8&&ar.min>=1.08&&ratio<=40);return {ins,ar,ratio,pass,n:nx*ny}
+}
+function emO(){const lum=getLum(val('e-lum'));return {mode:val('e-mode'),crit:val('e-crit'),L:num('e-L'),w:num('e-w'),Wa:num('e-Wa'),h:num('e-h'),nx:num('e-nx'),ny:num('e-ny'),lum,lm:num('e-lm')||lum.lm,mf:+val('e-mf')}}
+function runEm(){
+  const o=emO(),S=num('e-S'),Wl=num('e-Wl')||o.lum.W;
+  if(!(o.L>0&&o.h>0&&(o.mode==='area'?o.Wa>0:(o.w>0&&S>0)))){$('#e-det').innerHTML='<p class="err">Revisa largo, ancho, altura y separación.</p>';return}
+  const r=emEval(S,o);const P=photo(o.lum);const en=o.crit==='en';
+  let g,area,X0,Y0,X1,Y1;
+  if(o.mode==='ruta'){g=calcGrid(r.ins,0,0,o.L,o.w,0,clamp(Math.round(o.L/.25),40,240),clamp(Math.round(o.w/.15),5,24),0);area=[0,0,o.L,o.w];const half=Math.max(o.w,o.L*.12);X0=-1;X1=o.L+1;Y0=o.w/2-half;Y1=o.w/2+half;
+    kpis('e',[{l:'Mínimo en eje',v:fmt(r.cl.min,2),u:'lux',...okp(r.cl.min>=(en?1:1.08),'≥ '+(en?'1':'1.08'),'Pide '+(en?'1':'1.08'))},{l:'Promedio en eje',v:fmt(r.cl.avg,1),u:'lux',...(en?{}:okp(r.cl.avg>=10.8,'≥ 10.8','Pide 10.8'))},{l:'Máx / mín',v:fmt(r.ratio,1),...okp(r.ratio<=40,'≤ 40','> 40')},
+      ...(en?[{l:'Banda central',v:fmt(r.band.min,2),u:'lux mín',...okp(r.band.min>=.5,'≥ 0.5','Pide 0.5')}]:[]),{l:'Unidades',v:fmt(r.n),u:'c/ '+fmt(r.real,1)+' m'},{l:'Resultado',v:r.pass?'Cumple':'No cumple',...okp(r.pass,en?'EN 1838':'NFPA 101',en?'EN 1838':'NFPA 101')}]);
+  }else{g=r.ar;area=[0,0,o.L,o.Wa];X0=-1;Y0=-1;X1=o.L+1;Y1=o.Wa+1;
+    kpis('e',[{l:'Mínimo',v:fmt(g.min,2),u:'lux',...okp(g.min>=(en?.5:1.08),'≥ '+(en?'0.5':'1.08'),'Pide '+(en?'0.5':'1.08'))},{l:'Promedio',v:fmt(g.avg,1),u:'lux',...(en?{}:okp(g.avg>=10.8,'≥ 10.8','Pide 10.8'))},{l:'Máx / mín',v:fmt(r.ratio,1),...okp(r.ratio<=40,'≤ 40','> 40')},{l:'Unidades',v:fmt(r.n)},{l:'Resultado',v:r.pass?'Cumple':'No cumple',...okp(r.pass,en?'EN 1838':'NFPA 101',en?'EN 1838':'NFPA 101')}]);}
+  const dur=+val('e-dur');
+  const crit=en?'EN 1838: ruta ≥ 1 lux en el eje y ≥ 0.5 lux en la banda central (mitad del ancho); área abierta ≥ 0.5 lux sin la franja de 0.5 m; máx/mín ≤ 40; autonomía mínima 1 h.':'NFPA 101 (7.9): promedio inicial ≥ 10.8 lux (1 fc) y mínimo ≥ 1.08 lux (0.1 fc) a lo largo de la ruta; máx/mín ≤ 40; 90 minutos de autonomía.';
+  const notes=['Coloca además una unidad en cada puerta de salida, escalera, cambio de dirección, cruce de pasillos, extintor, hidrante y botiquín.','Señalización de salida y ruta conforme a NOM-003-SEGOB y NOM-026-STPS; plan de emergencia según NOM-002-STPS.','Prueba mensual de 30 s y prueba anual de autonomía completa; anótalo en la bitácora.'];
+  if(!en&&dur<1.5)notes.unshift('NFPA 101 pide 90 minutos: la batería elegida es de '+fmt(dur,1)+' h.');
+  $('#e-det').innerHTML='<h4>Detalle del cálculo</h4>'+rows([['Criterio',en?'EN 1838':'NFPA 101',crit],['Luminaria',esc(o.lum.name),fmt(o.lm)+' lm en emergencia · '+fmt(Wl)+' W'],['Factor por envejecimiento',fmt(o.mf,2),'batería y óptica al final de su vida'],['Autonomía',fmt(dur,1)+' h',''],['Potencia en carga',fmt(r.n*Wl)+' W','']])+`<h4 style="margin-top:12px">Notas</h4><ul class="notes">${notes.map(n=>`<li>${n}</li>`).join('')}</ul>`;
+  CTX.e={X0,Y0,X1,Y1,area,g,insts:r.ins,shape:o.lum.shape,scaleMax:niceCeil(Math.min(g.max,Math.max(g.avg*3,2))),isoStep:en?.5:2,zp:0,Eind:0,P,lumShow:Object.assign({},o.lum,{lm:o.lm,W:Wl}),
+    rec:{mod:'Emergencia',name:val('e-name'),zone:val('e-zone'),tipo:(o.mode==='ruta'?'Ruta de evacuación':'Área antipánico')+(en?' · EN 1838':' · NFPA 101'),area:o.L*(o.mode==='ruta'?o.w:o.Wa),Et:en?(o.mode==='ruta'?1:.5):10.8,Eavg:o.mode==='ruta'?r.cl.avg:g.avg,Emin:o.mode==='ruta'?r.cl.min:g.min,U0:o.mode==='ruta'?r.cl.min/r.cl.avg:g.u0,lum:o.lum.name,N:r.n,Wl,Wtot:r.n*Wl,hrs:24,days:365,Wact:0}};
+  legend('e');draw('e');
+}
+function maxEm(){const o=emO();if(o.mode!=='ruta'){$('#e-det').insertAdjacentHTML('afterbegin','<p class="note">En área abierta ajusta columnas y filas; la búsqueda automática es para rutas.</p>');return}
+  for(let S=Math.min(o.L,40);S>=1;S-=.5){if(emEval(S,o).pass){$('#e-S').value=S;runEm();return}}
+  $('#e-det').insertAdjacentHTML('afterbegin','<p class="err">Ni a 1 m de separación cumple: usa una unidad con más lúmenes o bájala de altura.</p>')}
+
+/* =================== LUZ NATURAL =================== */
+function solarAlt(lat,doy,hr){const dec=23.45*Math.sin(D2R*360*(284+doy)/365);const H=(hr-12)*15;const s=Math.sin(lat*D2R)*Math.sin(dec*D2R)+Math.cos(lat*D2R)*Math.cos(dec*D2R)*Math.cos(H*D2R);return Math.asin(clamp(s,-1,1))/D2R}
+function Eext(alt,sky){if(alt<=0)return 0;const sa=Math.sin(alt*D2R);const ov=300+21000*sa;const am=Math.min(38,1/sa);const cl=1353*Math.pow(.7,Math.pow(am,.678))*sa*1.1*105;return sky==='nub'?ov:sky==='desp'?cl:(ov+cl)/2}
+function runDay(){
+  const link=$('#d-link').checked;
+  if(link){$('#d-L').value=num('i-L');$('#d-W').value=num('i-W');$('#d-H').value=num('i-H');$('#d-E').value=num('i-E');if(CTX.i)$('#d-P').value=+(CTX.i.rec.Wtot/1000).toFixed(2)}
+  ['d-L','d-W','d-H','d-E','d-P'].forEach(id=>{$('#'+id).disabled=link});
+  const L=num('d-L'),W=num('d-W'),H=num('d-H'),Et=num('d-E'),Pk=num('d-P'),R=clamp(num('d-R'),0,.9),lat=num('d-lat'),noon=num('d-noon'),h0=num('d-h0'),h1=num('d-h1'),sky=val('d-sky'),ctrl=val('d-ctrl'),days=num('d-days');
+  const A=L*W,Atot=2*A+2*(L+W)*H;const skF=num('d-nsk')*num('d-ask')*(+val('d-T'))*num('d-dirt')*num('d-cu')/Math.max(A,1e-6);
+  const DFw=num('d-tw')*num('d-aw')*num('d-th')*num('d-dirt')/(Atot*(1-R*R));
+  const fac=skF+DFw/100;
+  if(!(A>0&&h1>h0)){$('#d-det').innerHTML='<p class="err">Revisa medidas y horario.</p>';return}
+  const dt=new Date(val('d-date')+'T12:00:00');const doy=isNaN(dt)?180:Math.round((dt-new Date(dt.getFullYear(),0,0))/864e5);
+  const hours=[],ein=[];let okH=0;for(let t=h0;t<=h1+1e-9;t+=.25){const e=Eext(solarAlt(lat,doy,t-(noon-12)),sky)*fac;hours.push(t);ein.push(e);if(e>=Et&&t<h1)okH+=.25}
+  const frac=e=>ctrl==='dim'?Math.min(1,e/Et):(e>=Et?1:0);
+  const mon=Array(12).fill(0),cnt=Array(12).fill(0);let tot=0,n=0;
+  for(let d=1;d<=365;d+=2){const m=new Date(2026,0,d).getMonth();let s=0,c=0;for(let t=h0;t<h1;t+=.25){s+=frac(Eext(solarAlt(lat,d,t+.125-(noon-12)),sky)*fac);c++}const f=c?s/c:0;mon[m]+=f;cnt[m]++;tot+=f;n++}
+  const avgF=n?tot/n:0;const kwh=Pk*(h1-h0)*days*avgF;const pr=+val('p-kwh')||0;
+  const mid=Eext(solarAlt(lat,doy,12),sky)*fac;
+  kpis('d',[{l:'Factor de luz día',v:fmt(fac*100,2),u:'%'},{l:'Al mediodía',v:fmt(mid),u:'lux',...(mid>=Et?{st:'ok',stt:'Alcanza el objetivo'}:{st:'warn',stt:fmt(mid/Et*100)+' % del objetivo'})},{l:'Horas suficientes',v:fmt(okH,1),u:'h ese día'},{l:'Ahorro anual',v:fmt(avgF*100),u:'% del alumbrado'},{l:'Energía ahorrada',v:fmt(kwh),u:'kWh/año'},{l:'Dinero',v:'$'+fmt(kwh*pr),u:'al año'}]);
+  CTX.d={hours,ein,target:Et,h0,h1};drawDay($('#d-chart'),CTX.d);
+  const mx=Math.max(...mon.map((v,i)=>cnt[i]?v/cnt[i]:0),.01);
+  $('#d-months').innerHTML=`<h4>Ahorro por mes (% de la energía de alumbrado en horario laboral)</h4><div class="mbar">${mon.map((v,i)=>{const p=cnt[i]?v/cnt[i]:0;return `<div style="height:${Math.max(2,p/mx*100)}%" title="${fmt(p*100)} %"></div>`}).join('')}</div><div class="mlab">${['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'].map((m,i)=>`<span>${m}<br>${fmt(cnt[i]?mon[i]/cnt[i]*100:0)}%</span>`).join('')}</div>`;
+  $('#d-det').innerHTML='<h4>Cómo se calculó</h4>'+rows([['Superficie traslúcida',fmt(num('d-nsk')*num('d-ask'),1)+' m²',fmt(num('d-nsk')*num('d-ask')/A*100,1)+' % del techo'],['Láminas (lumen de cielo)',fmt(skF*100,2)+' %','E = E exterior × área × T × suciedad × CU / área de piso'],['Ventanas (BRE)',fmt(DFw,2)+' %','FLD = T · Av · θ · M / (A total · (1 − R²))'],['Cielo exterior',esc($('#d-sky').selectedOptions[0].text),'nublado: CIE (300 + 21 000 · sen h); despejado: modelo de Meinel'],['Control',esc($('#d-ctrl').selectedOptions[0].text),ctrl==='dim'?'la lámpara baja lo que aporta el sol':'se apaga solo si la luz natural basta'],['Alumbrado controlado',fmt(Pk,2)+' kW',fmt(h1-h0,1)+' h × '+fmt(days)+' días']])+'<p class="note" style="margin-top:8px">Promedio en el área: cerca de las láminas habrá más luz y lejos de ellas menos. Pon la fotocelda o sensor en una zona representativa y divide el alumbrado en zonas. Con láminas amarillentas o sucias el aporte cae a la mitad: su limpieza es parte del ahorro.</p>';
+}
+
+/* =================== CATÁLOGO =================== */
+const SRC=[
+ ['Google · archivos .IES',q=>'https://www.google.com/search?q='+encodeURIComponent(q+' filetype:ies')],
+ ['Google · archivos .LDT',q=>'https://www.google.com/search?q='+encodeURIComponent(q+' filetype:ldt')],
+ ['Signify / Philips',q=>'https://www.google.com/search?q='+encodeURIComponent(q+' IES site:signify.com OR site:lighting.philips.com')],
+ ['LEDVANCE / Osram',q=>'https://www.google.com/search?q='+encodeURIComponent(q+' IES LDT site:ledvance.com')],
+ ['Tecnolite (México)',q=>'https://www.google.com/search?q='+encodeURIComponent(q+' IES tecnolite')],
+ ['Construlita (México)',q=>'https://www.google.com/search?q='+encodeURIComponent(q+' IES construlita')],
+ ['Acuity / Lithonia',q=>'https://www.google.com/search?q='+encodeURIComponent(q+' IES site:acuitybrands.com')],
+ ['Cree Lighting',q=>'https://www.google.com/search?q='+encodeURIComponent(q+' IES site:creelighting.com')],
+ ['Zumtobel / Thorn',q=>'https://www.google.com/search?q='+encodeURIComponent(q+' LDT site:zumtobel.com OR site:thornlighting.com')],
+ ['Opple (China)',q=>'https://www.google.com/search?q='+encodeURIComponent(q+' IES opple lighting')],
+ ['NVC (China)',q=>'https://www.google.com/search?q='+encodeURIComponent(q+' IES NVC lighting')],
+ ['Alibaba (fabricantes China)',q=>'https://www.alibaba.com/trade/search?SearchText='+encodeURIComponent(q+' IES file')],
+ ['Made-in-China',q=>'https://www.google.com/search?q='+encodeURIComponent(q+' IES site:made-in-china.com')],
+ ['Catálogos DIALux / Relux / GLDF',q=>'https://www.google.com/search?q='+encodeURIComponent(q+' site:dialux.com OR site:relux.com OR site:gldf.io')],
+ ['Mercado Libre México (precio)',q=>'https://listado.mercadolibre.com.mx/'+encodeURIComponent(q.trim().replace(/\s+/g,'-'))]
+];
+let catSel=null;
+function renderCat(){
+  const el=$('#r-c');const f=(val('c-q')||'').toLowerCase();const fam=val('c-fam');
+  const fams=[...new Set(allLums().map(l=>l.fam))];
+  if(!$('#c-q')){
+    el.innerHTML=`<p class="intro" style="margin:0">Las luminarias genéricas traen curvas y eficacias típicas del mercado (chinas y de marca). Para el modelo exacto, baja su archivo fotométrico <b>.IES</b> (IESNA LM-63) o <b>.LDT</b> (EULUMDAT) de la ficha del fabricante y súbelo aquí; desde ese momento sale en todos los cálculos con su curva real.</p>
+    <div class="card"><h4>Buscar fotometrías en fabricantes de todo el mundo</h4>
+      <div class="grp" style="grid-template-columns:minmax(0,1fr)">${T('c-s','Qué buscas (tipo, watts, modelo)','campana LED 150W high bay')}</div>
+      <div class="src" id="c-src" style="margin-top:10px"></div>
+      <p class="note" style="margin-top:8px">Cada botón abre la búsqueda en una pestaña nueva. Por seguridad del navegador, esta página no puede descargar de esos sitios por sí sola: baja el archivo y arrástralo al recuadro de abajo. A los proveedores chinos pídeles siempre el archivo IES o LDT medido en laboratorio (LM-79) antes de comprar.</p></div>
+    <div class="card"><h4>Importar archivo fotométrico</h4>
+      <div class="drop" id="c-drop">Arrastra aquí archivos .ies o .ldt, o <label for="c-file" style="color:var(--accent);cursor:pointer;text-decoration:underline">elígelos</label><input id="c-file" type="file" accept=".ies,.IES,.ldt,.LDT" multiple hidden></div>
+      <details style="margin-top:10px"><summary class="note" style="cursor:pointer">O pega el contenido del archivo</summary><textarea id="c-paste" placeholder="IESNA:LM-63-2002 …"></textarea><button class="btn sm" type="button" id="c-pasteb">Leer texto pegado</button></details>
+      <div id="c-msg" class="note" style="margin-top:8px"></div></div>
+    <div class="card"><h4>Catálogo</h4><div class="grp" style="grid-template-columns:minmax(0,2fr) minmax(0,1fr);margin-bottom:10px">${T('c-q','Filtrar','','')}${S('c-fam','Familia',[['','Todas']].concat(fams.map(x=>[x,x])),'')}</div><div class="tw" id="c-table"></div></div>
+    <div class="card" id="c-prev" hidden><h4>Curva fotométrica</h4><div class="stage"><canvas id="c-polar" aria-label="Curva fotométrica"></canvas></div></div>`;
+    const srcR=()=>{const q=val('c-s')||'luminaria LED';$('#c-src').innerHTML=SRC.map(s=>`<a href="${esc(s[1](q))}" target="_blank" rel="noopener">${esc(s[0])}</a>`).join('')};srcR();$('#c-s').addEventListener('input',srcR);
+    $('#c-q').addEventListener('input',renderCat);$('#c-fam').addEventListener('change',renderCat);
+    const drop=$('#c-drop');['dragenter','dragover'].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.add('over')}));['dragleave','drop'].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.remove('over')}));
+    drop.addEventListener('drop',ev=>importFiles(ev.dataTransfer.files));$('#c-file').addEventListener('change',ev=>importFiles(ev.target.files));
+    $('#c-pasteb').onclick=()=>{const t=val('c-paste');importText(t,/^\s*IESNA|TILT\s*=/im.test(t)?'ies':'ldt','Pegado '+new Date().toLocaleTimeString('es-MX'))};
+    return renderCat();
+  }
+  const list=allLums().filter(l=>(!fam||l.fam===fam)&&(!f||(l.name+' '+l.org+' '+l.fam).toLowerCase().includes(f)));
+  $('#c-table').innerHTML=`<table class="t"><thead><tr><th>Luminaria</th><th>Familia</th><th class="n">W</th><th class="n">lm</th><th class="n">lm/W</th><th>CCT · CRI · IP</th><th>Haz</th><th>Origen</th><th></th></tr></thead><tbody>${list.map(l=>`<tr><td>${esc(l.name)}</td><td>${esc(l.fam)}</td><td class="n">${fmt(l.W)}</td><td class="n">${fmt(l.lm)}</td><td class="n">${l.W?fmt(l.lm/l.W):'—'}</td><td>${l.cct?l.cct+' K':''}${l.cri?' · '+l.cri:''}${l.ip?' · IP'+l.ip:''}</td><td>${l.dist?BEAM[l.dist]:'archivo'}</td><td>${esc(l.org)}</td><td style="white-space:nowrap"><button class="btn sm" type="button" data-cv="${l.id}">Curva</button> <button class="btn sm" type="button" data-ci="${l.id}">Usar</button>${l.custom?` <button class="btn sm" type="button" data-cd="${l.id}">Quitar</button>`:''}</td></tr>`).join('')}</tbody></table>`;
+  $$('#c-table [data-cv]').forEach(b=>b.onclick=()=>{catSel=b.dataset.cv;$('#c-prev').hidden=false;drawPolar($('#c-polar'),photo(getLum(catSel)),getLum(catSel));$('#c-prev').scrollIntoView({behavior:'smooth',block:'nearest'})});
+  $$('#c-table [data-ci]').forEach(b=>b.onclick=()=>{const l=getLum(b.dataset.ci);const p=l.use==='ext'?'x':l.use==='vial'?'v':l.use==='em'?'e':'i';$('#'+p+'-lum').value=l.id;lumCard(p,true);RUN[p]();openTab({i:'interior',x:'exterior',v:'vial',e:'emergencia'}[p])});
+  $$('#c-table [data-cd]').forEach(b=>b.onclick=()=>{if(b.dataset.armed){CUSTOM=CUSTOM.filter(c=>c.id!==b.dataset.cd);saveCustom();renderCat()}else{b.dataset.armed=1;b.textContent='¿Seguro?'}});
+}
+function importText(t,fmtx,fname){const msg=$('#c-msg');try{const r=fmtx==='ldt'?parseLDT(t):parseIES(t);const id='c_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+  CUSTOM.push({id,fmt:fmtx,raw:t,name:r.name||fname,W:r.W||'',cct:r.cct||'',cri:r.cri||'',ip:''});const ok=saveCustom();
+  msg.innerHTML=`<span style="color:var(--ok)">Importada: <b>${esc(r.name||fname)}</b> · ${fmt(r.flux)} lm${r.W?' · '+fmt(r.W)+' W':' · sin watts en el archivo (captúralos en el cálculo)'}.</span>${r.warn?' '+esc(r.warn):''}${ok?'':' <span class="err">No se pudo guardar en este navegador; se usará solo mientras la página esté abierta.</span>'}`;renderCat()}
+  catch(e){msg.innerHTML=`<span class="err">${esc(fname)}: ${esc(e.message)}</span>`}}
+function importFiles(files){[...files].forEach(f=>{const rd=new FileReader();rd.onload=()=>importText(String(rd.result),/\.ldt$/i.test(f.name)?'ldt':'ies',f.name);rd.readAsText(f,'latin1')})}
+
+/* =================== PROYECTO =================== */
+let PROJ=store.get('proj',[]);
+function saveTo(p){const c=CTX[p];if(!c)return;PROJ.push(Object.assign({id:Date.now(),price:''},c.rec));store.set('proj',PROJ);renderProj();
+  const b=$(`[data-save="${p}"]`);if(b){const t=b.textContent;b.textContent='Guardado en el proyecto';setTimeout(()=>b.textContent=t,1600)}}
+function renderProj(){
+  const el=$('#r-p');if(!$('#p-kwh')){el.innerHTML=`<p class="intro" style="margin:0">Edificio completo: cada espacio que guardas desde Interior, Exterior, Calles o Emergencia se suma aquí, por zona, con energía, costo, inversión y recuperación.</p>
+    <div class="card"><div class="grp" style="grid-template-columns:repeat(auto-fit,minmax(170px,1fr))"><h3>Datos del proyecto</h3>${T('p-name','Proyecto',store.get('pname','Modernización de alumbrado LI'),'')}${F('p-kwh','Precio de la energía',store.get('pkwh',3.341),'$/kWh')}</div>
+    <p class="note" style="margin-top:6px">$3.341/kWh es el costo real 2025 del servicio de 440 V (recibos CFE). Si el alumbrado está en el servicio de 220 V, pon su costo real.</p></div>
+    <div class="kpis" id="p-kpis"></div><div class="card"><h4>Espacios</h4><div class="tw" id="p-table"></div><div class="btns" style="margin-top:10px"><button class="btn pri" type="button" id="p-copy">Copiar tabla para Excel</button><button class="btn" type="button" id="p-json">Respaldo del proyecto</button><button class="btn" type="button" id="p-rep">Memoria del proyecto (PDF)</button></div><div id="p-out" style="margin-top:10px"></div></div>`;
+    $('#p-kwh').addEventListener('input',()=>{store.set('pkwh',num('p-kwh'));renderProj();['i','x','v'].forEach(p=>CTX[p]&&RUN[p]())});$('#p-name').addEventListener('input',()=>store.set('pname',val('p-name')));
+    $('#p-copy').onclick=()=>{const tsv=projRows().map(r=>r.join('\t')).join('\n');const out=$('#p-out');navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText(tsv).then(()=>{out.innerHTML='<p class="note" style="color:var(--ok)">Tabla copiada. Pégala en Excel con Ctrl+V.</p>'},()=>showTA(tsv)):showTA(tsv)};
+    $('#p-rep').onclick=ev=>makeProjReport(ev.currentTarget);
+    $('#p-json').onclick=()=>{$('#p-out').innerHTML=`<p class="note">Copia este texto para guardar el proyecto, o pega uno anterior y pulsa Cargar.</p><textarea id="p-ta">${esc(JSON.stringify({proyecto:val('p-name'),kwh:num('p-kwh'),espacios:PROJ},null,1))}</textarea><button class="btn sm" type="button" id="p-load">Cargar</button>`;$('#p-load').onclick=()=>{try{const o=JSON.parse(val('p-ta'));PROJ=o.espacios||[];store.set('proj',PROJ);if(o.kwh){$('#p-kwh').value=o.kwh;store.set('pkwh',o.kwh)}renderProj()}catch(e){$('#p-out').insertAdjacentHTML('beforeend','<p class="err">El texto no es un respaldo válido.</p>')}}};
+  }
+  const pr=num('p-kwh');let T2={W:0,kwh:0,cost:0,act:0,inv:0,area:0,N:0};
+  const body=PROJ.map((r,i)=>{const kwh=r.Wtot*r.hrs*r.days/1000,cost=kwh*pr,ka=(r.Wact||0)*r.hrs*r.days/1000,sav=r.Wact?(ka-kwh)*pr:0,inv=(+r.price||0)*r.N,pay=sav>0&&inv>0?inv/sav:NaN;
+    T2.W+=r.Wtot;T2.kwh+=kwh;T2.cost+=cost;T2.act+=r.Wact?ka*pr:0;T2.inv+=inv;T2.area+=r.area;T2.N+=r.N;r._s=sav;
+    return `<tr><td>${esc(r.zone)}</td><td>${esc(r.name)}<br><span class="note">${esc(r.mod)} · ${esc(r.tipo)}</span></td><td class="n">${fmt(r.area)}</td><td class="n">${fmt(r.Et,r.Et<10?1:0)}</td><td class="n">${fmt(r.Eavg,r.Eavg<10?1:0)}</td><td class="n">${fmt(r.U0,2)}</td><td>${esc(r.lum)}</td><td class="n">${fmt(r.N)}</td><td class="n">${fmt(r.Wtot)}</td><td class="n">${fmt(r.Wtot/r.area,2)}</td><td class="n">${fmt(kwh)}</td><td class="n">$${fmt(cost)}</td><td class="n"><input type="number" step="any" aria-label="W actuales" data-k="Wact" data-i="${i}" value="${r.Wact||''}"></td><td class="n">${r.Wact?'$'+fmt(sav):'—'}</td><td class="n"><input type="number" step="any" aria-label="Precio unitario" data-k="price" data-i="${i}" value="${r.price||''}"></td><td class="n">${inv?'$'+fmt(inv):'—'}</td><td class="n">${isFinite(pay)?fmt(pay,1):'—'}</td><td><button class="btn sm" type="button" data-del="${i}">Quitar</button></td></tr>`}).join('');
+  $('#p-table').innerHTML=PROJ.length?`<table class="t"><thead><tr><th>Zona</th><th>Espacio</th><th class="n">m²</th><th class="n">Lux obj.</th><th class="n">Lux calc.</th><th class="n">U0</th><th>Luminaria</th><th class="n">Pzas</th><th class="n">W</th><th class="n">W/m²</th><th class="n">kWh/año</th><th class="n">$/año</th><th class="n">W hoy</th><th class="n">Ahorro $/año</th><th class="n">$ por pza</th><th class="n">Inversión</th><th class="n">Recup. años</th><th></th></tr></thead><tbody>${body}<tr class="tot"><td colspan="2">Total</td><td class="n">${fmt(T2.area)}</td><td></td><td></td><td></td><td></td><td class="n">${fmt(T2.N)}</td><td class="n">${fmt(T2.W)}</td><td></td><td class="n">${fmt(T2.kwh)}</td><td class="n">$${fmt(T2.cost)}</td><td></td><td class="n">$${fmt(PROJ.reduce((a,r)=>a+(r._s||0),0))}</td><td></td><td class="n">$${fmt(T2.inv)}</td><td></td><td></td></tr></tbody></table>`:'<p class="note">Aún no hay espacios. Calcula un área en Interior, Exterior, Calles o Emergencia y pulsa “Guardar en el proyecto”.</p>';
+  const sav=PROJ.reduce((a,r)=>a+(r._s||0),0);
+  kpis('p',[{l:'Espacios',v:fmt(PROJ.length)},{l:'Luminarias',v:fmt(T2.N)},{l:'Potencia',v:fmt(T2.W/1000,2),u:'kW'},{l:'Energía',v:fmt(T2.kwh),u:'kWh/año'},{l:'Costo energía',v:'$'+fmt(T2.cost),u:'al año'},{l:'Ahorro',v:'$'+fmt(sav),u:'al año'},{l:'Recuperación',v:sav>0&&T2.inv>0?fmt(T2.inv/sav,1):'—',u:'años'}]);
+  $$('#p-table input').forEach(inp=>inp.addEventListener('change',()=>{PROJ[+inp.dataset.i][inp.dataset.k]=+inp.value||'';store.set('proj',PROJ);renderProj()}));
+  $$('#p-table [data-del]').forEach(b=>b.onclick=()=>{if(b.dataset.armed){PROJ.splice(+b.dataset.del,1);store.set('proj',PROJ);renderProj()}else{b.dataset.armed=1;b.textContent='¿Seguro?'}});
+}
+function projRows(){const pr=num('p-kwh');const h=['Zona','Espacio','Módulo','Tipo','m²','Lux objetivo','Lux calculado','Lux mínimo','U0','Luminaria','Piezas','W por pieza','W total','W/m²','Horas/día','Días/año','kWh/año','$/año','W actuales','Ahorro $/año','$ por pieza','Inversión'];
+  return [h].concat(PROJ.map(r=>{const kwh=r.Wtot*r.hrs*r.days/1000,ka=(r.Wact||0)*r.hrs*r.days/1000;return [r.zone,r.name,r.mod,r.tipo,r.area.toFixed(1),r.Et,r.Eavg.toFixed(1),r.Emin.toFixed(1),r.U0.toFixed(2),r.lum,r.N,r.Wl,r.Wtot,(r.Wtot/r.area).toFixed(2),r.hrs,r.days,kwh.toFixed(0),(kwh*pr).toFixed(2),r.Wact||'',r.Wact?((ka-kwh)*pr).toFixed(2):'',r.price||'',(+r.price||0)*r.N||'']}))}
+function showTA(t){$('#p-out').innerHTML='<p class="note">Selecciona el texto (Ctrl+A) y cópialo (Ctrl+C):</p><textarea id="p-tsv">'+esc(t)+'</textarea>';const ta=$('#p-tsv');ta.focus();ta.select()}
+
+/* =================== MEMORIA DE CÁLCULO =================== */
+const MODN={i:'Interior',x:'Exterior',v:'Vialidad',e:'Alumbrado de emergencia'};
+const NORMS={
+  i:['NOM-025-STPS-2008, Condiciones de iluminación en los centros de trabajo (niveles, Tabla 1)','NOM-001-SEDE-2012, Instalaciones eléctricas (utilización): circuitos de alumbrado, art. 210, 220 y 410','NOM-007-ENER-2014, Eficiencia energética en sistemas de alumbrado en edificios no residenciales (DPEA, si aplica)','EN 12464-1 y CIE 117 (deslumbramiento UGR, referencia)','NOM-029-STPS (LOTO) y NOM-009-STPS (trabajo en altura) para la instalación'],
+  x:['NOM-025-STPS-2008 (patios, estacionamientos y exteriores)','NOM-001-SEDE-2012 (alumbrado exterior, postes, canalizaciones subterráneas)','EN 12464-2 (referencia para áreas exteriores de trabajo)'],
+  v:['EN 13201-2 y EN 13201-3 (clases P y método de cálculo entre postes)','NOM-025-STPS-2008 (vialidades internas y patios)','NOM-001-SEDE-2012 (alumbrado exterior)'],
+  e:['EN 1838 / NFPA 101 sección 7.9 (según el criterio elegido)','NOM-003-SEGOB y NOM-026-STPS (señalización de rutas y salidas)','NOM-002-STPS (prevención y protección contra incendios)']};
+function snap(fn,w,h){const cv=document.createElement('canvas');cv.style.cssText=`position:fixed;left:-5000px;top:0;width:${w||1000}px;height:${h||600}px`;document.body.appendChild(cv);fn(cv);const u=cv.toDataURL('image/png');cv.remove();return u}
+function withLight(fn){const root=document.documentElement,prev=root.getAttribute('data-theme');root.setAttribute('data-theme','light');try{return fn()}finally{prev===null?root.removeAttribute('data-theme'):root.setAttribute('data-theme',prev)}}
+function repHead(sub){const d=new Date();const fecha=d.toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'});
+  return `<div class="rh"><div><small>Línea Italia · Creaciones Industriales, S.A. de C.V. · Departamento de Mantenimiento</small><h1>Memoria de cálculo de iluminación</h1><div>${sub}</div></div><div style="text-align:right;white-space:nowrap">Folio LP-${d.toISOString().slice(0,10).replace(/-/g,'')}<br>${fecha}<br>Calculado con LuxPlan</div></div>`}
+const FIRMAS=`<div class="firmas avoid"><div>Elaboró<br><b>Ing. Amílcar Omar Andraca Herrera</b><br>Jefe de Mantenimiento</div><div>Revisó<br><br>Supervisor de Mantenimiento</div><div>Autorizó<br><br>Gerencia</div></div>`;
+const ALCANCE=`<h2>Alcance y método</h2><p>Cálculo de pre-diseño punto por punto: para cada punto de la retícula se suma la luz directa de cada luminaria con su curva de intensidad (ley del inverso del cuadrado y del coseno), descontando la que tapan los obstáculos, más una componente reflejada promedio en interiores (método de flujo dividido). Se aplica el factor de mantenimiento indicado. Las luminarias genéricas usan curvas y eficacias típicas; para la compra y la entrega se recalcula con el archivo IES/LDT del modelo exacto. Los valores marcados como supuestos se validan en campo.</p>`;
+function printReport(p,btn){
+  const msgId='repmsg-'+p;const old=document.getElementById(msgId);if(old)old.remove();
+  if(window.self!==window.top){btn.closest('.btns').insertAdjacentHTML('afterend',`<p class="repmsg" id="${msgId}">Desde esta vista no se puede imprimir. Abre LuxPlan instalado en la tablet o el archivo del Escritorio y vuelve a pulsar: ahí eliges “Guardar como PDF”.</p>`);return}
+  setTimeout(()=>window.print(),250);
+}
+function makeReport(p,btn){
+  const c=CTX[p];if(!c)return;
+  const imgs=withLight(()=>({plan:snap(cv=>drawPlan(cv,c)),pol:snap(cv=>drawPolar(cv,c.P,c.lumShow),600,600),td:p==='i'?snap(cv=>draw3D(cv,c),800,600):null}));
+  const r=c.rec;const k=(LASTK[p]||[]).map(x=>`<div><small>${x.l}</small><b>${x.v} ${x.u||''}</b>${x.stt?`<em class="${x.st}">${x.stt}</em>`:''}</div>`).join('');
+  $('#report').innerHTML=repHead(`${esc(val('p-name'))} · ${MODN[p]}: <b>${esc(r.name)}</b> · ${esc(r.zone)} · ${esc(r.tipo)}`)
+   +`<h2>1. Resultados</h2><div class="kp">${k}</div>`
+   +`<h2>2. Plano de iluminancias (lux)</h2><img src="${imgs.plan}" alt="Plano isolux">`
+   +`<div class="two avoid">${imgs.td?`<div><h2>3. Vista 3D</h2><img src="${imgs.td}" alt="Vista 3D"></div>`:''}<div><h2>${imgs.td?'4':'3'}. Curva fotométrica</h2><img src="${imgs.pol}" alt="Curva fotométrica"></div></div>`
+   +`<h2 class="pb">Datos, cálculo y notas</h2>${$('#'+p+'-det').innerHTML}`
+   +`<h2>Normas y referencias</h2><ul>${NORMS[p].map(n=>`<li>${n}</li>`).join('')}</ul>`+ALCANCE+FIRMAS;
+  printReport(p,btn);
+}
+function makeProjReport(btn){
+  if(!PROJ.length){btn.closest('.btns').insertAdjacentHTML('afterend','<p class="repmsg" id="repmsg-p">Primero guarda espacios en el proyecto.</p>');return}
+  const rws=projRows();const head=rws[0],idx=[0,1,3,4,5,6,8,9,10,12,13,16,17,19,21];
+  const k=(LASTK.p||[]).map(x=>`<div><small>${x.l}</small><b>${x.v} ${x.u||''}</b></div>`).join('');
+  $('#report').innerHTML=repHead(`${esc(val('p-name'))} · resumen del proyecto (${PROJ.length} espacios)`)
+   +`<h2>1. Resumen</h2><div class="kp">${k}</div>`
+   +`<h2>2. Espacios</h2><table class="t"><thead><tr>${idx.map(i=>`<th>${esc(head[i])}</th>`).join('')}</tr></thead><tbody>${rws.slice(1).map(r=>`<tr>${idx.map(i=>`<td>${esc(r[i])}</td>`).join('')}</tr>`).join('')}</tbody></table>`
+   +`<p class="note">Precio de la energía: $${fmt(num('p-kwh'),3)}/kWh. Las memorias de cada espacio se imprimen desde su pestaña.</p>`
+   +`<h2>Normas y referencias</h2><ul>${NORMS.i.concat(NORMS.v.slice(0,1),NORMS.e.slice(0,1)).map(n=>`<li>${n}</li>`).join('')}</ul>`+ALCANCE+FIRMAS;
+  printReport('p',btn);
+}
+
+/* =================== arranque =================== */
+const RUN={i:runInt,x:runExt,v:runVial,e:runEm,d:runDay};
+const TABS=[['interior','Interior','i'],['exterior','Exterior','x'],['vial','Calles','v'],['emergencia','Emergencia','e'],['diurna','Luz natural','d'],['catalogo','Catálogo','c'],['proyecto','Proyecto','p']];
+function openTab(id){TABS.forEach(([t])=>{$('#t-'+t).hidden=t!==id;$('#tab-'+t).setAttribute('aria-selected',t===id)});store.set('tab',id);
+  const p=(TABS.find(t=>t[0]===id)||[])[2];if(p==='d')runDay();else if(p==='c')renderCat();else if(p==='p')renderProj();else if(CTX[p])draw(p);else if(RUN[p])RUN[p]();window.scrollTo({top:0})}
+function init(){
+  $('#tabs').innerHTML=TABS.map(([t,l])=>`<button type="button" role="tab" id="tab-${t}" aria-controls="t-${t}" aria-selected="false">${l}</button>`).join('');
+  TABS.forEach(([t])=>$('#tab-'+t).onclick=()=>openTab(t));
+  buildForms();['i','x','v','e'].forEach(p=>setupRes(p,p==='i'));
+  $('#r-d').innerHTML='<div class="kpis" id="d-kpis"></div><div class="stage"><canvas id="d-chart" aria-label="Luz natural durante el día"></canvas></div><div class="card" id="d-months"></div><div class="card" id="d-det"></div>';
+  renderProj();refreshLumSelects();['i','x','v','e'].forEach(p=>lumCard(p,true));
+  ['i','x','v','e','d'].forEach(p=>{const f=$('#f-'+p);f.addEventListener('input',ev=>{if(ev.target.id===p+'-lum')return;deb(p,RUN[p])});f.addEventListener('change',ev=>{if(ev.target.id===p+'-lum'){lumCard(p,true);RUN[p]()}})});
+  $('#i-area').addEventListener('change',()=>{const a=AREAS.find(z=>z[0]===val('i-area'));$('#i-E').value=a[2];$('#i-U0').value=a[3];$('#i-mf').value=a[5]?'0.6':'0.7';runInt()});
+  $('#x-type').addEventListener('change',()=>{const a=EXT.find(z=>z[0]===val('x-type'));$('#x-E').value=a[2];$('#x-U0').value=a[3];runExt()});
+  $('#v-cls').addEventListener('change',()=>{const a=VIAL.find(z=>z[0]===val('v-cls'));$('#v-E').value=a[2];$('#v-Emin').value=a[3];runVial()});
+  $('#i-auto').addEventListener('change',()=>{const m=val('i-auto')==='1';$('#i-nx').disabled=m;$('#i-ny').disabled=m});$('#i-nx').disabled=$('#i-ny').disabled=true;
+  $('#i-sugb').onclick=suggestInt;$('#v-max').onclick=maxVial;$('#e-max').onclick=maxEm;
+  $$('[data-save]').forEach(b=>{b.onclick=()=>saveTo(b.dataset.save);b.insertAdjacentHTML('afterend',`<button class="btn" type="button" data-rep="${b.dataset.save}">Memoria de cálculo (PDF)</button>`)});
+  $$('[data-rep]').forEach(b=>b.onclick=()=>makeReport(b.dataset.rep,b));
+  renderObs();
+  $$('[data-addobs]').forEach(b=>b.onclick=()=>{const p=OBSP[b.dataset.addobs],L=num('i-L'),W=num('i-W'),k=OBS.length;
+    OBS.push({n:p.n+' '+(k+1),x:+Math.max(0,Math.min(2+k*3,L-p.w)).toFixed(1),y:+Math.max(0,Math.min(2+k*3,W-p.d)).toFixed(1),w:Math.min(p.w,L),d:p.d,h:p.h});store.set('obs',OBS);renderObs();runInt()});
+  $('#d-link').addEventListener('change',runDay);
+  runInt();
+  const h=(location.hash||'').slice(1);const start=TABS.some(t=>t[0]===h)?h:store.get('tab','interior');openTab(TABS.some(t=>t[0]===start)?start:'interior');
+  let rt;window.addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(()=>{['i','x','v','e'].forEach(p=>{if(!$('#t-'+{i:'interior',x:'exterior',v:'vial',e:'emergencia'}[p]).hidden)draw(p)});if(CTX.d&&!$('#t-diurna').hidden)drawDay($('#d-chart'),CTX.d)},150)});
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{['i','x','v','e'].forEach(draw);if(CTX.d)drawDay($('#d-chart'),CTX.d)});
+}
+init();
+</script>
+
+<script>
+if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{})})}
+</script></body>
+</html>
