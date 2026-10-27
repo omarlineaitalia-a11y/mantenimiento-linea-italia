@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#13294b">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Extractor LI">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}</style>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="icono-192.png">
+<link rel="apple-touch-icon" href="icono-192.png">
+</head>
+<body><title>Calculadora extractor de polvo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap">
+<style>
+/* Layout: en tablet horizontal / PC, datos a la izquierda y resultado a la derecha; en vertical o teléfono, una columna */
+:root {
+  --bg:#eef1f4; --panel:#ffffff; --fg:#17212e; --muted:#5a6676; --line:#d3d9e0; --field:#fbfaf3;
+  --navy:#13294b; --onnavy:#ffffff; --yel:#f2c200;
+  --ok:#1e8a4c; --mid:#c27c00; --bad:#bf3a2b; --onsem:#ffffff;
+  --display:"Barlow Condensed","Arial Narrow",Arial,sans-serif; --body:"Barlow","Segoe UI",Arial,sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg:#0f151d; --panel:#18212c; --fg:#e7ecf2; --muted:#9aa7b6; --line:#2c3846; --field:#111a24;
+  --navy:#1d3a66; --ok:#2ea867; --mid:#d9921a; --bad:#d9533f; color-scheme:dark } }
+:root[data-theme="dark"] {
+  --bg:#0f151d; --panel:#18212c; --fg:#e7ecf2; --muted:#9aa7b6; --line:#2c3846; --field:#111a24;
+  --navy:#1d3a66; --ok:#2ea867; --mid:#d9921a; --bad:#d9533f; color-scheme:dark }
+* { box-sizing:border-box; }
+body { background:var(--bg); color:var(--fg); font-family:var(--body); font-size:17px; line-height:1.45; }
+header { background:var(--navy); color:var(--onnavy); border-bottom:5px solid var(--yel);
+  padding-block:16px; padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); }
+header .in { max-width:1280px; margin:0 auto; display:flex; gap:12px 20px; align-items:center; justify-content:space-between; flex-wrap:wrap; }
+header .k { font-size:12px; letter-spacing:.18em; text-transform:uppercase; opacity:.85; }
+header h1 { margin:2px 0 0; font-family:var(--display); font-size:clamp(26px,5vw,34px); font-weight:700; text-wrap:balance; }
+main { max-width:1280px; margin:0 auto; display:flex; flex-direction:column; gap:14px;
+  padding-block:16px 28px; padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); }
+.card { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px 18px; min-width:0; }
+h2 { margin:0 0 12px; font-family:var(--display); font-size:22px; font-weight:700; color:var(--fg); }
+.grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:12px 16px; }
+.grp { grid-column:1/-1; font-size:12px; font-weight:600; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); border-bottom:1px solid var(--line); padding-bottom:4px; margin-top:4px; }
+label { font-size:14px; color:var(--muted); display:block; margin-bottom:4px; }
+input { width:100%; padding:12px 12px; min-height:50px; border:1px solid var(--line); border-radius:8px; font:600 20px var(--body); color:var(--fg); background:var(--field); font-variant-numeric:tabular-nums; }
+input:focus-visible { outline:3px solid var(--yel); outline-offset:1px; }
+.big { display:flex; gap:14px; align-items:center; padding:16px 18px; border-radius:10px; color:var(--onsem); margin-bottom:14px; }
+.big.ok { background:var(--ok); } .big.mid { background:var(--mid); } .big.bad { background:var(--bad); }
+.big .ico { font-size:44px; line-height:1; } .big .t { font-family:var(--display); font-size:clamp(24px,4.5vw,30px); font-weight:700; text-wrap:balance; } .big .s { font-size:15px; }
+.kpis { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:10px; }
+.kpi { background:var(--bg); border:1px solid var(--line); border-top:5px solid var(--navy); padding:10px 12px; border-radius:8px; }
+.kpi.ok { border-top-color:var(--ok); } .kpi.bad { border-top-color:var(--bad); } .kpi.mid { border-top-color:var(--mid); }
+.kpi .v { font-family:var(--display); font-size:28px; font-weight:700; font-variant-numeric:tabular-nums; } .kpi .s { font-size:14px; color:var(--muted); }
+ul { margin:6px 0 0 20px; padding:0; } li { margin-bottom:6px; }
+.note { font-size:13px; color:var(--muted); }
+.simwrap { background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:8px; margin-bottom:12px; }
+#sim { width:100%; max-width:100%; height:auto; display:block; }
+.simleg { font-size:14px; color:var(--muted); padding:4px 4px 0; }
+.pdfrow { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin:0 0 12px; }
+#pdf, .hdbtn { background:var(--yel); color:#17212e; border:0; border-radius:8px; padding:13px 18px; font:600 17px var(--body); cursor:pointer; min-height:50px; }
+#pdf:focus-visible, .hdbtn:focus-visible { outline:3px solid var(--fg); outline-offset:2px; } #pdf:disabled, .hdbtn:disabled { opacity:.6; cursor:wait; }
+.steps { display:flex; flex-direction:column; gap:16px; }
+.step { display:grid; grid-template-columns:240px minmax(0,1fr); gap:16px; align-items:start; padding-bottom:16px; border-bottom:1px solid var(--line); }
+.step:last-child { border-bottom:0; padding-bottom:0; }
+@media (max-width:640px) { .step { grid-template-columns:1fr; } }
+.cols { display:grid; grid-template-columns:minmax(0,1fr); gap:14px; align-items:start; }
+@media (min-width:1000px) {
+  .cols { grid-template-columns:minmax(0,1.1fr) minmax(0,1fr); }
+  .step { grid-template-columns:170px minmax(0,1fr); gap:12px; }
+}
+.grid.two { grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); }
+.maqrow { margin-bottom:14px; }
+.res .big { margin-bottom:10px; }
+.fig { margin:0; background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:8px; }
+.fig svg { width:100%; max-width:100%; height:auto; display:block; }
+.fig figcaption { font-size:13px; color:var(--muted); margin-top:4px; }
+.fig .ln { fill:none; stroke:var(--fg); stroke-width:2; } .fig .thin { stroke-width:1; opacity:.6; }
+.fig .fin line { stroke:var(--muted); stroke-width:1.5; }
+.fig .plate { fill:var(--field); stroke:var(--yel); stroke-width:2.5; }
+.fig .pt { font:600 9px var(--body); fill:var(--muted); } .fig .pv { font:700 11px var(--body); fill:var(--fg); }
+.fig .hl { font:700 10px var(--body); fill:var(--bad); }
+.fig .dim { fill:none; stroke:var(--bad); stroke-width:1.6; }
+.fig .duct { fill:none; stroke:var(--muted); stroke-width:9; stroke-linejoin:round; opacity:.55; }
+.fig .elb { fill:none; stroke:var(--yel); stroke-width:2.5; }
+.fig .bag rect { fill:var(--field); stroke:var(--fg); stroke-width:1.6; }
+.sugbox { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:10px; }
+.sg { border:2px solid var(--ok); border-radius:8px; padding:10px 12px; background:var(--bg); }
+.sg .v { font-family:var(--display); font-size:30px; font-weight:700; color:var(--fg); font-variant-numeric:tabular-nums; } .sg .s { font-size:14px; color:var(--muted); }
+.tw { overflow-x:auto; margin-top:12px; } table { border-collapse:collapse; width:100%; font-size:15px; font-variant-numeric:tabular-nums; }
+th { text-align:left; font-size:13px; color:var(--muted); font-weight:600; border-bottom:2px solid var(--line); padding:6px; }
+td { border-bottom:1px solid var(--line); padding:6px; } td.n, th.n { text-align:right; }
+tr.best td { font-weight:700; background:var(--field); }
+.tag { display:inline-block; font-size:12px; font-weight:600; padding:1px 8px; border-radius:10px; color:var(--onsem); }
+.tag.ok { background:var(--ok); } .tag.mid { background:var(--mid); } .tag.bad { background:var(--bad); }
+</style>
+<header><div class="in"><div><div class="k">Línea Italia · Mantenimiento</div><h1>Calculadora extractor de polvo</h1></div><button id="pdf2" class="hdbtn" type="button">Descargar reporte PDF</button></div></header>
+<main>
+<div class="cols">
+<section class="card"><h2>Tus datos</h2>
+<div class="maqrow"><label for="maq">Máquina</label><input id="maq" type="text" value="Enchapadora Blue"></div>
+<div class="steps">
+
+<div class="step">
+ <figure class="fig"><svg viewBox="0 0 240 150" role="img" aria-label="Placa de datos del motor del colector">
+  <rect x="20" y="40" width="130" height="80" rx="10" class="ln"/><rect x="150" y="62" width="30" height="36" rx="4" class="ln"/><line x1="180" y1="80" x2="222" y2="80" class="ln"/>
+  <g class="fin"><line x1="35" y1="40" x2="35" y2="120"/><line x1="50" y1="40" x2="50" y2="120"/><line x1="125" y1="40" x2="125" y2="120"/><line x1="138" y1="40" x2="138" y2="120"/></g>
+  <rect x="60" y="54" width="58" height="52" rx="3" class="plate"/>
+  <text x="65" y="70" class="pt">MOTOR</text><text x="65" y="86" class="pv">7.5 kW</text><text x="65" y="101" class="pv">3540 RPM</text>
+  <path d="M118 66 L160 30" class="dim"/><text x="150" y="24" class="hl">Lee la placa</text>
+  <line x1="30" y1="132" x2="140" y2="132" class="ln"/><line x1="40" y1="120" x2="40" y2="132" class="ln"/><line x1="130" y1="120" x2="130" y2="132" class="ln"/>
+ </svg><figcaption>Placa del motor del colector: anota <b>kW</b> (o HP × 0.746) y <b>RPM</b>.</figcaption></figure>
+ <div class="grid two">
+  <div class="grp">1 · Colector</div>
+  <div><label for="kw">Potencia del motor (kW)</label><input id="kw" type="number" inputmode="decimal" step="0.5" value="7.5"></div>
+  <div><label for="rpm">Velocidad del motor (rpm)</label><input id="rpm" type="number" inputmode="numeric" value="3540"></div>
+ </div>
+</div>
+
+<div class="step">
+ <figure class="fig"><svg viewBox="0 0 240 150" role="img" aria-label="Medición del diámetro de la tubería y de las bocas">
+  <rect x="18" y="88" width="150" height="46" rx="4" class="ln"/><text x="40" y="117" class="pt">ENCHAPADORA</text>
+  <g><rect x="40" y="66" width="18" height="22" class="ln"/><rect x="80" y="66" width="18" height="22" class="ln"/><rect x="120" y="66" width="18" height="22" class="ln"/></g>
+  <text x="44" y="60" class="hl">1</text><text x="84" y="60" class="hl">2</text><text x="124" y="60" class="hl">3</text>
+  <ellipse cx="200" cy="58" rx="26" ry="26" class="ln"/><ellipse cx="200" cy="58" rx="20" ry="20" class="ln thin"/>
+  <path d="M174 58 H226" class="dim"/><path d="M174 52 V64 M226 52 V64" class="dim"/>
+  <text x="182" y="102" class="hl">Ø mm</text><text x="166" y="118" class="pt">tubo principal</text>
+  <path d="M40 76 H58" class="dim"/><text x="18" y="146" class="pt">Ø de cada boca y cuántas son</text>
+ </svg><figcaption>Mide el <b>diámetro</b> de lado a lado (o la vuelta con cinta ÷ 3.14). Cuenta las <b>bocas</b> de la máquina.</figcaption></figure>
+ <div class="grid two">
+  <div class="grp">2 · Tubería y bocas</div>
+  <div><label for="dm">Ø tubería principal (mm)</label><input id="dm" type="number" inputmode="numeric" value="160"></div>
+  <div><label for="db">Ø de las bocas (mm)</label><input id="db" type="number" inputmode="numeric" value="100"></div>
+  <div><label for="nb">Número de bocas</label><input id="nb" type="number" inputmode="numeric" min="1" value="3"></div>
+ </div>
+</div>
+
+<div class="step">
+ <figure class="fig"><svg viewBox="0 0 240 150" role="img" aria-label="Recorrido del ducto: altura, distancia horizontal y codos">
+  <rect x="10" y="104" width="44" height="34" rx="3" class="ln"/><text x="14" y="125" class="pt">MÁQ.</text>
+  <rect x="196" y="56" width="36" height="82" rx="3" class="ln"/><text x="198" y="100" class="pt">COLEC.</text>
+  <path d="M32 104 V34 H186 V70 H196" class="duct"/>
+  <circle cx="32" cy="34" r="8" class="elb"/><circle cx="186" cy="34" r="8" class="elb"/><circle cx="186" cy="70" r="8" class="elb"/>
+  <text x="44" y="27" class="hl">codo</text>
+  <path d="M8 104 V34" class="dim"/><text x="0" y="74" class="hl" transform="rotate(-90 12 74)">altura</text>
+  <path d="M32 18 H186" class="dim"/><text x="80" y="13" class="hl">distancia horizontal</text>
+  <line x1="0" y1="138" x2="240" y2="138" class="ln thin"/>
+ </svg><figcaption>Con cinta o flexómetro: <b>cuánto sube</b> el ducto y <b>cuánto recorre</b> hasta el colector. Cuenta los <b>codos</b> (círculos).</figcaption></figure>
+ <div class="grid two">
+  <div class="grp">3 · Recorrido del ducto</div>
+  <div><label for="lh">Distancia horizontal (m)</label><input id="lh" type="number" inputmode="decimal" step="0.5" value="8"></div>
+  <div><label for="lv">Altura del ducto (m)</label><input id="lv" type="number" inputmode="decimal" step="0.5" value="2"></div>
+  <div><label for="ce">Codos de 90°</label><input id="ce" type="number" inputmode="numeric" min="0" value="3"></div>
+ </div>
+</div>
+
+<div class="step">
+ <figure class="fig"><svg viewBox="0 0 240 150" role="img" aria-label="Mangas filtrantes del colector: número, diámetro y largo">
+  <rect x="40" y="10" width="160" height="14" rx="2" class="ln"/>
+  <g class="bag"><rect x="56" y="24" width="34" height="96" rx="15"/><rect x="104" y="24" width="34" height="96" rx="15"/><rect x="152" y="24" width="34" height="96" rx="15"/></g>
+  <path d="M56 134 H90" class="dim"/><path d="M56 128 V140 M90 128 V140" class="dim"/><text x="60" y="148" class="hl">Ø mm</text>
+  <path d="M210 24 V120" class="dim"/><path d="M204 24 H216 M204 120 H216" class="dim"/><text x="214" y="76" class="hl">largo</text>
+  <text x="102" y="74" class="pt">manga</text><text x="108" y="140" class="hl">cuenta las mangas</text>
+ </svg><figcaption>Cuenta las <b>mangas</b> (filtros de tela) y mide su <b>diámetro</b> y su <b>largo</b>. Con el colector apagado y con LOTO.</figcaption></figure>
+ <div class="grid two">
+  <div class="grp">4 · Filtros</div>
+  <div><label for="nf">Número de mangas</label><input id="nf" type="number" inputmode="numeric" min="1" value="2"></div>
+  <div><label for="df">Ø de cada manga (mm)</label><input id="df" type="number" inputmode="numeric" value="500"></div>
+  <div><label for="lf">Largo de cada manga (m)</label><input id="lf" type="number" inputmode="decimal" step="0.1" value="1.0"></div>
+ </div>
+</div>
+
+</div>
+<p class="note" style="margin:10px 0 0">Valores de ejemplo: cámbialos por los de tu colector. Si no sabes el largo de la manga, deja 1.0 m.</p>
+</section>
+
+<section class="card res"><h2>Resultado</h2>
+<div id="big" class="big"></div>
+<div class="pdfrow"><button id="pdf" type="button">Descargar reporte PDF</button><span id="pdfmsg" class="note" role="status"></span></div>
+<div class="simwrap"><canvas id="sim" width="840" height="300" aria-label="Simulación del polvo viajando de la máquina al colector"></canvas>
+<div class="simleg" id="simleg"></div></div>
+<div class="kpis" id="kpis"></div>
+<ul id="obs" style="margin-top:12px"></ul>
+</section>
+</div>
+
+<section class="card"><h2>Sugerencia para tu colector</h2>
+<p class="note" style="margin:0 0 10px">Con la potencia del motor, el número de bocas, las distancias, los codos y las mangas que capturaste, la calculadora prueba los diámetros comerciales y elige la tubería que mueve más aire manteniendo de 20 a 28 m/s (extrae bien sin desgastar ni hacer ruido de más).</p>
+<div id="sug"></div>
+</section>
+
+<section class="card"><h2>Para que extraiga bien</h2><ul>
+<li><b>Velocidad mínima de 20 m/s</b> en tubería y bocas (viruta de PVC y polvo de MDF). Con menos, el material se asienta y tapa el ducto.</li>
+<li>Tubería de <b>lámina galvanizada</b> (cal. 24 hasta 200 mm), aterrizada; codos de radio largo y uniones en "Y" a 45°. Nada de tubo de PVC hidráulico.</li>
+<li><b>Sentido de giro correcto</b> del ventilador (motor de 2 polos, 3,540 rpm): al revés mueve mucho menos aire.</li>
+<li><b>Mangas limpias</b>: sacudirlas y vaciar el contenedor antes de ¾. Manguera flexible corta (≤ 1.5 m).</li>
+<li>Mantenimiento del colector con <b>LOTO</b>.</li>
+</ul>
+<p class="note">Cómo calcula: estima el aire que puede mover el colector con la potencia de su motor (ventilador 65 %, motor 90 % trabajando al 80 % de su placa, altitud 1,600 m) contra la resistencia de la tubería (fricción, codos, entrada de bocas, manguera de 1.5 m y mangas sucias: su pérdida sube si el área de filtro es chica). Es un estimado: para confirmarlo, mide con un anemómetro en una boca (debe dar 20 m/s o más).</p>
+</section>
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+const f=(n,d=0)=>n.toLocaleString('es-MX',{minimumFractionDigits:d,maximumFractionDigits:d});
+const rho=1.2*Math.pow(1-2.25577e-5*1600,5.2559);
+function fr(V,D){const Re=Math.max(V*D/1.5e-5,1),f1=0.11*Math.pow(0.00015/D+68/Re,0.25),ff=f1>=0.018?f1:0.85*f1+0.0028;return ff/D*rho*V*V/2;}
+function calc(){
+ const kw=+$('kw').value||0, Dm=(+$('dm').value||1)/1000, Db=(+$('db').value||1)/1000, nb=Math.max(+$('nb').value,1), L=(+$('lh').value||0)+(+$('lv').value||0), ce=+$('ce').value||0;
+ const nf=Math.max(+$('nf').value,1), Df=(+$('df').value||1)/1000, Lf=Math.max(+$('lf').value,0.1);
+ const Am=Math.PI*Dm*Dm/4, Ab=Math.PI*Db*Db/4, area=nf*Math.PI*Df*Lf;
+ const SP=Q=>{const Vb=Q/nb/Ab, Vm=Q/Am, VPb=rho*Vb*Vb/2, VPm=rho*Vm*Vm/2, Pf=Math.max(250,400*Q*60/area);
+   return VPb*1.18 + 3*fr(Vb,Db)*1.5 + fr(Vm,Dm)*L + VPm*0.24*ce + VPm + Pf;};
+ const Pair=kw*1000*0.9*0.65*0.8;
+ let lo=0.001, hi=10; for(let i=0;i<60;i++){const m=(lo+hi)/2; if(m*SP(m)>Pair) hi=m; else lo=m;}
+ const Q=lo, Vm=Q/Am, Vb=Q/nb/Ab, sp=SP(Q), ratio=Q*60/area;
+ const okV=Vm>=20 && Vb>=20, altoV=Vm>32, okF=ratio<=2.0;
+ let cls,ico,t,s;
+ if(okV && okF){cls='ok';ico='✔';t='FUNCIONAL: sí extrae bien';s='La velocidad en la tubería y en las bocas está arriba de 20 m/s y los filtros tienen área suficiente.';}
+ else if(okV){cls='mid';ico='⚠';t='Extrae, pero los FILTROS se quedan cortos';s='Se tapan rápido y la succión baja: agregar mangas o usar mangas más largas.';}
+ else {cls='bad';ico='✖';t='NO FUNCIONAL: velocidad baja';s='Con menos de 20 m/s la viruta se asienta. Reducir el Ø de la tubería o revisar el colector y los filtros.';}
+ const big=$('big'); big.className='big '+cls; big.innerHTML=`<div class="ico" aria-hidden="true">${ico}</div><div><div class="t">${t}</div><div class="s">${s}</div></div>`;
+ const cl=v=>v>=20?(v>32?'mid':'ok'):'bad';
+ $('kpis').innerHTML=`
+ <div class="kpi"><div class="v">${f(Q*3600)} m³/h</div><div class="s">Aire que mueve el colector (${f(Q*2118.88)} CFM), estimado</div></div>
+ <div class="kpi ${cl(Vm)}"><div class="v">${f(Vm,1)} m/s</div><div class="s">Velocidad en tubería Ø ${$('dm').value} mm (mínimo 20)</div></div>
+ <div class="kpi ${cl(Vb)}"><div class="v">${f(Vb,1)} m/s</div><div class="s">Velocidad en cada boca Ø ${$('db').value} mm (mínimo 20)</div></div>
+ <div class="kpi ${okF?'ok':'mid'}"><div class="v">${f(area,2)} m²</div><div class="s">Área de filtro: ${f(ratio,1)} m³/min por m² (máx. 2.0)</div></div>
+ <div class="kpi"><div class="v">${f(sp)} Pa</div><div class="s">Resistencia de la instalación (${f(sp/249.1,1)} in c.a.)</div></div>`;
+ const o=[`Tubería: ${f(L,1)} m en total (${$('lh').value} m horizontal + ${$('lv').value} m de altura) con ${ce} codos.`];
+ if(altoV) o.push('Velocidad arriba de 32 m/s: extrae bien, pero hace más ruido y desgasta codos. Se puede usar tubería un tamaño mayor.');
+ if(Vm<20) o.push(`Para llegar a 20 m/s la tubería principal debe ser de máximo Ø ${f(Math.sqrt(4*Q/(Math.PI*20))*1000)} mm.`);
+ if(!okF) o.push(`Se recomiendan al menos ${Math.ceil(Q*60/2.0/(Math.PI*Df*Lf))} mangas de Ø ${$('df').value} mm × ${$('lf').value} m.`);
+ o.push(`Motor de ${$('kw').value} kW a ${$('rpm').value} rpm: ${+$('rpm').value>3000?'2 polos, transmisión directa (revisar sentido de giro)':'4 polos o con bandas (revisar tensión de bandas)'}.`);
+ $('obs').innerHTML=o.map(x=>'<li>'+x+'</li>').join('');
+ const best=sugerir(kw,nb,L,ce,area,Df,Lf);
+ // datos para simulación y reporte
+ const estado=okV&&okF?'ok':(okV?'mid':'bad');
+ const rpm=+$('rpm').value||3540, u=Math.sqrt(2*sp/(rho*1.0)), dImp=60*u/(Math.PI*rpm);
+ let Lmax=0; for(let x=0;x<=150;x+=1){ const r=op(kw,best.dm/1000,best.db/1000,nb,x+(+$('lv').value||0),ce,area); if(r.Vm>=20&&r.Vb>=20) Lmax=x; else break; }
+ R={maq:$('maq').value||'Máquina',kw,rpm,dm:+$('dm').value,db:+$('db').value,nb,lh:+$('lh').value,lv:+$('lv').value,ce,nf,df:+$('df').value,lf:Lf,
+    Q,Vm,Vb,sp,area,ratio,estado,t,s,best,dImp,u,Lmax,nOk:Math.ceil(Q*60/2.0/(Math.PI*Df*Lf)),obs:o};
+ SIM.set(Vm,Vb,estado);
+ $('simleg').textContent = estado==='ok'?'El polvo viaja rápido y limpio hasta el colector: extracción correcta.'
+   : estado==='mid'?'El polvo llega, pero las mangas se saturan: el colector pierde succión con el uso.'
+   : 'Velocidad baja: el polvo se asienta en el tramo horizontal y tapa el ducto.';
+}
+let R=null;
+// ---- simulación ----
+const SIM=(()=>{
+ const cv=$('sim'), cx=cv.getContext('2d'); let parts=[], pile=0, v=25, st='ok', bag=0, last=0;
+ const reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+ const col=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim()||'#888';
+ // trayecto: boca (90,230) sube a (90,70), horizontal a (690,70), baja a (690,120)
+ const P=[[90,235],[90,70],[690,70],[690,125]];
+ const segLen=[165,600,55], tot=820;
+ function pos(d){let a=d; for(let i=0;i<3;i++){ if(a<=segLen[i]){const k=a/segLen[i]; return [P[i][0]+(P[i+1][0]-P[i][0])*k, P[i][1]+(P[i+1][1]-P[i][1])*k, i];} a-=segLen[i]; } return [P[3][0],P[3][1],2];}
+ function set(vm,vb,s){ v=vm; st=s; pile=0; bag=0; parts=[]; if(reduce) draw(0); }
+ function draw(dt){
+  const W=cv.width,H=cv.height, fg=col('--fg'), mu=col('--muted'), ln=col('--line'), yel=col('--yel'), ok=col('--ok'), bad=col('--bad'), mid=col('--mid'), pan=col('--panel');
+  cx.clearRect(0,0,W,H);
+  // máquina
+  cx.fillStyle=pan; cx.strokeStyle=fg; cx.lineWidth=2; cx.fillRect(20,235,150,50); cx.strokeRect(20,235,150,50);
+  cx.fillStyle=mu; cx.font='600 15px Barlow, Segoe UI, sans-serif'; cx.fillText((R&&R.maq||'Máquina').slice(0,18),30,266);
+  // ducto
+  cx.strokeStyle=ln; cx.lineWidth=30; cx.lineJoin='round'; cx.beginPath(); P.forEach((p,i)=>i?cx.lineTo(p[0],p[1]):cx.moveTo(p[0],p[1])); cx.stroke();
+  cx.strokeStyle=mu; cx.lineWidth=1.5; cx.beginPath(); P.forEach((p,i)=>i?cx.lineTo(p[0]-0,p[1]):cx.moveTo(p[0],p[1])); cx.stroke();
+  // colector
+  cx.fillStyle=pan; cx.strokeStyle=fg; cx.lineWidth=2; cx.fillRect(650,125,170,160); cx.strokeRect(650,125,170,160);
+  for(let i=0;i<3;i++){ const x=668+i*50, h=110; cx.strokeStyle=mu; cx.strokeRect(x,140,36,h);
+    const fill=Math.min(bag,1); cx.fillStyle=st==='ok'?ok:(st==='mid'?mid:bad); cx.globalAlpha=.35; cx.fillRect(x,140+h*(1-fill),36,h*fill); cx.globalAlpha=1; }
+  cx.fillStyle=mu; cx.fillText('Colector',700,278);
+  // velocidad
+  cx.fillStyle=st==='bad'?bad:(st==='mid'?mid:ok); cx.font='700 18px Barlow, Segoe UI, sans-serif';
+  cx.fillText(`${v.toFixed(1)} m/s en el ducto`,300,40);
+  // partículas
+  const spd=Math.max(v,3)*9, n=st==='bad'?2:4;
+  if(!reduce){ for(let i=0;i<n;i++) parts.push({d:Math.random()*10, off:(Math.random()-.5)*16, drop:false, y:0}); }
+  else { for(let d=0; d<tot; d+=12) parts.push({d, off:(Math.random()-.5)*16, drop:false, y:0}); }
+  parts.forEach(p=>{
+   if(p.drop){ p.y=Math.min(p.y+dt*120, 12); }
+   else {
+    p.d+= reduce?0:spd*dt*(st==='mid'&&p.d>700?0.35:1);
+    if(st==='bad' && p.d>200 && p.d<720 && Math.random()<dt*1.8){ p.drop=true; pile=Math.min(pile+0.004,1); }
+   }
+  });
+  parts=parts.filter(p=>{ if(p.d>=tot){ bag=Math.min(bag+(st==='ok'?0.0015:0.004),1); if(st==='mid'&&Math.random()<.5){p.d=760;return true;} return false;} return true; });
+  if(parts.length>500) parts.splice(0,parts.length-500);
+  cx.fillStyle=col('--fg');
+  parts.forEach(p=>{ const [x,y,seg]=pos(p.d); let px=x, py=y;
+   if(seg===1){ py+=p.off*0.8 + (p.drop?p.y:0); } else { px+=p.off*0.8; }
+   cx.globalAlpha=p.drop?.9:.75; cx.beginPath(); cx.arc(px,py,2.4,0,6.3); cx.fill(); });
+  cx.globalAlpha=1;
+  if(st==='bad'&&pile>0){ cx.fillStyle=bad; cx.globalAlpha=.45; cx.fillRect(200,84-12*pile,480,12*pile+1); cx.globalAlpha=1; cx.fillStyle=bad; cx.font='700 14px Barlow, Segoe UI, sans-serif'; cx.fillText('se asienta',380,110); }
+ }
+ function loop(t){ const dt=Math.min((t-last)/1000||0,0.05); last=t; draw(dt); requestAnimationFrame(loop); }
+ if(!reduce) requestAnimationFrame(loop);
+ return {set, canvas:cv};
+})();
+// ---- sugerencia de diámetros según la potencia ----
+const DM=[100,125,150,160,180,200,224,250,280,300,315], DB=[80,100,120,125,150];
+function op(kw,Dm,Db,nb,L,ce,area){
+ const Am=Math.PI*Dm*Dm/4, Ab=Math.PI*Db*Db/4;
+ const SP=Q=>{const Vb=Q/nb/Ab, Vm=Q/Am, VPb=rho*Vb*Vb/2, VPm=rho*Vm*Vm/2, Pf=Math.max(250,400*Q*60/area);
+   return VPb*1.18 + 3*fr(Vb,Db)*1.5 + fr(Vm,Dm)*L + VPm*0.24*ce + VPm + Pf;};
+ const Pair=kw*1000*0.9*0.65*0.8; let lo=0.001, hi=10;
+ for(let i=0;i<50;i++){const m=(lo+hi)/2; if(m*SP(m)>Pair) hi=m; else lo=m;}
+ return {Q:lo, Vm:lo/Am, Vb:lo/nb/Ab, sp:SP(lo)};
+}
+function sugerir(kw,nb,L,ce,area,Df,Lf){
+ const res=[];
+ DM.forEach(dm=>DB.forEach(db=>{ if(db>dm) return; const r=op(kw,dm/1000,db/1000,nb,L,ce,area); res.push({dm,db,...r}); }));
+ const enRango=res.filter(r=>r.Vm>=20&&r.Vm<=28&&r.Vb>=20&&r.Vb<=28);
+ const pool=enRango.length?enRango:res.filter(r=>r.Vm>=20&&r.Vb>=20);
+ const best=(pool.length?pool:res).slice().sort((a,b)=>b.Q-a.Q)[0];
+ const cal=best.dm<=200?'cal. 24':'cal. 22';
+ const ratio=best.Q*60/area, nOk=Math.ceil(best.Q*60/2.0/(Math.PI*Df*Lf));
+ const ok=enRango.length>0;
+ let h=`<div class="sugbox">
+  <div class="sg"><div class="v">Ø ${best.dm} mm</div><div class="s">Tubería principal (${f(best.dm/25.4,1)}"), lámina galvanizada ${cal} · ${f(best.Vm,1)} m/s</div></div>
+  <div class="sg"><div class="v">${nb} × Ø ${best.db} mm</div><div class="s">Bocas con manguera antiestática y "Y" a 45° · ${f(best.Vb,1)} m/s</div></div>
+  <div class="sg"><div class="v">${f(best.Q*3600)} m³/h</div><div class="s">Aire que movería tu motor de ${kw} kW (${f(best.Q*2118.88)} CFM)</div></div>
+  <div class="sg"><div class="v">${ratio<=2?'Alcanzan':nOk+' mangas'}</div><div class="s">${ratio<=2?'Tus mangas tienen área suficiente':'Mínimo de mangas de Ø '+f(Df*1000)+' mm × '+f(Lf,1)+' m para ese aire'}</div></div>
+ </div>`;
+ if(!ok) h+=`<p class="note" style="margin-top:8px">Ninguna combinación queda entre 20 y 28 m/s con estos datos: se muestra la que mejor se acerca. Revisa el número de bocas o el área de filtro.</p>`;
+ const top=res.filter(r=>r.db===best.db).sort((a,b)=>a.dm-b.dm);
+ h+=`<div class="tw"><table><tr><th>Ø tubería</th><th class="n">Aire (m³/h)</th><th class="n">Vel. tubería</th><th class="n">Vel. bocas Ø ${best.db}</th><th>¿Cómo queda?</th></tr>`+
+  top.map(r=>{const tag=r.Vm<20?'<span class="tag bad">Se asienta</span>':(r.Vm>28?'<span class="tag mid">Ruido / desgaste</span>':'<span class="tag ok">Eficiente</span>');
+   return `<tr class="${r.dm===best.dm?'best':''}"><td>Ø ${r.dm} mm</td><td class="n">${f(r.Q*3600)}</td><td class="n">${f(r.Vm,1)} m/s</td><td class="n">${f(r.Vb,1)} m/s</td><td>${tag}</td></tr>`;}).join('')+`</table></div>`;
+ $('sug').innerHTML=h;
+ best.cal=cal; best.nOk=nOk; best.ok=ok; best.tabla=top; return best;
+}
+// ---- reporte PDF ----
+// La descarga la da claude.ai: se pide sin ocultar el botón; si no está, se avisa al tocarlo.
+let dlP=null;
+function getDl(){
+ if(!dlP) dlP=(async()=>{
+  for(let i=0;i<30 && !(window.claude&&window.claude.use);i++) await new Promise(r=>setTimeout(r,100));
+  try { return window.claude&&window.claude.use ? await window.claude.use('downloads') : null; } catch(e){ return null; }
+ })();
+ return dlP;
+}
+async function descargar(){
+ const bs=[$('pdf'),$('pdf2')], msg=$('pdfmsg');
+ const local=!window.claude; // archivo abierto directo en la PC (sin claude.ai)
+ if(!window.jspdf){ if(local){ window.print(); return; } msg.textContent='No cargó el generador de PDF: revisa el internet de la tablet y recarga la página.'; return; }
+ bs.forEach(b=>b.disabled=true); msg.textContent='Generando reporte…';
+ try {
+  const nombre='Reporte extractor de polvo - '+(R.maq||'maquina').replace(/[\\/:*?"<>|]/g,'')+'.pdf';
+  const ios=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  if(local&&ios&&navigator.canShare){ const fl=new File([reporte()],nombre,{type:'application/pdf'});
+   if(navigator.canShare({files:[fl]})){ try{ await navigator.share({files:[fl],title:nombre}); msg.textContent='Reporte listo: guárdalo en Archivos o compártelo.'; }catch(e){ msg.textContent='Descarga cancelada.'; } return; } }
+  if(local){ const a=document.createElement('a'); a.href=URL.createObjectURL(reporte()); a.download=nombre; document.body.appendChild(a); a.click(); a.remove(); msg.textContent='Reporte descargado.'; return; }
+  const dl=await getDl();
+  if(!dl){ dlP=null; msg.textContent='La descarga solo funciona con la calculadora abierta en claude.ai (navegador o app). Recarga e inténtalo otra vez.'; return; }
+  const blob=reporte();
+  await dl.save({filename:nombre, data:blob});
+  msg.textContent='Reporte descargado.';
+ } catch(e){
+  const c=e&&e.code;
+  msg.textContent = c==='declined' ? 'Descarga cancelada.' : c==='rate_limited' ? 'Ya hay una descarga abierta: acéptala o espera un momento.' : 'No se pudo descargar el PDF en este dispositivo.';
+ } finally { bs.forEach(b=>b.disabled=false); }
+}
+function reporte(){
+ const {jsPDF}=window.jspdf; const d=new jsPDF({unit:'mm',format:'letter'}); const r=R, b=r.best;
+ const NAVY=[19,41,75], YEL=[242,194,0], OK=[30,138,76], MID=[194,124,0], BAD=[191,58,43], GR=[90,102,118];
+ const sc=r.estado==='ok'?OK:(r.estado==='mid'?MID:BAD);
+ const fm=(n,dd=0)=>n.toLocaleString('es-MX',{minimumFractionDigits:dd,maximumFractionDigits:dd});
+ let y=0;
+ d.setFillColor(...NAVY); d.rect(0,0,216,24,'F'); d.setFillColor(...YEL); d.rect(0,24,216,2,'F');
+ d.setTextColor(255); d.setFontSize(9); d.text('LÍNEA ITALIA · MANTENIMIENTO',12,9);
+ d.setFontSize(16); d.setFont(undefined,'bold'); d.text('Reporte de extractor de polvo · '+r.maq,12,18);
+ d.setFont(undefined,'normal'); d.setFontSize(9); d.text(new Date().toLocaleDateString('es-MX'),204,9,{align:'right'});
+ y=34; d.setFillColor(...sc); d.roundedRect(12,y-6,192,16,2,2,'F'); d.setTextColor(255); d.setFontSize(13); d.setFont(undefined,'bold'); d.text(r.t,16,y+1);
+ d.setFont(undefined,'normal'); d.setFontSize(9); d.text(d.splitTextToSize(r.s,184),16,y+6);
+ y+=18;
+ // simulación
+ try { const img=SIM.canvas.toDataURL('image/png'); d.addImage(img,'PNG',12,y,96,34); } catch(e){}
+ // datos
+ d.setTextColor(30); d.setFontSize(10); d.setFont(undefined,'bold'); d.text('Datos medidos',114,y+3); d.setFont(undefined,'normal'); d.setFontSize(9);
+ const dat=[['Motor',fm(r.kw,1)+' kW · '+fm(r.rpm)+' rpm'],['Tubería principal','Ø '+r.dm+' mm'],['Bocas',r.nb+' × Ø '+r.db+' mm'],['Recorrido',fm(r.lh,1)+' m horiz. + '+fm(r.lv,1)+' m altura · '+r.ce+' codos'],['Mangas',r.nf+' × Ø '+r.df+' mm × '+fm(r.lf,1)+' m']];
+ dat.forEach((x,i)=>{ d.setTextColor(...GR); d.text(x[0],114,y+9+i*5.5); d.setTextColor(30); d.text(x[1],150,y+9+i*5.5); });
+ y+=40;
+ // resultados
+ d.setFontSize(11); d.setFont(undefined,'bold'); d.text('Resultado con la instalación actual',12,y); d.setFont(undefined,'normal'); d.setFontSize(9); y+=5;
+ const res=[['Aire que mueve el colector',fm(r.Q*3600)+' m³/h ('+fm(r.Q*2118.88)+' CFM)'],['Velocidad en tubería',fm(r.Vm,1)+' m/s (mínimo 20)'],['Velocidad en bocas',fm(r.Vb,1)+' m/s (mínimo 20)'],['Área de filtro',fm(r.area,2)+' m² · '+fm(r.ratio,1)+' m³/min·m² (máx. 2.0)'],['Resistencia de la instalación',fm(r.sp)+' Pa ('+fm(r.sp/249.1,1)+' in c.a.)']];
+ res.forEach((x,i)=>{ if(i%2){d.setFillColor(242,244,247); d.rect(12,y-3.6,192,5.4,'F');} d.setTextColor(...GR); d.text(x[0],14,y); d.setTextColor(30); d.text(x[1],100,y); y+=5.4; });
+ y+=4;
+ // requerimiento
+ d.setFontSize(11); d.setFont(undefined,'bold'); d.text('Lo que se requiere para una succión correcta',12,y); d.setFont(undefined,'normal'); d.setFontSize(9); y+=5;
+ const req=[['Tipo de tubería','Ducto rígido espiral o engargolado; codos de 5 gajos radio mayor o igual a 1.5 D; uniones en "Y" a 45°'],
+  ['Material de la tubería','Lámina galvanizada '+b.cal+', aterrizada (puentes de tierra en uniones). Mangueras antiestáticas con alambre a tierra. No usar tubo de PVC.'],
+  ['Ø tubería principal','Ø '+b.dm+' mm ('+fm(b.dm/25.4,1)+'") -> '+fm(b.Vm,1)+' m/s'],
+  ['Ø de bocas',r.nb+' × Ø '+b.db+' mm -> '+fm(b.Vb,1)+' m/s'],
+  ['Distancia máxima con este motor','aprox. '+fm(r.Lmax)+' m horizontales (con '+fm(r.lv,1)+' m de altura y '+r.ce+' codos) manteniendo 20 m/s'],
+  ['Turbina del colector (estimado)','Rueda radial para viruta, Ø aprox. '+fm(r.dImp*1000)+' mm a '+fm(r.rpm)+' rpm (velocidad periférica aprox. '+fm(r.u)+' m/s)'],
+  ['Filtros','Mínimo '+r.nOk+' mangas de Ø '+r.df+' mm × '+fm(r.lf,1)+' m (relación hasta 2.0 m³/min·m²)'],
+  ['Aire esperado','aprox. '+fm(b.Q*3600)+' m³/h con el diámetro recomendado']];
+ req.forEach((x,i)=>{ const t=d.splitTextToSize(x[1],120); const h=Math.max(5.4,t.length*4.4+1); if(i%2){d.setFillColor(242,244,247); d.rect(12,y-3.6,192,h,'F');} d.setTextColor(...GR); d.text(x[0],14,y); d.setTextColor(30); d.text(t,82,y); y+=h; });
+ y+=4;
+ // gráfica velocidad vs diámetro
+ d.setFontSize(11); d.setFont(undefined,'bold'); d.text('Velocidad en tubería según el diámetro (con este motor)',12,y); d.setFont(undefined,'normal'); y+=4;
+ const gx=24, gy=y+40, gw=176, gh=36, vmax=Math.max(40,...b.tabla.map(t=>t.Vm));
+ d.setDrawColor(200); d.setFontSize(7); [0,10,20,30,40].forEach(v=>{ if(v>vmax) return; const yy=gy-gh*v/vmax; d.line(gx,yy,gx+gw,yy); d.setTextColor(...GR); d.text(v+' m/s',gx-2,yy+1,{align:'right'}); });
+ d.setDrawColor(...OK); d.setLineDashPattern([1.5,1],0); d.line(gx,gy-gh*20/vmax,gx+gw,gy-gh*20/vmax); d.line(gx,gy-gh*28/vmax,gx+gw,gy-gh*28/vmax); d.setLineDashPattern([],0);
+ const bw=gw/b.tabla.length;
+ b.tabla.forEach((t,i)=>{ const c=t.Vm<20?BAD:(t.Vm>28?MID:OK); const hh=gh*Math.min(t.Vm,vmax)/vmax; d.setFillColor(...c); d.rect(gx+i*bw+1.5,gy-hh,bw-3,hh,'F'); d.setTextColor(30); d.text(String(t.dm),gx+i*bw+bw/2,gy+4,{align:'center'}); if(t.dm===b.dm){ d.setFont(undefined,'bold'); d.text('recomendado',gx+i*bw+bw/2,gy+8,{align:'center'}); d.setFont(undefined,'normal'); } });
+ d.setTextColor(...GR); d.text('Ø tubería (mm) · verde = eficiente (20-28 m/s) · rojo = se asienta · ámbar = ruido/desgaste',gx,gy+12);
+ y=gy+18;
+ // qué hacer
+ d.setFontSize(11); d.setFont(undefined,'bold'); d.setTextColor(30); d.text('Qué hacer',12,y); d.setFont(undefined,'normal'); d.setFontSize(9); y+=5;
+ const todo=[];
+ if(r.Vm<20) todo.push('Cambiar la tubería principal a Ø '+b.dm+' mm para subir la velocidad arriba de 20 m/s.');
+ if(r.ratio>2) todo.push('Ampliar el área de filtro: mínimo '+r.nOk+' mangas, o mangas más largas. Es lo que más frena la succión.');
+ if(r.Vm>28) todo.push('Velocidad alta: considerar tubería Ø '+b.dm+' mm para bajar ruido y desgaste de codos.');
+ if(r.lh>r.Lmax) todo.push('El recorrido de '+fm(r.lh,1)+' m pasa del máximo (aprox. '+fm(r.Lmax)+' m): acercar el colector o reducir codos.');
+ todo.push('Verificar el sentido de giro del ventilador ('+(r.rpm>3000?'2 polos, transmisión directa':'con bandas: revisar tensión')+').');
+ todo.push('Sacudir/limpiar mangas y vaciar el contenedor antes de ¾. Revisar fugas en uniones y compuertas.');
+ todo.push('Confirmar con anemómetro en una boca: debe marcar 20 m/s o más.');
+ todo.push('Todo trabajo en colector, ventilador y ductos con LOTO y EPP (lentes, mascarilla P100, protección auditiva).');
+ todo.forEach(x=>{ const t=d.splitTextToSize('• '+x,188); if(y+t.length*4.4>268){ d.addPage(); y=16; } d.text(t,14,y); y+=t.length*4.4+1; });
+ d.setFontSize(7); d.setTextColor(...GR); d.text('Estimado con potencia del motor (ventilador 65 %, motor 90 % al 80 % de placa), altitud 1,600 m, fricción Darcy–Weisbach. Validar con la curva del ventilador.',12,274);
+ return d.output('blob');
+}
+$('pdf').addEventListener('click',descargar);
+$('pdf2').addEventListener('click',()=>{ $('pdf').scrollIntoView({block:'center'}); descargar(); });
+getDl();
+document.querySelectorAll('input').forEach(e=>e.addEventListener('input',calc)); calc();
+</script>
+
+<script>if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{});});}</script>
+</body>
+</html>
