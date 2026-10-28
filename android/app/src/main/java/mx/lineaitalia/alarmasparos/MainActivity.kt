@@ -49,6 +49,7 @@ class MainActivity : Activity() {
     private lateinit var cajaEntrar: LinearLayout
     private lateinit var interruptor: Button
     private lateinit var actualizar: Button
+    private var fuera = 0L // cuándo se dejó de ver la app (para recargar Control de Paros al volver)
 
     private val verde = Color.rgb(30, 74, 42)
     private val rcv = object : BroadcastReceiver() {
@@ -63,10 +64,12 @@ class MainActivity : Activity() {
         // ---- pestañas
         tabParos = pestanaBoton("CONTROL DE PAROS") { mostrar(true) }
         tabAlarmas = pestanaBoton("ACTIVACIÓN DE ALARMAS") { mostrar(false) }
+        val tabRecargar = pestanaBoton("🔄 RECARGAR") { mostrar(true); recargarParos() }
         val barra = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL; setBackgroundColor(verde)
             addView(tabParos, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
             addView(tabAlarmas, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            addView(tabRecargar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         }
 
         // ---- Control de Paros (la página de siempre)
@@ -114,6 +117,12 @@ class MainActivity : Activity() {
         if (web.visibility == View.VISIBLE && web.canGoBack()) web.goBack()
         else if (web.visibility != View.VISIBLE) mostrar(true)
         else super.onBackPressed()
+    }
+
+    // baja la versión más reciente de Control de Paros (sin copias guardadas), para que los cambios publicados lleguen sin "Forzar detención"
+    private fun recargarParos() {
+        web.clearCache(true)
+        web.loadUrl(Cfg.URL_PAROS + "?r=" + System.currentTimeMillis())
     }
 
     private fun pestanaBoton(t: String, f: () -> Unit) = Button(this).apply {
@@ -181,13 +190,16 @@ class MainActivity : Activity() {
         super.onResume()
         ContextCompat.registerReceiver(this, rcv, IntentFilter(Cfg.ACCION_ESTADO), ContextCompat.RECEIVER_NOT_EXPORTED)
         refrescar()
+        // al volver después de más de 5 minutos fuera, recarga Control de Paros para tomar la versión publicada
+        if (fuera > 0 && System.currentTimeMillis() - fuera > 5 * 60_000L) recargarParos()
+        fuera = 0L
         Actualizacion.buscar { v ->
             actualizar.visibility = if (v == null) View.GONE else View.VISIBLE
             if (v != null) actualizar.text = "⬆ ACTUALIZAR A LA VERSIÓN 1.$v (se instala encima, sin borrar nada)"
         }
     }
 
-    override fun onPause() { try { unregisterReceiver(rcv) } catch (_: Exception) { }; super.onPause() }
+    override fun onPause() { fuera = System.currentTimeMillis(); try { unregisterReceiver(rcv) } catch (_: Exception) { }; super.onPause() }
 
     private fun abrir(i: Intent) { try { startActivity(i) } catch (_: Exception) { startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName"))) } }
 
