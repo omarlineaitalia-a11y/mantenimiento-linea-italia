@@ -280,7 +280,8 @@ body.kiosk .top nav.nav, body.kiosk .hide-kiosk{display:none}
       <label class="f">Desde<input type="date" id="repDe"></label>
       <label class="f">Hasta<input type="date" id="repA"></label>
       <label class="f" style="min-width:180px">Máquina<select id="repMaq"><option value="">Todas</option></select></label>
-      <button type="button" class="primary" id="btnXlsx" style="margin-left:auto">⬇ Descargar Excel (administradores)</button>
+      <button type="button" class="primary" id="btnPdf" style="margin-left:auto">📄 Resumen PDF (administradores)</button>
+      <button type="button" class="primary" id="btnXlsx">⬇ Descargar Excel (administradores)</button>
     </div>
     <div class="rep-kpis" id="repKpis"></div>
     <div class="charts">
@@ -961,6 +962,94 @@ function renderRep(){
   $('repPruebas').innerHTML = prs.length ? '<table class="tbl"><tr><th>Fecha</th><th>Máquina</th><th>Lanzó</th><th>Técnico en sitio</th><th>Minutos de prueba</th><th>Resultado</th><th>Nota</th></tr>' + prs.map(e => '<tr data-a="ver" data-ev="'+e.id+'" style="cursor:pointer"><td>'+fdt(e.t0)+'</td><td>'+esc(e.maqN)+'</td><td>'+esc(e.op?.n||'')+'</td><td>'+esc(e.tec?.n||'—')+'</td><td class="num">'+(e.estado==='espera' ? '<span class="tag warn">en curso</span>' : fmtN(mins(minPrueba(e))) + ' min')+'</td><td>'+(e.estado==='espera' ? 'En curso' : e.cancelada ? '<span class="tag">Cancelada</span>' : '<span class="tag ok">Atendida</span>')+'</td><td>'+esc(e.nota||'')+'</td></tr>').join('') + '</table>' : '<p class="foot">Sin pruebas de alarma en este periodo.</p>';
   $('repTabla').innerHTML = evs.length ? '<table class="tbl"><tr><th>Alerta</th><th>Máquina</th><th>Falla</th><th>Operador</th><th>Técnico</th><th>Llegada</th><th>Reparación</th><th>Paro total</th><th>Estado</th></tr>' + evs.map(e => { const t = tiempos(e); return '<tr data-a="ver" data-ev="'+e.id+'" style="cursor:pointer"><td>'+fdt(e.t0)+'</td><td>'+esc(e.maqN)+'</td><td>'+esc(e.falla)+'</td><td>'+esc(e.op?.n||'')+'</td><td>'+esc(e.tec?.n||'—')+'</td><td class="num">'+dur(t.lleg)+'</td><td class="num">'+dur(t.rep)+'</td><td class="num">'+(e.tLib?dur(t.total):'<span class="tag bad">abierto</span>')+'</td><td>'+esc(estadoTxt(e))+'</td></tr>'; }).join('') + '</table>' : '<p class="foot">Sin paros en este periodo.</p>';
 }
+// ---------- resumen en PDF: paros reales, sin causa clara (confirmar), registros de prueba y pruebas de alarma
+const sinAcento = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+const GENERICO = ['ya quedo','ya esta','se reparo','reparado','listo','nada','no se','ok','bien','na','n/a'];
+// texto "claro": no es relleno ni teclazos ("ggh", "Mmm", "M") ni una frase genérica ("ya quedó")
+function textoClaro(t){
+  const s = sinAcento(t).replace(/[^a-z0-9ñ ]/g, ' ').replace(/\s+/g, ' ').trim();
+  if (s.length < 4 || GENERICO.includes(s) || !/[aeiou]/.test(s)) return false;
+  return s.includes(' ') || s.length >= 7;
+}
+// prueba: la falla dice "prueba", o la causa / solución es solo "prueba" (no cuenta "se realizan pruebas y sale bien")
+const soloPrueba = t => { const s = sinAcento(t); return /^(prueb|pruba)/.test(s) && s.length <= 25; };
+const esPrueba = e => /prueb|pruba/.test(sinAcento(e.falla)) || soloPrueba(e.causa) || soloPrueba(e.solucion);
+function clasificarParos(evs){
+  const r = { real:[], dudoso:[], prueba:[] };
+  evs.forEach(e => { if (esPrueba(e)) r.prueba.push(e); else if (textoClaro(e.falla) && (textoClaro(e.causa) || textoClaro(e.solucion))) r.real.push(e); else r.dudoso.push(e); });
+  return r;
+}
+function cargarScript(src){ return new Promise((ok, no) => { if (document.querySelector('script[src="'+src+'"]')) return ok(); const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = no; document.head.appendChild(s); }); }
+async function resumenPdf(){
+  if (!S.admin && !(S.sesion && ['admin','general'].includes(S.sesion.r))) { const p = await pedirNomina('Resumen PDF', 'config', 'Solo administradores · nómina de administrador'); if (!p) return; cerrarModal(); }
+  try { await cargarScript('../lib/jspdf.umd.min.js'); await cargarScript('../lib/jspdf.plugin.autotable.min.js'); }
+  catch(e) { toast('No se pudo cargar el generador de PDF. Revisa la conexión.'); return; }
+  toast('Generando resumen PDF…');
+  const { A, B, ks, est, evs } = calcular(), fm = $('repMaq').value;
+  const c = clasificarParos(evs.slice().sort((a,b) => (a.t0||'').localeCompare(b.t0||'')));
+  const prs = S.pru.filter(e => !e.cancelada && new Date(e.t0) >= A && new Date(e.t0) <= B && (!fm || e.maq === fm));
+  const mi = t => Math.round((t||0)/60000), paro = e => e.tLib ? tiempos(e).total : ms(e.t0);
+  const suma = a => a.reduce((s, e) => s + mi(paro(e)), 0);
+  const fh = iso => { const d = new Date(iso); return d.toLocaleDateString('es-MX',{day:'2-digit',month:'short'}).replace('.', '') + ' ' + d.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit',hour12:false}); };
+  const nom = n => String(n || '—').toLowerCase().replace(/(^|\s)\S/g, x => x.toUpperCase());
+  const lim = s => String(s || '—').replace(/[^\u0000-ÿ]/g, '');
+  const avg = a => a.length ? a.reduce((s,x)=>s+x,0)/a.length : null;
+  let tSp = 0; ks.forEach(k => { tSp += est[k].sinprod || 0; });
+  const { jsPDF } = window.jspdf, d = new jsPDF({ unit:'mm', format:'letter' });
+  const VE = [31,107,58], AM = [169,109,0], MO = [91,63,158], RO = [178,58,43], GR = [90,102,118], W = 216, M = 12;
+  // encabezado
+  d.setFillColor(...VE); d.roundedRect(M, 10, W - 2*M, 22, 2, 2, 'F'); d.setTextColor(255);
+  d.setFont('helvetica','normal'); d.setFontSize(8); d.text('LÍNEA ITALIA · MANTENIMIENTO CORRECTIVO', M + 5, 16);
+  d.setFont('helvetica','bold'); d.setFontSize(15); d.text('Resumen de paros · ' + fday(A) + ' a ' + fday(B) + (fm ? ' · ' + maqName(fm) : ''), M + 5, 24);
+  d.setFont('helvetica','normal'); d.setFontSize(8); d.text('Generado ' + new Date().toLocaleString('es-MX') + (S.sesion ? ' · ' + nom(S.sesion.n) : (S.admin ? ' · ' + nom(S.admin.n) : '')), M + 5, 29);
+  // indicadores
+  const kp = [[String(c.real.length), 'paros reales · ' + suma(c.real) + ' min', VE], [String(c.dudoso.length), 'sin causa clara (confirmar) · ' + suma(c.dudoso) + ' min', AM], [String(c.prueba.length), 'registros de prueba · ' + suma(c.prueba) + ' min', MO], [String(prs.length), 'pruebas de alarma · ' + prs.reduce((s,e) => s + mi(minPrueba(e)), 0) + ' min', MO], [String(evs.reduce((s,e) => s + (e.reab||0), 0)), 'reincidencias · ' + S.tpm.filter(t => t.estado !== 'atendido').length + ' TPM abiertos', VE]];
+  const kw = (W - 2*M - 4*3) / 5;
+  kp.forEach(([v, l, col], i) => { const x = M + i*(kw + 3); d.setDrawColor(214,221,228); d.setFillColor(255); d.roundedRect(x, 36, kw, 17, 1.5, 1.5, 'FD'); d.setFillColor(...col); d.rect(x, 36, kw, 1.4, 'F'); d.setTextColor(23,33,46); d.setFont('helvetica','bold'); d.setFontSize(14); d.text(v, x + 3, 44); d.setFont('helvetica','normal'); d.setFontSize(7); d.setTextColor(...GR); d.text(d.splitTextToSize(l, kw - 5), x + 3, 48.5); });
+  const cy = c.real.concat(c.dudoso).flatMap(e => ciclos(e));
+  d.setFontSize(7.5); d.setTextColor(...GR);
+  const nota = d.splitTextToSize('Minutos = paro total por registro (alerta a liberación). Llegada promedio ' + dur(avg(cy.filter(x => x.lleg != null).map(x => x.lleg))) + ', reparación promedio ' + dur(avg(cy.filter(x => x.rep != null).map(x => x.rep))) + ' (reales y por confirmar). Minutos sin producción en el periodo: ' + mi(tSp) + ' (estado de máquina, no es falla). Los registros de prueba y las pruebas de alarma no cuentan como paro.', W - 2*M);
+  d.text(nota, M, 58);
+  let y = 58 + nota.length * 3.3 + 8;
+  const titulo = (t, col) => { if (y > 250) { d.addPage(); y = 16; } d.setFillColor(col[0] + (255-col[0])*0.85, col[1] + (255-col[1])*0.85, col[2] + (255-col[2])*0.85); d.roundedRect(M, y - 5, W - 2*M, 7.5, 1.5, 1.5, 'F'); d.setTextColor(...col); d.setFont('helvetica','bold'); d.setFontSize(10.5); d.text(t, M + 3, y); y += 5; };
+  const tabla = (head, body, col, opts = {}) => { d.autoTable(Object.assign({ head:[head], body: body.length ? body : [[{ content:'Sin registros en este periodo.', colSpan: head.length }]], startY: y, margin:{ left:M, right:M }, theme:'grid', styles:{ font:'helvetica', fontSize:7.6, cellPadding:1.4, lineColor:[214,221,228], lineWidth:0.15, textColor:[23,33,46], valign:'top' }, headStyles:{ fillColor:[243,245,247], textColor:GR, fontStyle:'bold', fontSize:7 }, alternateRowStyles:{ fillColor:[250,251,252] } }, opts)); y = d.lastAutoTable.finalY + 8; };
+  const filaTot = (txt, n, val) => [{ content: txt, colSpan: n, styles:{ fontStyle:'bold' } }, { content: val, styles:{ fontStyle:'bold', halign:'right' } }];
+  // 1 · paros reales
+  titulo('1 · Máquinas que fallaron (paros reales)', VE);
+  tabla(['Fecha','Máquina','Falla reportada','Por qué (causa)','Qué se hizo','Atendió','Llegada','Paro'],
+    c.real.map(e => { const t = tiempos(e); return [fh(e.t0), { content: lim(e.maqN), styles:{ fontStyle:'bold' } }, lim(e.falla), lim(e.causa), lim(e.solucion) + (e.refac ? ' · Refacciones: ' + lim(e.refac) : '') + (e.tLib ? '' : ' (ABIERTO)'), nom((e.tecRep || e.tec)?.n), mi(t.lleg) + ' min', mi(paro(e)) + ' min']; }).concat(c.real.length ? [filaTot('Total paros reales', 7, suma(c.real) + ' min')] : []),
+    VE, { columnStyles:{ 0:{ cellWidth:19 }, 1:{ cellWidth:27 }, 6:{ halign:'right', cellWidth:13 }, 7:{ halign:'right', cellWidth:13 } } });
+  // 2 · sin causa clara
+  titulo('2 · Paros sin causa clara: confirmar si fueron reales o prueba', AM);
+  d.setFont('helvetica','normal'); d.setFontSize(7.5); d.setTextColor(...GR); d.text('Falla, causa o solución vacías, muy cortas o genéricas ("ya quedó", "se reparó"). Si fue real, el técnico completa causa y solución.', M, y + 1.5); y += 4;
+  tabla(['Fecha','Máquina','Falla reportada','Causa / solución capturada','Atendió','Paro'],
+    c.dudoso.map(e => [fh(e.t0), lim(e.maqN), lim(e.falla), lim(e.causa) + ' / ' + lim(e.solucion), nom((e.tecRep || e.tec)?.n), mi(paro(e)) + ' min']).concat(c.dudoso.length ? [filaTot('Total por confirmar', 5, suma(c.dudoso) + ' min')] : []),
+    AM, { columnStyles:{ 0:{ cellWidth:19 }, 5:{ halign:'right', cellWidth:14 } } });
+  // 3 · registros de prueba
+  titulo('3 · Registros de prueba (dicen "prueba"; no cuentan como paro)', MO);
+  tabla(['Fecha','Máquina','Falla capturada','Quién la hizo','Atendió','Min'],
+    c.prueba.map(e => [fh(e.t0), lim(e.maqN), lim(e.falla), nom(e.op?.n), nom((e.tecRep || e.tec)?.n), String(mi(paro(e)))]).concat(c.prueba.length ? [filaTot(c.prueba.length + ' registros de prueba', 5, String(suma(c.prueba)))] : []),
+    MO, { columnStyles:{ 0:{ cellWidth:19 }, 5:{ halign:'right', cellWidth:12 } } });
+  // 4 · pruebas de alarma (agrupadas por día y equipo)
+  titulo('4 · Pruebas de alarma (botón de prueba)', MO);
+  const ga = {}; prs.forEach(e => { const k = fday(new Date(e.t0)) + '|' + e.maqN; ga[k] = ga[k] || { n:0, m:0, tecs:new Set() }; ga[k].n++; ga[k].m += mi(minPrueba(e)); if (e.tec?.n) ga[k].tecs.add(nom(e.tec.n)); });
+  tabla(['Día','Equipo','Atendió','Pruebas','Min'],
+    Object.entries(ga).map(([k, o]) => { const [dd, mq] = k.split('|'); return [dd, lim(mq), [...o.tecs].join(', ') || '—', String(o.n), String(o.m)]; }).concat(prs.length ? [[{ content:'Total', colSpan:3, styles:{ fontStyle:'bold' } }, { content:String(prs.length), styles:{ fontStyle:'bold', halign:'right' } }, { content:String(prs.reduce((s,e) => s + mi(minPrueba(e)), 0)), styles:{ fontStyle:'bold', halign:'right' } }]] : []),
+    MO, { columnStyles:{ 0:{ cellWidth:22 }, 3:{ halign:'right', cellWidth:16 }, 4:{ halign:'right', cellWidth:14 } } });
+  // quién atendió
+  titulo('Quién atendió (paros reales y por confirmar)', [60,70,82]);
+  const qa = {}; c.real.forEach(e => { const n = nom((e.tecRep || e.tec)?.n); qa[n] = qa[n] || [0,0]; qa[n][0]++; }); c.dudoso.forEach(e => { const n = nom((e.tecRep || e.tec)?.n); qa[n] = qa[n] || [0,0]; qa[n][1]++; });
+  tabla(['Técnico','Reales','Por confirmar'], Object.entries(qa).sort((a,b) => b[1][0] - a[1][0] || b[1][1] - a[1][1]).map(([n, v]) => [n, String(v[0]), String(v[1])]), [60,70,82], { tableWidth:110, columnStyles:{ 1:{ halign:'right' }, 2:{ halign:'right' } } });
+  // pie con número de hoja
+  const np = d.getNumberOfPages();
+  for (let i = 1; i <= np; i++) { d.setPage(i); d.setDrawColor(214,221,228); d.line(M, 268, W - M, 268); d.setFontSize(7); d.setTextColor(...GR); d.text('Control de Paros · Línea Italia · Departamento de Mantenimiento', M, 272); d.text('Hoja ' + i + ' de ' + np, W - M, 272, { align:'right' }); }
+  const blob = d.output('blob'), name = 'Resumen de paros ' + fday(A) + ' a ' + fday(B) + (fm ? ' ' + maqName(fm).replace(/[\\/:*?"<>|]/g,' ') : '') + '.pdf';
+  // iPhone / iPad: se abre el menú Compartir (Guardar en Archivos, WhatsApp, correo)
+  const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if (ios && navigator.canShare) { const f = new File([blob], name, { type:'application/pdf' }); if (navigator.canShare({ files:[f] })) { try { await navigator.share({ files:[f], title:name }); } catch(e) {} return; } }
+  try { const dl = await window.claude.use('downloads'); if (!dl) { toast('La descarga no está disponible en esta vista.'); return; } await dl.save({ filename:name, data:blob }); toast('PDF descargado: ' + name); }
+  catch(e) { if (e && e.code !== 'declined') toast('No se pudo descargar ('+(e.code||e.message)+').'); }
+}
 // ---------- gráficas para el Excel (imagen PNG dibujada en canvas)
 const XC = { paro:'#C62828', ok:'#2E7D32', sin:'#C99700', acc:'#2E7D32', MTA:'#2a78d6', MTB:'#eb6834', EA:'#1baf7a', OTRA:'#8a8f8c', lleg:'#2a78d6', rep:'#eb6834' };
 function chartPng(o){
@@ -1391,6 +1480,7 @@ $('repSeg').addEventListener('click', e => { const b = e.target.closest('[data-p
 ['repDe','repA'].forEach(id => $(id).addEventListener('change', () => { S.rep.p = 'rango'; renderRep(); }));
 $('repMaq').addEventListener('change', renderRep);
 $('btnXlsx').addEventListener('click', excel);
+$('btnPdf').addEventListener('click', resumenPdf);
 document.body.classList.toggle('kiosk', LS.get('tc_kiosk') === '1');
 $('logo').addEventListener('dblclick', () => setView('cfg'));
 $('logo').title = 'Doble clic: configuración';
