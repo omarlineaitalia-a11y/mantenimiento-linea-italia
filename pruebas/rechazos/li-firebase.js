@@ -265,6 +265,7 @@
     salir: function () { return auth.signOut().then(function () { location.reload(); }); },
     // entrar en este mismo equipo con otra nómina (cambia la cuenta y recarga la página)
     entrarComo: function (nomina, pass) {
+      marcarAcceso('pend:' + String(nomina).trim());
       return correoActual(nomina).then(function (c) { return auth.signInWithEmailAndPassword(c, pass); }).then(function () {
         if (APP === 'almacen') { try { localStorage.setItem('alm_nomina', String(nomina).trim()); localStorage.setItem('alm_last', String(Date.now())); } catch (e) {} }
         location.reload();
@@ -321,7 +322,10 @@
         ev.preventDefault();
         var f = ev.target, b = f.querySelector('button'), m = f.querySelector('.m');
         b.disabled = true; m.textContent = 'Entrando…'; m.style.color = '#4F5A54';
-        correoActual(f.u.value).then(function (c) { return auth.signInWithEmailAndPassword(c, f.p.value); }).catch(function (e) { m.style.color = '#C62828'; m.textContent = traducir(e); b.disabled = false; });
+        marcarAcceso('pend:' + String(f.u.value).trim());
+        correoActual(f.u.value).then(function (c) { return auth.signInWithEmailAndPassword(c, f.p.value); })
+          .then(function () { if (window.LI_PEDIR_ACCESO) location.reload(); }) // misma cuenta ya abierta: Firebase no avisa el cambio
+          .catch(function (e) { marcarAcceso(''); m.style.color = '#C62828'; m.textContent = traducir(e); b.disabled = false; });
       });
     }
     d.style.display = 'grid';
@@ -353,8 +357,22 @@
     });
   }
 
+  // LI_PEDIR_ACCESO: la sesión abierta por otra aplicación del mismo sitio (p. ej. Control de Paros) no basta;
+  // en este equipo hay que entrar con nómina y contraseña desde esta aplicación (no se cierra la sesión de la otra).
+  function claveAcceso() { return 'li_ok_' + APP; }
+  function marcarAcceso(v) { try { if (v) localStorage.setItem(claveAcceso(), v); else localStorage.removeItem(claveAcceso()); } catch (e) {} }
+  function accesoOk(u) {
+    if (!window.LI_PEDIR_ACCESO) return true;
+    var v = ''; try { v = localStorage.getItem(claveAcceso()) || ''; } catch (e) {}
+    var nom = (u.email || '').split('@')[0].split('.')[0];
+    if (v === u.uid) return true;
+    if (v === 'pend:' + nom) { marcarAcceso(u.uid); return true; }
+    return false;
+  }
+  window.LI.salir = function () { marcarAcceso(''); return auth.signOut().then(function () { location.reload(); }); };
   var primeraVez = true;
   auth.onAuthStateChanged(function (u) {
+    if (u && !accesoOk(u)) u = null;
     if (!u) { if (primeraVez || estado.nomina) { if (document.body) mostrarAcceso(); else document.addEventListener('DOMContentLoaded', function () { mostrarAcceso(); }); } return; }
     estado.nomina = (u.email || '').split('@')[0].split('.')[0];
     fs.doc(PFX + 'config/personal').get().then(function (s) {
