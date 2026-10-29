@@ -1,0 +1,852 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Caja Chica Mantenimiento</title>
+<style>
+:root{
+  --bg:#F3F1EA;--card:#FFFFFF;--ink:#1D2A22;--muted:#5D6B62;--line:#DDE2DB;
+  --verde:#1E5B3A;--verde2:#2E7D4F;--verde-s:#E3F1E8;--menta:#BFE3CB;
+  --oro:#C99A1E;--oro-s:#FBF1D6;--rojo:#B3261E;--rojo-s:#FBE4E2;--azul:#1F5E8C;--azul-s:#E2EEF7;--negro:#2B2F2C;
+  --sombra:0 1px 2px rgba(20,40,28,.06),0 6px 18px rgba(20,40,28,.06);color-scheme:light}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 "Segoe UI",system-ui,-apple-system,Arial,sans-serif;font-variant-numeric:tabular-nums}
+button,input,select,textarea{font:inherit;color:inherit}
+.wrap{max-width:1180px;margin:0 auto;padding:0 16px 40px}
+header.top{background:linear-gradient(120deg,#163F29,#1E5B3A 60%,#2E7D4F);color:#F4F8F2;padding:16px 0 60px}
+.top .wrap{display:flex;gap:14px;align-items:center;flex-wrap:wrap;padding-bottom:0}
+.top h1{margin:0;font-size:25px}.top p{margin:2px 0 0;opacity:.82;font-size:14px}.top .esp{flex:1}
+.chip{display:inline-flex;align-items:center;gap:6px;border-radius:99px;padding:5px 12px;font-size:13px;font-weight:600;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25);color:#fff;cursor:pointer}
+.chip.mal{background:#FBE4E2;color:var(--rojo);border-color:#F2B8B3}
+.hero{margin-top:-46px;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1.6fr);gap:16px}
+@media (max-width:900px){.hero{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--sombra);padding:18px}
+.caja{display:flex;gap:16px;align-items:center}.caja svg{flex:none}
+.lbl{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.big{font-size:36px;font-weight:800;color:var(--verde);line-height:1.1}
+.sub{color:var(--muted);font-size:13.5px}
+.compo{display:flex;height:22px;border-radius:8px;overflow:hidden;margin:10px 0 10px;background:#EEF0EC}
+.compo i{display:block;height:100%}
+.ley{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 16px;font-size:13.5px}
+.ley div{display:flex;gap:8px;align-items:center}.ley b{margin-left:auto}
+.pt{width:12px;height:12px;border-radius:3px;flex:none}
+.avisos{display:grid;gap:10px;margin-top:16px}
+.aviso{display:flex;gap:12px;align-items:flex-start;border-radius:12px;padding:11px 14px;border:1px solid;font-size:14.5px}
+.aviso .e{font-size:22px;line-height:1.2}.aviso b{display:block}
+.aviso.r{background:var(--rojo-s);border-color:#F2B8B3}.aviso.a{background:var(--oro-s);border-color:#EED9A0}
+.aviso.i{background:var(--azul-s);border-color:#BCD5E8}.aviso.v{background:var(--verde-s);border-color:var(--menta)}
+nav.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:22px 0 14px;border-bottom:2px solid var(--line)}
+nav.tabs button{border:0;background:none;padding:10px 14px;border-radius:10px 10px 0 0;font-weight:700;color:var(--muted);cursor:pointer;margin-bottom:-2px;border-bottom:3px solid transparent;font-size:15px}
+nav.tabs button.on{color:var(--verde);border-bottom-color:var(--verde);background:var(--card)}
+h2{margin:0 0 12px;font-size:19px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+h3{margin:16px 0 8px;font-size:16px}
+.cols{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:900px){.cols{grid-template-columns:1fr}}
+.pila{display:grid;gap:16px;align-content:start}
+.form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.form .full{grid-column:1/-1}
+@media (max-width:520px){.form{grid-template-columns:1fr}}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600;color:var(--muted)}
+input,select,textarea{border:1px solid #C9D0C8;border-radius:10px;padding:9px 11px;background:#fff;font-size:15px;min-width:0}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--verde2);border-color:transparent}
+.cats{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:8px}
+.cat{border:1.5px solid var(--line);background:#fff;border-radius:12px;padding:7px 4px;text-align:center;cursor:pointer;font-size:12px;font-weight:600;color:var(--muted)}
+.cat .e{display:block;font-size:24px;line-height:1.2}.cat.on{border-color:var(--verde2);background:var(--verde-s);color:var(--verde)}
+.btn{border:1px solid #C9D0C8;background:#fff;border-radius:10px;padding:9px 14px;font-weight:700;cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+.btn:hover{background:#F4F6F2}.btn:disabled{opacity:.5;cursor:default}
+.btn.pri{background:var(--verde);border-color:var(--verde);color:#fff}.btn.pri:hover{background:#174A2F}
+.btn.oro{background:var(--oro);border-color:var(--oro);color:#fff}.btn.azul{background:var(--azul);border-color:var(--azul);color:#fff}
+.btn.rojo{color:var(--rojo);border-color:#F2B8B3}.btn.sm{padding:5px 10px;font-size:13px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.msg{font-size:13.5px;min-height:1.2em;margin:0}.msg.ok{color:var(--verde2)}.msg.e{color:var(--rojo)}
+.muted{color:var(--muted)}.small{font-size:13px}
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);text-align:left;padding:8px;border-bottom:2px solid var(--line);white-space:nowrap}
+td{padding:8px;border-bottom:1px solid #EEF0EC;vertical-align:middle}
+td.m,th.m{text-align:right;white-space:nowrap}
+tr.tot td{font-weight:800;border-top:2px solid var(--ink);border-bottom:0}
+.ico{font-size:20px;width:36px;height:36px;border-radius:10px;display:inline-grid;place-items:center;background:var(--verde-s)}
+.tag{display:inline-block;border-radius:99px;padding:2px 9px;font-size:12px;font-weight:700;white-space:nowrap}
+.tag.v{background:var(--verde-s);color:var(--verde)}.tag.a{background:var(--oro-s);color:#8A6508}.tag.r{background:var(--rojo-s);color:var(--rojo)}.tag.i{background:var(--azul-s);color:var(--azul)}
+.vacio{text-align:center;padding:24px;color:var(--muted)}.vacio .e{font-size:42px;display:block}
+.ent{border:1px solid var(--line);border-radius:14px;padding:14px;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:14px;align-items:center;background:#fff}
+@media (max-width:700px){.ent{grid-template-columns:auto 1fr}.ent .acc{grid-column:1/-1}}
+.pila .ent{grid-template-columns:auto minmax(0,1fr)}.pila .ent .acc{grid-column:1/-1}
+.ent .e{font-size:28px;width:54px;height:54px;border-radius:14px;display:grid;place-items:center}
+.pasos{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.paso{font-size:12px;font-weight:700;border-radius:99px;padding:3px 10px;background:#EEF0EC;color:var(--muted)}.paso.hecho{background:var(--verde-s);color:var(--verde)}
+details.grupo{border:1px solid var(--line);border-radius:14px;background:#fff;margin-bottom:10px}
+details.grupo>summary{list-style:none;cursor:pointer;padding:12px 14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+details.grupo>summary::-webkit-details-marker{display:none}
+details.grupo>summary .t{flex:1;min-width:180px}
+details.grupo[open]>summary{border-bottom:1px solid var(--line)}
+details.grupo .in{padding:10px 14px 14px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{border:0;background:#fff;padding:7px 14px;font-weight:700;color:var(--muted);cursor:pointer}.seg button.on{background:var(--verde);color:#fff}
+.deudas{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.deuda{border:1px solid var(--line);border-radius:14px;padding:14px;background:#fff;display:flex;flex-direction:column;gap:8px}
+.deuda .cab{display:flex;gap:10px;align-items:center}
+.av{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:18px;color:#fff;flex:none}
+.deuda .monto{font-size:25px;font-weight:800}.deuda.pagada{opacity:.6}
+.barras{display:grid;gap:9px}
+.br{display:grid;grid-template-columns:minmax(0,170px) minmax(0,1fr) auto;gap:10px;align-items:center;font-size:14px}
+.br .t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.br .b{height:16px;border-radius:6px;background:#EEF0EC;overflow:hidden}.br .b i{display:block;height:100%;background:var(--verde2);border-radius:6px}
+.br .v{font-weight:700;min-width:80px;text-align:right}
+.cols-g{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:16px}
+.colsv{display:grid;gap:6px;align-items:end;height:180px}
+.colsv>div{display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end;min-width:0}
+.colsv .bar{width:100%;max-width:44px;background:linear-gradient(180deg,var(--verde2),var(--verde));border-radius:6px 6px 2px 2px}
+.colsv .n{font-size:10.5px;font-weight:700;white-space:nowrap}
+.modal{position:fixed;inset:0;background:rgba(15,30,20,.55);display:grid;place-items:center;padding:16px;z-index:50}
+.modal>.card{width:min(620px,100%);max-height:92vh;overflow:auto}
+.conectar{display:flex;gap:14px;align-items:center;flex-wrap:wrap;background:var(--oro-s);border:1px solid #EED9A0;border-radius:14px;padding:12px 16px;margin-top:16px}
+.conectar .e{font-size:30px}
+.solo-admin{border:2px dashed #D9C27A}
+/* ciclo ilustrado e interacción */
+.card,.ent,.deuda,.kpi{transition:transform .18s,box-shadow .18s}
+.ent:hover,.deuda:hover{transform:translateY(-3px);box-shadow:0 10px 24px rgba(20,40,28,.12)}
+.compo i{transition:width .9s cubic-bezier(.2,.8,.2,1)}
+.ciclo{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:16px}
+@media (max-width:860px){.ciclo{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.etapa{position:relative;border:2px solid var(--line);background:#fff;border-radius:18px;padding:14px 12px 12px;text-align:center;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;transition:transform .18s,box-shadow .18s,border-color .18s}
+.etapa:hover{transform:translateY(-4px) scale(1.02);box-shadow:0 12px 26px rgba(20,40,28,.14)}
+.etapa svg{width:86px;height:70px;transition:transform .3s}
+.etapa:hover svg{transform:rotate(-4deg) scale(1.08)}
+.etapa .paso-n{position:absolute;top:8px;left:10px;width:24px;height:24px;border-radius:50%;background:#EEF0EC;color:var(--muted);font-weight:800;font-size:13px;display:grid;place-items:center}
+.etapa b{font-size:14.5px}.etapa .m{font-size:20px;font-weight:800}.etapa small{color:var(--muted);font-size:12.5px}
+.etapa.on{border-color:var(--c);background:linear-gradient(180deg,#fff,var(--cs))}.etapa.on .paso-n{background:var(--c);color:#fff}
+.etapa.on::before{content:"";position:absolute;inset:-6px;border-radius:22px;border:2px solid var(--c);opacity:.35;animation:latido 1.8s ease-out infinite}
+@keyframes latido{0%{transform:scale(.97);opacity:.5}100%{transform:scale(1.04);opacity:0}}
+.etapa:not(:last-child)::after{content:"➜";position:absolute;right:-15px;top:42%;font-size:18px;color:#B9C2B9;z-index:2}
+@media (max-width:860px){.etapa:nth-child(2)::after{content:""}}
+@media (prefers-reduced-motion:reduce){.etapa.on::before{animation:none}.etapa,.etapa svg,.compo i{transition:none}}
+.resalta{animation:resalta 1.6s ease}
+@keyframes resalta{0%,100%{box-shadow:var(--sombra)}30%{box-shadow:0 0 0 4px var(--oro)}}
+footer{margin-top:28px;text-align:center;color:var(--muted);font-size:12.5px}
+</style>
+<link rel="manifest" href="manifest.json"><meta name="theme-color" content="#1E5B3A"><link rel="icon" href="icono-192.png"><link rel="apple-touch-icon" href="icono-192.png">
+<script>
+// Datos en Firebase bajo apps/cajachica/ (misma capa li-firebase.js que Control de Paros). Se entra con nómina + contraseña.
+window.LI_APP = 'cajachica'; window.LI_AREA = 'Mantenimiento'; window.LI_PEDIR_ACCESO = true;
+window.LI_PERSONAL_INICIAL = {
+  '4781': { n: 'AMÍLCAR OMAR ANDRACA HERRERA', r: 'general', a: true, cargar: true, eliminar: true },
+  '1162': { n: 'CARLOS ALBERTO MARTÍNEZ JASSO', r: 'usuario', a: true, cargar: false, eliminar: false },
+  '2000': { n: 'MARISELA MARTÍNEZ MALDONADO', r: 'usuario', a: true, cargar: false, eliminar: false }
+};
+// Modo demostración (?demo o ?demo=<nómina>): base en memoria, no toca Firebase; sirve para probar y practicar.
+window.DEMO = /[?&]demo\b/.test(location.search);
+if (window.DEMO) {
+  const store = { 'config/personal': { p: JSON.parse(JSON.stringify(window.LI_PERSONAL_INICIAL)) } }, subs = [];
+  const copia = o => JSON.parse(JSON.stringify(o)), avisar = () => setTimeout(() => subs.forEach(f => f()), 0);
+  const docRef = p => ({ get: async () => ({ exists: p in store, data: () => copia(store[p]) }), set: async d => { store[p] = copia(d); avisar(); }, delete: async () => { delete store[p]; avisar(); },
+    onSnapshot: cb => { const f = () => cb({ exists: p in store, data: () => store[p] ? copia(store[p]) : undefined }); subs.push(f); f(); } });
+  const docsDe = c => Object.keys(store).filter(k => k.startsWith(c + '/') && k.split('/').length === 2).map(k => ({ id: k.split('/')[1], data: () => copia(store[k]) }));
+  const colRef = c => { const q = { orderBy: () => q, limit: () => q, get: async () => ({ docs: docsDe(c).sort((a, b) => String(b.data().t).localeCompare(String(a.data().t))) }),
+    onSnapshot: cb => { const f = () => cb({ docs: docsDe(c) }); subs.push(f); f(); }, add: async d => { store[c + '/' + Math.random().toString(36).slice(2)] = copia(d); avisar(); } }; return q; };
+  window.claude = { use: async n => n === 'db' ? { doc: docRef, collection: colRef } : null };
+  window.LI = { nomina: () => (location.search.match(/demo=(\d+)/) || [, '4781'])[1], salir: async () => location.reload(), crearCuenta: async () => 'creada', dialogoRestablecer: (n, nom) => alert('Demostración: aquí se pone la contraseña nueva de ' + (nom || n) + '.') };
+} else {
+  document.write('<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"><\/script>' +
+    '<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"><\/script>' +
+    '<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"><\/script>' +
+    '<script src="../firebase-config.js"><\/script><script src="li-firebase.js"><\/script>');
+}
+</script>
+<script src="lib/jspdf.umd.min.js"></script><script src="lib/jspdf.plugin.autotable.min.js"></script>
+</head><body>
+
+
+<header class="top"><div class="wrap">
+  <svg width="50" height="50" viewBox="0 0 64 64" aria-hidden="true"><rect x="6" y="20" width="52" height="34" rx="6" fill="#2B2F2C"/><rect x="6" y="20" width="52" height="11" rx="5" fill="#444A46"/><rect x="25" y="34" width="14" height="9" rx="2" fill="#C99A1E"/><rect x="14" y="8" width="36" height="16" rx="3" fill="#7FC79A"/><text x="32" y="20" text-anchor="middle" font-size="11" font-weight="700" fill="#1E5B3A" font-family="Segoe UI,Arial">$</text></svg>
+  <div><h1>Caja Chica · Mantenimiento</h1><p>Línea Italia · fondo de caja chica de Mantenimiento</p></div>
+  <span class="esp"></span>
+  <span id="hoy" class="chip" style="cursor:default"></span>
+  <button id="estadoArch" class="chip" type="button"></button>
+  <button id="quien" class="chip" type="button" title="Salir"></button>
+</div></header>
+
+<main class="wrap">
+  <section class="hero">
+    <div class="card caja">
+      <svg width="104" height="104" viewBox="0 0 120 120" aria-hidden="true" id="dona"></svg>
+      <div style="min-width:0"><div class="lbl">Debe haber en la caja negra</div><div class="big" id="hEfectivo">$0</div>
+        <div class="sub" id="hSub"></div><div class="row" id="hConteo" style="margin-top:8px"></div></div>
+    </div>
+    <div class="card"><div class="lbl">¿Dónde están los <span id="hFondo"></span> del fondo?</div><div class="compo" id="compo"></div><div class="ley" id="ley"></div></div>
+  </section>
+  <div id="conectar"></div>
+  <section class="avisos" id="avisos"></section>
+
+  <nav class="tabs" id="tabs"></nav>
+  <section id="t-principal"></section>
+  <section id="t-historial" hidden></section>
+  <section id="t-graficas" hidden></section>
+  <section id="t-deben" hidden></section>
+  <section id="t-solicitudes" hidden></section>
+  <section id="t-config" hidden></section>
+
+  <footer>Datos en <b>MANTENIMIENTO 2026\CAJA CHICA\caja-chica-datos.json</b> · Excel: <b>Concentrado Caja Chica Mantenimiento.xlsx</b> · PDF: carpeta <b>Entregas a finanzas</b></footer>
+</main>
+
+<script>
+// ===================== catálogos =====================
+const CATS = {
+  ferre: ['🔩', 'Ferretería'], elec: ['⚡', 'Eléctrico'], neum: ['💨', 'Aire / neumático'], sold: ['🔥', 'Soldadura'],
+  maq: ['⚙️', 'Refacción de máquina'], herr: ['🔧', 'Herramienta'], edif: ['🏭', 'Edificio'], limp: ['🧽', 'Limpieza'],
+  ofi: ['🖱️', 'Oficina'], serv: ['🛠️', 'Servicio externo'], trans: ['🚚', 'Transporte'], otro: ['📦', 'Otros']
+};
+const TIPOS = { recordatorio: ['📌', 'Recordatorio', 'Ya está sumado en el histórico: solo para no olvidar, no mueve la caja'], vale: ['💸', 'Préstamo de caja', 'Se le prestó dinero de la caja: baja el efectivo hasta que lo regrese'], debe: ['📝', 'Debe', 'Adeudo para control, no sale de la caja'], leDebe: ['↩️', 'Se le debe', 'Pagó de su bolsa: hay que reponérselo'] };
+const ARCH_XLS = 'Concentrado Caja Chica Mantenimiento.xlsx', DIR_PDF = 'Entregas a finanzas', DIR_ACC = 'accesos';
+
+// ===================== utilidades =====================
+const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const r2 = n => Math.round((Number(n) || 0) * 100) / 100;
+const din = n => '$' + r2(n).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const din0 = n => '$' + Math.round(Number(n) || 0).toLocaleString('es-MX');
+const iso = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+const hoyISO = () => iso(new Date());
+const aFecha = s => { const [a, m, d] = s.split('-').map(Number); return new Date(a, m - 1, d); };
+const dias = (desde, hasta) => Math.round((aFecha(hasta || hoyISO()) - aFecha(desde)) / 864e5);
+const sumaD = (d, n) => { const x = aFecha(d); x.setDate(x.getDate() + n); return iso(x); };
+const MES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const MESL = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+const fF = s => { if (!s) return '—'; const d = aFecha(s); return d.getDate() + ' ' + MES[d.getMonth()] + ' ' + d.getFullYear(); };
+const fC = s => { if (!s) return '—'; const d = aFecha(s); return d.getDate() + ' ' + MES[d.getMonth()]; };
+const fN = s => { const d = aFecha(s); return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear(); };
+const fL = s => { const d = aFecha(s); return d.getDate() + ' de ' + MESL[d.getMonth()] + ' de ' + d.getFullYear(); };
+// semana ISO (lunes a domingo)
+function semana(s) { const d = aFecha(s), x = new Date(d); x.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7); const a = x.getFullYear(), p = new Date(a, 0, 4); const n = 1 + Math.round(((x - p) / 864e5 - 3 + (p.getDay() + 6) % 7) / 7); const lun = new Date(d); lun.setDate(d.getDate() - (d.getDay() + 6) % 7); return { a, n, clave: a + '-S' + String(n).padStart(2, '0'), lun: iso(lun), dom: sumaD(iso(lun), 6) }; }
+const nuevoId = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const COLORES = ['#1E5B3A', '#1F5E8C', '#8A4FB0', '#C2571A', '#0F7C7A', '#A23A5A', '#5A6B1E'];
+const colorDe = s => COLORES[[...String(s)].reduce((a, c) => a + c.charCodeAt(0), 0) % COLORES.length];
+const catDe = k => CATS[k] || CATS.otro;
+
+// ===================== estado (vive en Firebase: apps/cajachica/) =====================
+// Colecciones: facturas, entregas, solicitudes (vales), deudas, conteos, eliminados, accesos · config/ajustes · config/personal
+const COLS = ['facturas', 'entregas', 'solicitudes', 'deudas', 'conteos', 'eliminados'];
+const AJUSTES = ['fondo', 'responsable', 'diasEntrega', 'diasCheque', 'alertaPct'];
+const VACIO = () => ({ fondo: 9000, responsable: 'AMÍLCAR OMAR ANDRACA HERRERA', diasEntrega: 7, diasCheque: 7, alertaPct: 30, usuarios: {}, facturas: [], entregas: [], solicitudes: [], deudas: [], conteos: [], eliminados: [] });
+let D = VACIO(), DB = null, YO = null, tab = 'principal', carpeta = null, errorArch = '';
+const listo = {}, ULT = {}; COLS.forEach(c => ULT[c] = {}); let ULT_AJ = '', ULT_US = '';
+// texto canónico (llaves ordenadas) para saber si un registro cambió
+const canon = v => JSON.stringify(v, (k, x) => x && typeof x === 'object' && !Array.isArray(x) ? Object.keys(x).sort().reduce((o, y) => (o[y] = x[y], o), {}) : x);
+const limpio = o => JSON.parse(JSON.stringify(o));
+
+async function conectar() {
+  DB = await window.claude.use('db'); if (!DB) return;
+  const nom = window.LI.nomina();
+  DB.doc('config/personal').onSnapshot(s => {
+    const p = (s.data() || {}).p || {}, u = p[nom];
+    D.usuarios = p; ULT_US = canon(p);
+    YO = u ? { nom, n: u.n, rol: u.r === 'admin' || u.r === 'general' ? 'admin' : 'consulta', general: u.r === 'general', cargar: !!u.cargar, eliminar: !!u.eliminar } : null;
+    listo.per = true; refrescar();
+  });
+  DB.doc('config/ajustes').onSnapshot(s => { const a = s.data() || {}; AJUSTES.forEach(k => { if (a[k] != null) D[k] = a[k]; }); ULT_AJ = canon(AJUSTES.map(k => D[k])); listo.aj = true; refrescar(); }, () => { listo.aj = true; refrescar(); });
+  COLS.forEach(c => DB.collection(c).onSnapshot(q => {
+    D[c] = q.docs.map(d => Object.assign({}, d.data(), { id: d.id })).sort((a, b) => c === 'entregas' ? a.n - b.n : String(a.fecha || a.t || '').localeCompare(String(b.fecha || b.t || '')) || a.id.localeCompare(b.id)); ULT[c] = {}; D[c].forEach(x => ULT[c][x.id] = canon(x)); listo[c] = true; refrescar();
+  }, () => { listo[c] = true; refrescar(); }));
+  registrarAcceso(nom);
+}
+let tR;
+function refrescar() { clearTimeout(tR); tR = setTimeout(() => { if (listo.per && COLS.every(c => listo[c])) { pintar(); revisarViernes(); } }, 60); }
+
+// guardar = mandar a Firebase solo lo que cambió (así varios pueden capturar a la vez sin pisarse)
+let enviando = Promise.resolve();
+function guardar() { pintar(); enviando = enviando.then(sincronizar).catch(e => toast('No se pudo guardar: ' + (e.message || e.code || e))); }
+async function sincronizar() {
+  if (!DB) return; const ops = [];
+  for (const c of COLS) {
+    const vivos = {};
+    for (const x of D[c]) {
+      if (!x.id) x.id = nuevoId(c.slice(0, 2)); vivos[x.id] = 1;
+      const j = canon(x); if (ULT[c][x.id] !== j) { ULT[c][x.id] = j; const datos = limpio(x); delete datos.id; ops.push(DB.doc(c + '/' + x.id).set(datos)); }
+    }
+    Object.keys(ULT[c]).forEach(id => { if (!vivos[id]) { delete ULT[c][id]; ops.push(DB.doc(c + '/' + id).delete()); } });
+  }
+  if (esAdmin()) {
+    const aj = canon(AJUSTES.map(k => D[k])); if (aj !== ULT_AJ) { ULT_AJ = aj; const o = {}; AJUSTES.forEach(k => o[k] = D[k]); ops.push(DB.doc('config/ajustes').set(o)); }
+    const us = canon(D.usuarios); if (us !== ULT_US) { ULT_US = us; ops.push(DB.doc('config/personal').set({ p: limpio(D.usuarios) })); }
+  }
+  await Promise.all(ops);
+}
+
+// historial de entradas (solo lo ve el administrador)
+function equipo() { const u = navigator.userAgent; return /Android/i.test(u) ? 'Android' : /iPhone|iPad/i.test(u) ? 'iPhone/iPad' : /Windows/i.test(u) ? 'PC Windows' : /Mac/i.test(u) ? 'Mac' : 'Otro'; }
+function registrarAcceso(nom) {
+  if (sessionStorage.getItem('cc_acc') === nom) return; sessionStorage.setItem('cc_acc', nom);
+  DB.collection('accesos').add({ t: new Date().toISOString(), nom, n: (window.LI_PERSONAL_INICIAL[nom] || {}).n || '', eq: equipo() }).catch(() => {});
+}
+async function leerAccesos() { try { const q = await DB.collection('accesos').orderBy('t', 'desc').limit(300).get(); return q.docs.map(d => d.data()); } catch (e) { return []; } }
+
+// importar el archivo caja-chica-datos.json (la versión que vivía en la carpeta CAJA CHICA)
+function importar(x) {
+  COLS.forEach(c => { if (Array.isArray(x[c])) D[c] = x[c].map(o => Object.assign({}, o, { id: o.id || nuevoId(c.slice(0, 2)) })); });
+  AJUSTES.forEach(k => { if (x[k] != null) D[k] = x[k]; });
+  guardar();
+}
+
+// ===================== carpeta CAJA CHICA en la PC del administrador (Excel y PDF; Edge o Chrome) =====================
+const soporta = 'showDirectoryPicker' in window;
+const IDB = () => new Promise((ok, mal) => { const r = indexedDB.open('cajaChicaWeb', 1); r.onupgradeneeded = () => r.result.createObjectStore('h'); r.onsuccess = () => ok(r.result); r.onerror = () => mal(r.error); });
+const conLimite = (p, ms) => Promise.race([p, new Promise(ok => setTimeout(() => ok(null), ms))]);
+const idbGet = k => conLimite((async () => { try { const db = await IDB(); return await new Promise(ok => { const q = db.transaction('h').objectStore('h').get(k); q.onsuccess = () => ok(q.result); q.onerror = () => ok(null); }); } catch (e) { return null; } })(), 2000);
+const idbSet = async (k, v) => { try { const db = await IDB(); await new Promise(ok => { const t = db.transaction('h', 'readwrite'); t.objectStore('h').put(v, k); t.oncomplete = ok; t.onerror = ok; }); } catch (e) {} };
+async function escribirArchivo(nombre, contenido, sub) {
+  let dir = carpeta; if (sub) dir = await carpeta.getDirectoryHandle(sub, { create: true });
+  const fh = await dir.getFileHandle(nombre, { create: true }); const w = await fh.createWritable(); await w.write(contenido); await w.close(); return fh;
+}
+async function elegirCarpeta() {
+  try { carpeta = await showDirectoryPicker({ id: 'cajachica', mode: 'readwrite' }); errorArch = ''; await idbSet('carpeta', carpeta); pintar(); return true; }
+  catch (e) { if (e.name !== 'AbortError') { errorArch = e.message; pintar(); } return false; }
+}
+// se llama desde un clic (el navegador solo pide permiso con un clic)
+async function pedirPermiso() {
+  if (carpeta) return true;
+  const h = await idbGet('carpeta'); if (!h) return elegirCarpeta();
+  try { if ((await h.requestPermission({ mode: 'readwrite' })) === 'granted') { carpeta = h; pintar(); return true; } } catch (e) { errorArch = e.message; }
+  return elegirCarpeta();
+}
+async function carpetaSinPreguntar() { const h = await idbGet('carpeta'); if (h) { try { if ((await conLimite(h.queryPermission({ mode: 'readwrite' }), 2000)) === 'granted') carpeta = h; } catch (e) {} } }
+function descargar(blob, nombre) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = nombre; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 3000); }
+
+// el Excel concentrado se actualiza solo los viernes (una vez al día, al abrir el administrador)
+const esViernes = () => new Date().getDay() === 5;
+function xlsHoyListo() { try { return localStorage.getItem('cc_xls_ult') === hoyISO(); } catch (e) { return false; } }
+async function revisarViernes() {
+  if (!esAdmin() || !esViernes() || xlsHoyListo() || revisarViernes.corriendo) return;
+  revisarViernes.corriendo = true;
+  if (!carpeta) await carpetaSinPreguntar();
+  if (carpeta) await actualizarExcel(false);
+  revisarViernes.corriendo = false; pintarEstado();
+}
+
+// ===================== cálculos =====================
+const esAdmin = () => !!(YO && YO.rol === 'admin');
+const puedeCargar = () => esAdmin() || !!(YO && YO.cargar);
+const puedeEliminar = () => esAdmin() || !!(YO && YO.eliminar);
+const porEntregar = () => D.facturas.filter(x => !x.entrega).sort((a, b) => a.fecha.localeCompare(b.fecha));
+const facDe = id => D.facturas.filter(x => x.entrega === id).sort((a, b) => a.fecha.localeCompare(b.fecha));
+const suma = L => r2(L.reduce((s, x) => s + Number(x.monto || 0), 0));
+const saldoDeuda = d => Math.max(0, Number(d.monto || 0) - (d.abonos || []).reduce((s, a) => s + Number(a.monto || 0), 0));
+function cuentas() {
+  const pe = suma(porEntregar());
+  const espera = D.entregas.filter(e => !e.cheque), enEspera = r2(espera.reduce((s, e) => s + suma(facDe(e.id)), 0));
+  const sol = r2(D.solicitudes.filter(s => s.estado === 'pendiente').reduce((s, x) => s + Number(x.monto || 0), 0));
+  const vales = r2(D.deudas.filter(d => d.tipo === 'vale').reduce((s, d) => s + saldoDeuda(d), 0));
+  const caja = r2(D.fondo - pe - enEspera - sol - vales);
+  return { pe, enEspera, espera, sol, vales, caja };
+}
+
+// ===================== avisos con fechas =====================
+function avisos() {
+  const A = [], c = cuentas(), hoy = hoyISO(), pe = porEntregar();
+  if (pe.length) {
+    const n = dias(pe[0].fecha);
+    if (n >= D.diasEntrega) A.push(['r', '📤', 'Toca entregar facturas a finanzas', 'Tienes ' + pe.length + ' facturas por ' + din(c.pe) + '. La más antigua es del ' + fF(pe[0].fecha) + ' (hace ' + n + ' días).']);
+    else A.push(['i', '🧾', pe.length + ' facturas esperando entrega: ' + din(c.pe), 'Desde el ' + fF(pe[0].fecha) + '. Entrega sugerida antes del ' + fF(sumaD(pe[0].fecha, D.diasEntrega)) + '.']);
+    const fut = pe.filter(x => x.fecha > hoy); if (fut.length) A.push(['a', '📆', 'Revisa la fecha de ' + fut.length + ' factura(s)', fut.map(x => x.proveedor + ' (' + fF(x.fecha) + ')').join(' · ') + ' tienen fecha futura.']);
+  }
+  c.espera.forEach(e => { const n = dias(e.fecha); A.push([n > D.diasCheque ? 'r' : 'a', '🏦', n > D.diasCheque ? 'Finanzas lleva ' + n + ' días sin dar el cheque' : 'En espera del cheque de devolución', 'Entrega N° ' + e.n + ' del ' + fF(e.fecha) + ' por ' + din(suma(facDe(e.id))) + '.']); });
+  if (c.caja < D.fondo * D.alertaPct / 100) A.push(['r', '🪫', 'Queda poco efectivo en la caja negra', 'Deben quedar ' + din(c.caja) + ' (menos del ' + D.alertaPct + ' % del fondo). Entrega facturas para que repongan.']);
+  if (esAdmin()) D.solicitudes.filter(s => s.estado === 'pendiente').forEach(s => { const n = dias(s.fecha); if (n >= 2) A.push(['a', '📝', s.persona + ' no ha traído factura (' + din(s.monto) + ')', 'Se le dio el ' + fF(s.fecha) + ' (hace ' + n + ' días) para: ' + s.motivo + '.']); });
+  D.deudas.filter(d => d.tipo !== 'recordatorio' && saldoDeuda(d) > 0).forEach(d => {
+    const quien = d.tipo === 'leDebe' ? 'Se le debe a ' + d.persona : d.persona + ' debe';
+    if (d.compromiso && d.compromiso < hoy) A.push(['r', '⏰', quien + ' ' + din(saldoDeuda(d)) + ': ya venció', 'Quedó de pagarse el ' + fF(d.compromiso) + ' (hace ' + dias(d.compromiso) + ' días).']);
+    else if (d.compromiso && dias(hoy, d.compromiso) <= 2) A.push(['a', '⏳', quien + ' ' + din(saldoDeuda(d)) + ': vence pronto', 'Fecha de pago: ' + fF(d.compromiso) + '.']);
+  });
+  const uc = D.conteos[D.conteos.length - 1];
+  if (esAdmin() && (!uc || dias(uc.fecha) >= 7)) A.push(['i', '🔍', 'Cuenta la caja negra', uc ? 'El último conteo fue el ' + fF(uc.fecha) + ' (hace ' + dias(uc.fecha) + ' días).' : 'Aún no hay conteo registrado. Usa el botón "Contar caja negra".']);
+  if (!A.some(a => a[0] === 'r' || a[0] === 'a')) A.unshift(['v', '✅', 'Todo en orden', 'No hay pendientes vencidos.']);
+  const o = { r: 0, a: 1, i: 2, v: 3 }; return A.sort((x, y) => o[x[0]] - o[y[0]]);
+}
+
+// ===================== pintar =====================
+function pintar() {
+  if (!YO) return;
+  pintarEstado(); pintarHero(); $('#avisos').innerHTML = avisos().map(a => '<div class="aviso ' + a[0] + '"><span class="e">' + a[1] + '</span><div><b>' + esc(a[2]) + '</b>' + esc(a[3]) + '</div></div>').join('');
+  const T = [['principal', '🏠 Principal'], ['historial', '📚 Historial'], ['graficas', '📊 Gráficas'], ['deben', '🤝 Quién debe']];
+  if (esAdmin()) T.push(['solicitudes', '💵 Vales de caja'], ['config', '⚙ Configuración']);
+  if (!T.some(t => t[0] === tab)) tab = 'principal';
+  $('#tabs').innerHTML = T.map(t => '<button type="button" data-t="' + t[0] + '" class="' + (t[0] === tab ? 'on' : '') + '">' + t[1] + '</button>').join('');
+  $$('#tabs button').forEach(b => b.onclick = () => { tab = b.dataset.t; pintar(); });
+  ['principal', 'historial', 'graficas', 'deben', 'solicitudes', 'config'].forEach(t => $('#t-' + t).hidden = t !== tab);
+  ({ principal: pPrincipal, historial: pHistorial, graficas: pGraficas, deben: pDeben, solicitudes: pSolicitudes, config: pConfig })[tab]();
+}
+function pintarEstado() {
+  $('#hoy').textContent = '📅 ' + new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  $('#quien').textContent = (esAdmin() ? '🔑 ' : '👤 ') + YO.n.split(' ')[0] + ' · ' + YO.nom + ' · Salir';
+  $('#quien').onclick = () => window.LI.salir();
+  const b = $('#estadoArch');
+  b.hidden = !esAdmin();
+  if (esAdmin()) {
+    if (!soporta) { b.className = 'chip mal'; b.textContent = '⚠ Para guardar Excel y PDF en la carpeta usa Edge o Chrome'; }
+    else if (carpeta) { b.className = 'chip'; b.textContent = errorArch ? '⚠ ' + errorArch : '🗂️ Excel y PDF → CAJA CHICA'; }
+    else { b.className = 'chip'; b.textContent = '🗂️ Elegir carpeta CAJA CHICA'; }
+    b.onclick = () => { if (soporta) pedirPermiso(); };
+  }
+  let k = '';
+  // primera vez en línea: cargar los datos que vivían en la carpeta (caja-chica-datos.json)
+  if (esAdmin() && !D.facturas.length && !D.entregas.length) k += '<div class="conectar"><span class="e">📥</span><div style="flex:1;min-width:240px"><b>Carga tus datos de caja chica</b><div class="small">Elige el archivo <b>caja-chica-datos.json</b> de la carpeta <b>MANTENIMIENTO 2026\\CAJA CHICA</b>. Se hace una sola vez; después todo vive en línea.</div></div><label class="btn pri" style="cursor:pointer">📥 Elegir archivo<input type="file" id="kImp" accept=".json,application/json" hidden></label></div>';
+  // viernes: actualizar el Excel concentrado (si el navegador pide permiso de la carpeta, se necesita un clic)
+  if (esAdmin() && esViernes() && !xlsHoyListo()) k += '<div class="conectar" style="background:var(--verde-s);border-color:var(--menta)"><span class="e">📗</span><div style="flex:1;min-width:240px"><b>Hoy es viernes: toca actualizar el Excel concentrado</b><div class="small">Se guarda en <b>CAJA CHICA\\Concentrado Caja Chica Mantenimiento.xlsx</b> (el mismo archivo de siempre). Ciérralo en Excel antes.</div></div><button class="btn pri" id="kXls" type="button">📗 Actualizar ahora</button></div>';
+  $('#conectar').innerHTML = k;
+  if ($('#kImp')) $('#kImp').onchange = async e => { const f = e.target.files[0]; if (!f) return; try { importar(JSON.parse(await f.text())); toast('✔ Datos cargados: ' + D.facturas.length + ' facturas'); } catch (x) { toast('No se pudo leer el archivo: ' + x.message); } };
+  if ($('#kXls')) $('#kXls').onclick = async () => { if (soporta) await pedirPermiso(); await actualizarExcel(true); pintarEstado(); };
+}
+// el número sube o baja contando hasta el valor nuevo
+function animarNum(el, v) {
+  const de = Number(el.dataset.v || 0); el.dataset.v = v;
+  if (de === v || matchMedia('(prefers-reduced-motion: reduce)').matches) { el.textContent = din(v); return; }
+  const t0 = performance.now(), dur = 900;
+  const paso = t => { const k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3); el.textContent = din(de + (v - de) * e); if (k < 1) requestAnimationFrame(paso); };
+  requestAnimationFrame(paso);
+}
+function pintarHero() {
+  const c = cuentas(), pct = Math.max(0, Math.min(100, c.caja / D.fondo * 100)), col = pct < D.alertaPct ? '#B3261E' : '#2E7D4F';
+  animarNum($('#hEfectivo'), c.caja); $('#hEfectivo').style.color = col;
+  $('#hSub').innerHTML = 'efectivo real esperado · ' + Math.round(pct) + ' % del fondo de <b>' + din0(D.fondo) + '</b>';
+  const uc = D.conteos[D.conteos.length - 1];
+  $('#hConteo').innerHTML = (uc ? '<span class="tag ' + (uc.dif == null || Math.abs(uc.dif) < 0.5 ? 'v' : 'r') + '">Último conteo ' + fC(uc.fecha) + ': ' + din(uc.monto) + (uc.dif != null && Math.abs(uc.dif) >= 0.5 ? ' (' + (uc.dif < 0 ? 'faltaban ' : 'sobraban ') + din(Math.abs(uc.dif)) + ')' : '') + '</span>' : '') +
+    (esAdmin() ? '<button class="btn sm" id="bContar" type="button">💵 Contar caja negra</button>' : '');
+  if ($('#bContar')) $('#bContar').onclick = dlgConteo;
+  const L = 2 * Math.PI * 46;
+  $('#dona').innerHTML = '<circle cx="60" cy="60" r="46" fill="none" stroke="#E9ECE6" stroke-width="14"/><circle cx="60" cy="60" r="46" fill="none" stroke="' + col + '" stroke-width="14" stroke-linecap="round" stroke-dasharray="' + (L * pct / 100) + ' ' + L + '" transform="rotate(-90 60 60)"/>' +
+    '<rect x="42" y="44" width="36" height="22" rx="4" fill="#2B2F2C"/><rect x="55" y="52" width="10" height="6" rx="1" fill="#C99A1E"/><text x="60" y="86" text-anchor="middle" font-size="15" font-weight="800" fill="' + col + '" font-family="Segoe UI,Arial">' + Math.round(pct) + '%</text>';
+  $('#hFondo').textContent = din0(D.fondo);
+  const P = [['#2B2F2C', '🗃️ En la caja negra', c.caja], ['#C99A1E', '🧾 Facturas por entregar', c.pe], ['#1F5E8C', '🏦 En espera del cheque', c.enEspera], ['#B3261E', '💵 Vales sin factura', c.sol], ['#8A4FB0', '💸 Préstamos de caja', c.vales]].filter((p, i) => i < 3 || p[2] > 0);
+  $('#compo').innerHTML = P.map(p => '<i style="background:' + p[0] + ';width:' + Math.max(0, p[2] / D.fondo * 100) + '%" title="' + p[1] + ' ' + din(p[2]) + '"></i>').join('');
+  $('#ley').innerHTML = P.map(p => '<div><span class="pt" style="background:' + p[0] + '"></span>' + p[1] + '<b>' + din(p[2]) + '</b></div>').join('') + '<div style="grid-column:1/-1;border-top:1px solid var(--line);padding-top:6px"><span class="pt" style="background:transparent"></span><b style="margin-left:0">Total</b><b>' + din(P.reduce((s, p) => s + p[2], 0)) + '</b></div>';
+}
+
+// ---------- Principal
+let catSel = 'ferre', editF = null;
+function tablaFacturas(L, opts = {}) {
+  if (!L.length) return '<div class="vacio"><span class="e">🪙</span>' + (opts.vacio || 'Sin facturas.') + '</div>';
+  opts.acc = opts.editar || opts.borrar;
+  return '<div class="tw"><table><thead><tr><th></th><th>Fecha</th><th>Proveedor / artículo</th><th>Destino</th><th class="m">Monto</th>' + (opts.acc ? '<th></th>' : '') + '</tr></thead><tbody>' +
+    L.map(x => '<tr><td><span class="ico" title="' + catDe(x.cat)[1] + '">' + catDe(x.cat)[0] + '</span></td><td style="white-space:nowrap">' + fN(x.fecha) + '</td><td><b>' + esc(x.proveedor) + '</b>' + (x.folio ? '<div class="small muted">' + esc(x.folio) + '</div>' : '') + (x.solicitud ? ' <span class="tag i">de solicitud</span>' : '') + '</td><td>' + esc(x.destino) + '</td><td class="m"><b>' + din(x.monto) + '</b></td>' +
+      (opts.acc ? '<td style="white-space:nowrap">' + (opts.editar ? '<button class="btn sm" data-e="' + x.id + '" type="button" title="Corregir">✏️</button> ' : '') + (opts.borrar ? '<button class="btn sm rojo" data-b="' + x.id + '" type="button" title="Eliminar">🗑</button>' : '') + '</td>' : '') + '</tr>').join('') +
+    '<tr class="tot"><td></td><td colspan="3">TOTAL (' + L.length + ' facturas)</td><td class="m">' + din(suma(L)) + '</td>' + (opts.acc ? '<td></td>' : '') + '</tr></tbody></table></div>';
+}
+// ilustraciones del ciclo de la caja chica (SVG propio, sin internet)
+const ILU = {
+  facturas: '<svg viewBox="0 0 90 72"><rect x="20" y="12" width="44" height="54" rx="3" fill="#EDE6D2" transform="rotate(-8 42 39)"/><path d="M26 6h40v56l-5-4-5 4-5-4-5 4-5-4-5 4-5-4-5 4z" fill="#fff" stroke="#C99A1E" stroke-width="2"/><rect x="32" y="14" width="22" height="4" rx="2" fill="#1E5B3A"/><rect x="32" y="24" width="28" height="3" rx="1.5" fill="#CBD3CB"/><rect x="32" y="31" width="24" height="3" rx="1.5" fill="#CBD3CB"/><rect x="32" y="38" width="28" height="3" rx="1.5" fill="#CBD3CB"/><text x="58" y="54" text-anchor="end" font-size="11" font-weight="800" fill="#1E5B3A" font-family="Segoe UI,Arial">$</text><circle cx="70" cy="56" r="11" fill="#C99A1E"/><text x="70" y="60.5" text-anchor="middle" font-size="12" font-weight="800" fill="#fff" font-family="Segoe UI,Arial">!</text></svg>',
+  entrega: '<svg viewBox="0 0 90 72"><rect x="46" y="18" width="38" height="46" rx="3" fill="#DCE8F2"/><path d="M44 18l21-12 21 12z" fill="#1F5E8C"/><rect x="52" y="26" width="8" height="8" fill="#fff"/><rect x="70" y="26" width="8" height="8" fill="#fff"/><rect x="52" y="40" width="8" height="8" fill="#fff"/><rect x="70" y="40" width="8" height="8" fill="#fff"/><rect x="60" y="50" width="10" height="14" fill="#1F5E8C"/><g transform="rotate(-10 22 40)"><rect x="4" y="28" width="36" height="24" rx="3" fill="#fff" stroke="#C99A1E" stroke-width="2"/><path d="M4 30l18 12 18-12" fill="none" stroke="#C99A1E" stroke-width="2"/></g><path d="M38 20q6-10 14-4" fill="none" stroke="#1E5B3A" stroke-width="2.5" stroke-dasharray="3 3"/><path d="M50 12l3 5-6 1z" fill="#1E5B3A"/></svg>',
+  cheque: '<svg viewBox="0 0 90 72"><rect x="6" y="16" width="78" height="42" rx="4" fill="#E2EEF7" stroke="#1F5E8C" stroke-width="2"/><rect x="6" y="16" width="78" height="9" rx="4" fill="#B3261E"/><text x="12" y="23.5" font-size="7" font-weight="800" fill="#fff" font-family="Segoe UI,Arial">BANORTE</text><rect x="12" y="31" width="40" height="3" rx="1.5" fill="#9FB6CA"/><rect x="12" y="38" width="30" height="3" rx="1.5" fill="#9FB6CA"/><rect x="56" y="30" width="22" height="10" rx="2" fill="#fff" stroke="#1F5E8C"/><text x="67" y="38" text-anchor="middle" font-size="7.5" font-weight="800" fill="#1F5E8C" font-family="Segoe UI,Arial">$$$</text><path d="M14 51q6-6 10 0t10 0 10-2" fill="none" stroke="#1D2A22" stroke-width="1.6"/><rect x="50" y="50" width="28" height="2" fill="#9FB6CA"/></svg>',
+  caja: '<svg viewBox="0 0 90 72"><rect x="22" y="6" width="34" height="18" rx="2" fill="#7FC79A" transform="rotate(-12 39 15)"/><rect x="30" y="4" width="34" height="18" rx="2" fill="#A9DDBB" transform="rotate(8 47 13)"/><text x="47" y="17" text-anchor="middle" font-size="10" font-weight="800" fill="#1E5B3A" font-family="Segoe UI,Arial" transform="rotate(8 47 13)">$</text><rect x="10" y="24" width="70" height="42" rx="6" fill="#2B2F2C"/><rect x="10" y="24" width="70" height="12" rx="5" fill="#444A46"/><rect x="38" y="42" width="14" height="11" rx="2" fill="#C99A1E"/><circle cx="45" cy="47" r="2" fill="#2B2F2C"/></svg>'
+};
+function pPrincipal() {
+  const pe = porEntregar(), c = cuentas(), adm = esAdmin(), ult = D.entregas.filter(e => e.cheque).slice(-1)[0];
+  const etapa = c.enEspera > 0 ? 3 : pe.length ? 2 : 4;
+  const E = [
+    ['facturas', '#C99A1E', '#FBF1D6', 'Facturas por entregar', din(c.pe), pe.length + ' facturas', 'fac'],
+    ['entrega', '#1E5B3A', '#E3F1E8', 'Entregar a finanzas', pe.length ? 'Con PDF' : 'Nada pendiente', adm ? 'Botón "Ya se entregaron"' : 'Lo hace el administrador', 'ent'],
+    ['cheque', '#1F5E8C', '#E2EEF7', 'Espera del cheque', din(c.enEspera), c.espera.length ? c.espera.length + ' entrega(s) · ' + dias(c.espera[0].fecha) + ' días' : 'Sin entregas pendientes', 'chq'],
+    ['caja', '#2B2F2C', '#EDEEEC', 'En la caja negra', din(c.caja), Math.round(c.caja / D.fondo * 100) + ' % del fondo', 'caja']
+  ];
+  $('#t-principal').innerHTML = '<div class="ciclo">' + E.map((e, i) => '<button type="button" class="etapa' + (i + 1 === etapa || (etapa === 2 && i === 0) ? ' on' : '') + '" data-ir="' + e[6] + '" style="--c:' + e[1] + ';--cs:' + e[2] + '"><span class="paso-n">' + (i + 1) + '</span>' + ILU[e[0]] + '<b>' + e[3] + '</b><span class="m" style="color:' + e[1] + '">' + e[4] + '</span><small>' + e[5] + '</small></button>').join('') + '</div>' +
+    '<div class="cols"><div class="card" id="cFac"><h2>🧾 Facturas por entregar a finanzas <span class="tag a">' + din(c.pe) + '</span></h2>' +
+    (puedeCargar() || adm ? '<div class="row" style="margin-bottom:12px">' + (puedeCargar() ? '<button class="btn pri" id="bNueva" type="button">➕ Registrar factura</button>' : '') + (adm ? '<button class="btn" id="bPdf" type="button"' + (pe.length ? '' : ' disabled') + '>🖨 PDF con fecha de corte</button><button class="btn oro" id="bEntregar" type="button"' + (pe.length ? '' : ' disabled') + '>📤 Ya se entregaron facturas</button><button class="btn" id="bXls" type="button">📗 Actualizar Excel</button>' : '') + '<span class="msg" id="xMsg"></span></div>' : '') +
+    tablaFacturas(pe, { editar: puedeCargar(), borrar: puedeEliminar(), vacio: 'No hay facturas pendientes de entregar.' }) + '</div>' +
+    '<div class="pila"><div class="card" id="cChq"><h2>🏦 En espera del cheque</h2>' +
+      (c.espera.length ? c.espera.map(e => '<div class="ent" style="margin-bottom:10px"><span class="e" style="background:var(--azul-s)">⏳</span><div><b>Entrega N° ' + e.n + '</b> · ' + fF(e.fecha) + '<div class="small muted">' + facDe(e.id).length + ' facturas · <b style="color:var(--ink)">' + din(suma(facDe(e.id))) + '</b> · hace ' + dias(e.fecha) + ' días</div></div>' +
+        '<div class="acc row"><button class="btn sm" data-pdf="' + e.id + '" type="button">🖨 PDF</button>' + (adm ? '<button class="btn sm azul" data-chq="' + e.id + '" type="button">🏦 Llegó el cheque</button>' : '') + '</div></div>').join('') : '<div class="vacio" style="padding:12px"><span class="e">✅</span>No hay entregas esperando cheque.</div>') + '</div>' +
+      (ult ? '<div class="card"><h2>✅ Último cheque recibido</h2><div class="small">Entrega N° ' + ult.n + ' · <b>' + din(ult.cheque.monto) + '</b> · ' + esc(ult.cheque.ref || '') + ' · ' + fF(ult.cheque.fecha) + (ult.cheque.caja != null ? '<br>Efectivo en caja negra ese día: <b>' + din(ult.cheque.caja) + '</b>' : '') + '</div></div>' : '') +
+      '</div></div>';
+  // las etapas del ciclo llevan a su sección
+  $$('#t-principal [data-ir]').forEach(b => b.onclick = () => {
+    const ir = b.dataset.ir;
+    if (ir === 'ent' && adm && pe.length) return dlgEntrega(true);
+    if (ir === 'caja') { if (adm) return dlgConteo(); window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+    const t = $(ir === 'chq' ? '#cChq' : '#cFac'); t.scrollIntoView({ behavior: 'smooth', block: 'start' }); t.classList.remove('resalta'); void t.offsetWidth; t.classList.add('resalta');
+  });
+  $$('[data-pdf]').forEach(b => b.onclick = () => generarPDF(D.entregas.find(e => e.id === b.dataset.pdf)));
+  if ($('#bNueva')) $('#bNueva').onclick = () => dlgFactura();
+  $$('#t-principal [data-e]').forEach(b => b.onclick = () => dlgFactura(b.dataset.e));
+  $$('#t-principal [data-b]').forEach(b => b.onclick = () => dlgEliminar(D.facturas.find(y => y.id === b.dataset.b)));
+  if (!adm) return;
+  $('#bPdf').onclick = () => dlgEntrega(false);
+  $('#bEntregar').onclick = () => dlgEntrega(true);
+  $('#bXls').onclick = async () => { if (soporta) await pedirPermiso(); actualizarExcel(true); };
+  $$('[data-chq]').forEach(b => b.onclick = () => dlgCheque(b.dataset.chq));
+}
+// eliminar una factura: pide el motivo y deja registro (el historial de eliminación solo lo ve el administrador)
+const MOTIVOS = ['Error de captura', 'Factura duplicada', 'Se canceló la compra', 'Monto o datos equivocados', 'Otro'];
+function dlgEliminar(x) {
+  const m = modal('🗑 Eliminar factura', '<p><b>' + esc(x.proveedor) + '</b> · ' + fN(x.fecha) + ' · <b>' + din(x.monto) + '</b></p>' +
+    '<form class="form"><label class="f full">¿Por qué se elimina?<select name="mo" required><option value="">Elige el motivo…</option>' + MOTIVOS.map(o => '<option>' + o + '</option>').join('') + '</select></label>' +
+    '<label class="f full">Explica (obligatorio si es "Otro")<input name="de" placeholder="Ej. se capturó dos veces"></label>' +
+    '<p class="small muted full" style="margin:0">Queda registrado quién la eliminó, cuándo y por qué.</p><p class="msg e full" id="elMsg"></p>' +
+    '<div class="full row"><button class="btn rojo" type="submit">🗑 Eliminar</button><button class="btn" type="button" data-x>Cancelar</button></div></form>');
+  $('form', m).onsubmit = e => {
+    e.preventDefault(); const mo = e.target.mo.value, de = e.target.de.value.trim();
+    if (!mo || (mo === 'Otro' && !de)) { $('#elMsg', m).textContent = 'Escribe el motivo.'; return; }
+    const datos = Object.assign({}, x); delete datos.id;
+    D.eliminados.push({ id: nuevoId('el'), tipo: 'factura', ref: x.id, t: new Date().toISOString(), fecha: hoyISO(), por: YO.nom, porN: YO.n, motivo: mo, detalle: de, datos, restaurado: false });
+    D.facturas = D.facturas.filter(y => y !== x); m.remove(); guardar(); toast('Factura eliminada: quedó en el historial de eliminación.');
+  };
+}
+function modal(titulo, html) {
+  const m = document.createElement('div'); m.className = 'modal';
+  m.innerHTML = '<div class="card"><h2>' + titulo + '</h2>' + html + '</div>';
+  document.body.appendChild(m); m.addEventListener('click', e => { if (e.target === m) m.remove(); });
+  $$('[data-x]', m).forEach(b => b.onclick = () => m.remove()); return m;
+}
+function formCats(sel) { return '<div class="cats">' + Object.entries(CATS).map(([k, c]) => '<button type="button" class="cat' + (k === sel ? ' on' : '') + '" data-c="' + k + '"><span class="e">' + c[0] + '</span>' + c[1] + '</button>').join('') + '</div>'; }
+function activarCats(m) { $$('.cat', m).forEach(b => b.onclick = () => { catSel = b.dataset.c; $$('.cat', m).forEach(x => x.classList.toggle('on', x === b)); }); }
+function listas() {
+  return '<datalist id="lProv">' + [...new Set(D.facturas.map(x => x.proveedor))].sort().map(p => '<option value="' + esc(p) + '">').join('') + '</datalist>' +
+    '<datalist id="lDest">' + [...new Set(D.facturas.map(x => x.destino).filter(Boolean))].sort().map(p => '<option value="' + esc(p) + '">').join('') + '</datalist>';
+}
+function dlgFactura(id, solicitud) {
+  const g = id ? D.facturas.find(x => x.id === id) : null; catSel = g ? g.cat : 'ferre';
+  const m = modal(g ? '✏️ Corregir factura' : solicitud ? '🧾 Llegó la factura de ' + esc(solicitud.persona) : '➕ Registrar factura',
+    (solicitud ? '<p class="small">Se le dieron <b>' + din(solicitud.monto) + '</b> el ' + fF(solicitud.fecha) + ' para: ' + esc(solicitud.motivo) + '.</p><div class="aviso v" id="feria" style="margin-bottom:10px"><span class="e">🪙</span><div><b>Escribe el monto de la factura</b>y te digo cuánta feria regresa a la caja negra.</div></div>' : '') +
+    '<form class="form" autocomplete="off"><label class="f">Fecha de la factura<input name="fecha" type="date" required value="' + (g ? g.fecha : hoyISO()) + '"></label>' +
+    '<label class="f">Monto de la factura ($)<input name="monto" type="number" step="0.01" min="0.01" required value="' + (g ? g.monto : '') + '" placeholder="0.00"></label>' +
+    '<label class="f full">Proveedor / qué se compró<input name="proveedor" list="lProv" required value="' + esc(g ? g.proveedor : solicitud ? solicitud.motivo : '') + '"></label>' +
+    '<label class="f full">Destino (máquina o área)<input name="destino" list="lDest" value="' + esc(g ? g.destino : '') + '" placeholder="Ej. MAQ. SELEXX, TALLER MTTO"></label>' +
+    '<div class="full"><div class="small muted" style="font-weight:600;margin-bottom:6px">Tipo de gasto</div>' + formCats(catSel) + '</div>' +
+    '<label class="f full">Folio de la factura (opcional)<input name="folio" value="' + esc(g ? g.folio : '') + '"></label>' +
+    '<p class="msg full" id="dMsg"></p><div class="full row"><button class="btn pri" type="submit">💾 Guardar</button><button class="btn" type="button" data-x>Cancelar</button></div></form>' + listas());
+  activarCats(m);
+  // vale: al escribir el monto de la factura se ve cuánta feria regresa a la caja negra
+  if (solicitud) { const fe = $('#feria', m), inp = $('[name=monto]', m);
+    inp.oninput = () => { const v = r2(inp.value), d = r2(solicitud.monto - v);
+      if (!(v > 0)) { fe.className = 'aviso v'; fe.innerHTML = '<span class="e">🪙</span><div><b>Escribe el monto de la factura</b>y te digo cuánta feria regresa a la caja negra.</div>'; }
+      else if (d > 0) { fe.className = 'aviso v'; fe.innerHTML = '<span class="e">🪙</span><div><b>Regresa de feria a la caja negra: ' + din(d) + '</b>Se le dio ' + din(solicitud.monto) + ' − factura ' + din(v) + '. Cuéntala antes de guardarla en la caja.</div>'; }
+      else if (d < 0) { fe.className = 'aviso a'; fe.innerHTML = '<span class="e">↩️</span><div><b>Le faltó ' + din(-d) + '</b>La factura es mayor que lo que se le dio. Se le anota en "Quién debe" como "Se le debe".</div>'; }
+      else { fe.className = 'aviso i'; fe.innerHTML = '<span class="e">✅</span><div><b>Exacto: no hay feria</b>Se gastó todo lo que se le dio.</div>'; } }; }
+  $('form', m).onsubmit = e => {
+    e.preventDefault(); const F = e.target, v = { fecha: F.fecha.value, monto: r2(F.monto.value), proveedor: F.proveedor.value.trim().toUpperCase(), destino: F.destino.value.trim().toUpperCase(), cat: catSel, folio: F.folio.value.trim() };
+    if (!(v.monto > 0)) { $('#dMsg', m).className = 'msg e'; $('#dMsg', m).textContent = 'Escribe el monto.'; return; }
+    if (g) Object.assign(g, v, { modPor: YO.nom, modT: new Date().toISOString() });
+    else { const nf = Object.assign({ id: nuevoId('g'), entrega: null, por: YO.nom, porN: YO.n, creado: new Date().toISOString() }, v); if (solicitud) { nf.solicitud = solicitud.id; solicitud.estado = 'comprobada'; solicitud.factura = nf.id; solicitud.fechaFactura = hoyISO(); solicitud.montoFactura = v.monto;
+        const dif = r2(solicitud.monto - v.monto);
+        if (dif < 0) D.deudas.push({ id: nuevoId('d'), persona: solicitud.persona, tipo: 'leDebe', concepto: 'Diferencia de la solicitud: ' + solicitud.motivo, monto: -dif, fecha: hoyISO(), compromiso: '', abonos: [] });
+        solicitud.dif = dif; }
+      D.facturas.push(nf); }
+    m.remove(); guardar();
+  };
+}
+
+// ---------- entrega a finanzas (PDF con fecha de corte)
+function dlgEntrega(marcar) {
+  const pe = porEntregar();
+  const m = modal(marcar ? '📤 Entregar facturas a finanzas' : '🖨 PDF con fecha de corte',
+    '<form class="form"><label class="f">Fecha de corte: incluir facturas hasta el<input name="corte" type="date" value="' + hoyISO() + '" required></label>' +
+    '<label class="f">' + (marcar ? 'Fecha de entrega a finanzas' : 'Fecha que aparece en el PDF') + '<input name="ent" type="date" value="' + hoyISO() + '" required></label>' +
+    '<div class="full"><div class="small muted" style="font-weight:600;margin-bottom:6px">Facturas que van (puedes quitar alguna)</div><div class="tw" style="max-height:300px;overflow:auto;border:1px solid var(--line);border-radius:10px"><table><tbody>' +
+      pe.map(x => '<tr><td style="width:34px"><input type="checkbox" data-f="' + x.id + '" data-fecha="' + x.fecha + '" style="width:20px;height:20px"></td><td style="white-space:nowrap">' + fN(x.fecha) + '</td><td>' + esc(x.proveedor) + '</td><td class="m">' + din(x.monto) + '</td></tr>').join('') +
+    '</tbody></table></div></div><div class="full" style="font-size:17px">Total: <b id="eTot"></b> <span class="muted small" id="eN"></span></div>' +
+    (marcar ? '<div class="full small aviso a" style="margin:0"><span class="e">ℹ️</span><span>Al confirmar, estas facturas pasan a <strong>"En espera del cheque"</strong> y se genera el PDF (en tu PC se guarda en la carpeta <strong>CAJA CHICA › Entregas a finanzas</strong>).</span></div>' : '') +
+    '<div class="full row"><button class="btn" type="button" id="eVer">👁 Ver PDF</button>' + (marcar ? '<button class="btn oro" type="submit">✅ Ya se entregaron: guardar</button>' : '') + '<button class="btn" type="button" data-x>Cancelar</button></div></form>');
+  const F = $('form', m), sel = () => $$('[data-f]', m).filter(x => x.checked).map(x => D.facturas.find(y => y.id === x.dataset.f));
+  const tot = () => { const L = sel(); $('#eTot', m).textContent = din(suma(L)); $('#eN', m).textContent = '(' + L.length + ' facturas)'; };
+  const aplicarCorte = () => { $$('[data-f]', m).forEach(x => x.checked = x.dataset.fecha <= F.corte.value); tot(); };
+  F.corte.onchange = aplicarCorte; $$('[data-f]', m).forEach(x => x.onchange = tot); aplicarCorte();
+  $('#eVer', m).onclick = () => { const L = sel(); if (!L.length) return; generarPDF({ id: 'previa', n: (D.entregas.reduce((s, e) => Math.max(s, e.n), 0) + 1), fecha: F.ent.value, corte: F.corte.value }, L, true); };
+  F.onsubmit = async e => {
+    e.preventDefault(); const L = sel(); if (!L.length) return;
+    const en = { id: nuevoId('e'), n: D.entregas.reduce((s, x) => Math.max(s, x.n), 0) + 1, fecha: F.ent.value, corte: F.corte.value, cheque: null };
+    D.entregas.push(en); L.forEach(x => x.entrega = en.id); m.remove(); guardar();
+    await generarPDF(en);
+  };
+}
+function dlgCheque(id) {
+  const e = D.entregas.find(x => x.id === id), t = suma(facDe(id));
+  const m = modal('🏦 Llegó el cheque · Entrega N° ' + e.n, '<p>Entregada el ' + fF(e.fecha) + ' por <b>' + din(t) + '</b>.</p><form class="form">' +
+    '<label class="f">Fecha del cheque<input name="f" type="date" value="' + hoyISO() + '" required></label><label class="f">Monto del cheque<input name="m" type="number" step="0.01" value="' + t.toFixed(2) + '" required></label>' +
+    '<label class="f full">Referencia<input name="r" value="Cheque Banorte"></label>' +
+    '<label class="f full">Efectivo total que hay en la caja negra después de depositar<input name="c" type="number" step="0.01" placeholder="Cuenta todo el efectivo de la caja negra"></label>' +
+    '<p class="small muted full" style="margin:0">Con el cheque, en la caja negra deben quedar <b>' + din(cuentas().caja + t) + '</b>.</p>' +
+    '<div class="full row"><button class="btn azul" type="submit">Guardar</button><button class="btn" type="button" data-x>Cancelar</button></div></form>');
+  $('form', m).onsubmit = ev => {
+    ev.preventDefault(); const F = ev.target, esperado = r2(cuentas().caja + t);
+    e.cheque = { fecha: F.f.value, monto: r2(F.m.value), ref: F.r.value.trim(), caja: F.c.value === '' ? null : r2(F.c.value) };
+    if (F.c.value !== '') D.conteos.push({ fecha: F.f.value, monto: r2(F.c.value), esperado, dif: r2(Number(F.c.value) - esperado), nota: 'Al depositar el cheque de la entrega N° ' + e.n });
+    m.remove(); guardar();
+  };
+}
+function dlgConteo() {
+  const c = cuentas();
+  const m = modal('💵 Contar caja negra', '<p>Debe haber <b>' + din(c.caja) + '</b>.</p><form class="form"><label class="f">Efectivo contado<input name="c" type="number" step="0.01" min="0" required></label><label class="f">Nota<input name="n" placeholder="Opcional"></label>' +
+    '<p class="msg full" id="cMsg"></p><div class="full row"><button class="btn pri" type="submit">Registrar</button><button class="btn" type="button" data-x>Cerrar</button></div></form>');
+  $('form', m).onsubmit = e => { e.preventDefault(); const v = r2(e.target.c.value), d = r2(v - c.caja); D.conteos.push({ fecha: hoyISO(), monto: v, esperado: c.caja, dif: d, nota: e.target.n.value.trim() });
+    $('#cMsg', m).className = Math.abs(d) < 0.5 ? 'msg ok' : 'msg e'; $('#cMsg', m).textContent = Math.abs(d) < 0.5 ? '✔ Cuadra perfecto.' : (d < 0 ? 'Faltan ' : 'Sobran ') + din(Math.abs(d)) + '. Revisa solicitudes, vales y facturas sin registrar.'; guardar(); };
+}
+
+// ---------- PDF (jsPDF local en lib\)
+async function generarPDF(en, lista, previa) {
+  const L = lista || facDe(en.id), t = suma(L);
+  if (!window.jspdf) { alert('No se encontró la librería de PDF (carpeta lib).'); return; }
+  const { jsPDF } = window.jspdf, doc = new jsPDF({ unit: 'mm', format: 'letter' }), W = 215.9;
+  const verde = [30, 91, 58], oro = [201, 154, 30], gris = [93, 107, 98];
+  doc.setFillColor(...verde); doc.rect(0, 0, W, 30, 'F'); doc.setFillColor(...oro); doc.rect(0, 30, W, 2, 'F');
+  doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(14);
+  doc.text('CONTROL DE CAJA CHICA', 14, 13); doc.setFontSize(10.5); doc.setFont('helvetica', 'normal');
+  doc.text('Mantenimiento · Línea Italia (Creaciones Industriales, S.A. de C.V.)', 14, 20);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.text('ENTREGA N° ' + en.n, W - 14, 13, { align: 'right' });
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.text(previa ? 'Vista previa' : 'Relación de facturas', W - 14, 20, { align: 'right' });
+  const desde = L.length ? L[0].fecha : en.fecha, hasta = L.length ? L[L.length - 1].fecha : en.fecha;
+  const cajas = [['FONDO ASIGNADO', din(D.fondo)], ['PERIODO DE FACTURAS', fN(desde) + ' al ' + fN(hasta)], ['FECHA DE ENTREGA', fN(en.fecha)], ['TOTAL A RECUPERAR', din(t)]];
+  const bw = (W - 28 - 9) / 4; cajas.forEach((c, i) => { const x = 14 + i * (bw + 3); doc.setDrawColor(221, 226, 219); doc.setFillColor(i === 3 ? 251 : 247, i === 3 ? 241 : 248, i === 3 ? 214 : 245); doc.roundedRect(x, 38, bw, 18, 2, 2, 'FD');
+    doc.setTextColor(...gris); doc.setFontSize(7.5); doc.setFont('helvetica', 'bold'); doc.text(c[0], x + 3, 44); doc.setTextColor(29, 42, 34); doc.setFontSize(i === 1 ? 9 : 12); doc.text(c[1], x + 3, 51.5); });
+  doc.autoTable({ startY: 62, head: [['#', 'FECHA', 'PROVEEDOR / ARTÍCULO', 'DESTINO', 'FOLIO', 'MONTO']],
+    body: L.map((x, i) => [i + 1, fN(x.fecha), x.proveedor, x.destino || '', x.folio || '', din(x.monto)]),
+    foot: [[{ content: 'TOTAL A RECUPERAR (' + L.length + ' facturas)', colSpan: 5, styles: { halign: 'right' } }, din(t)]],
+    theme: 'grid', styles: { fontSize: 9, cellPadding: 2.2, lineColor: [221, 226, 219], textColor: [29, 42, 34] },
+    headStyles: { fillColor: verde, textColor: 255, fontStyle: 'bold', fontSize: 8.5 }, footStyles: { fillColor: [251, 241, 214], textColor: [29, 42, 34], fontStyle: 'bold', fontSize: 10.5 },
+    alternateRowStyles: { fillColor: [247, 248, 245] }, columnStyles: { 0: { cellWidth: 9, halign: 'center' }, 1: { cellWidth: 23 }, 4: { cellWidth: 20 }, 5: { cellWidth: 27, halign: 'right', fontStyle: 'bold' } }, margin: { left: 14, right: 14 } });
+  let y = doc.lastAutoTable.finalY + 10; if (y > 225) { doc.addPage(); y = 25; }
+  doc.setFontSize(9.5); doc.setTextColor(29, 42, 34); doc.setFont('helvetica', 'normal');
+  doc.text('Se solicita la reposición de ' + din(t) + ' al fondo de caja chica de Mantenimiento (' + din(D.fondo) + ').', 14, y);
+  const fs = [['ENTREGA', D.responsable], ['RECIBE', 'FINANZAS'], ['VO. BO.', 'GERENCIA']]; const fw = (W - 28 - 20) / 3;
+  fs.forEach((x, i) => { const fx = 14 + i * (fw + 10); doc.setDrawColor(29, 42, 34); doc.line(fx, y + 30, fx + fw, y + 30); doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.text(x[0], fx + fw / 2, y + 35, { align: 'center' }); doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.text(doc.splitTextToSize(x[1], fw), fx + fw / 2, y + 39, { align: 'center' }); });
+  const np = doc.getNumberOfPages(); for (let i = 1; i <= np; i++) { doc.setPage(i); doc.setFontSize(7.5); doc.setTextColor(...gris); doc.text('Generado el ' + fL(hoyISO()) + ' · Caja Chica Mantenimiento · Página ' + i + ' de ' + np, W / 2, 272, { align: 'center' }); }
+  const nombre = 'Entrega ' + String(en.n).padStart(3, '0') + ' - ' + en.fecha + (previa ? ' (vista previa)' : '') + '.pdf', blob = doc.output('blob');
+  if (carpeta && !previa) { try { await escribirArchivo(nombre, blob, DIR_PDF); toast('PDF guardado en CAJA CHICA\\' + DIR_PDF + '\\' + nombre); } catch (e) { toast('No se pudo guardar el PDF en la carpeta: ' + e.message); } }
+  const u = URL.createObjectURL(blob), w = window.open(u, '_blank'); if (!w) doc.save(nombre);
+}
+function toast(t) { const d = document.createElement('div'); d.textContent = t; d.style.cssText = 'position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1D2A22;color:#fff;padding:10px 16px;border-radius:10px;z-index:200;font-size:14px;max-width:90vw'; document.body.appendChild(d); setTimeout(() => d.remove(), 4500); }
+
+// ---------- Excel concentrado (un solo archivo que se reescribe)
+function cargarJS(src) { return new Promise((ok, mal) => { if (window.ExcelJS) return ok(); const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = () => mal(new Error('Sin internet para cargar el generador de Excel.')); document.head.appendChild(s); }); }
+async function actualizarExcel(avisar) {
+  const msg = t => { if ($('#xMsg')) { $('#xMsg').className = 'msg'; $('#xMsg').textContent = t; } };
+  if (!esAdmin()) return;
+  try {
+    msg('Generando Excel…'); await cargarJS('https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js');
+    const wb = new ExcelJS.Workbook(); wb.creator = 'Caja Chica Mantenimiento';
+    const VER = 'FF1E5B3A', ORO = 'FFFBF1D6', borde = { top: { style: 'thin', color: { argb: 'FFDDE2DB' } }, bottom: { style: 'thin', color: { argb: 'FFDDE2DB' } }, left: { style: 'thin', color: { argb: 'FFDDE2DB' } }, right: { style: 'thin', color: { argb: 'FFDDE2DB' } } };
+    const titulo = (ws, t, sub, cols) => { ws.pageSetup = { orientation: cols > 5 ? 'landscape' : 'portrait', paperSize: 1, fitToPage: true, fitToWidth: 1, fitToHeight: 0, margins: { left: 0.4, right: 0.4, top: 0.5, bottom: 0.5, header: 0.2, footer: 0.2 } }; ws.mergeCells(1, 1, 1, cols); ws.getCell(1, 1).value = t; ws.getCell(1, 1).font = { bold: true, size: 15, color: { argb: 'FFFFFFFF' } }; ws.getCell(1, 1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: VER } }; ws.getRow(1).height = 26;
+      ws.mergeCells(2, 1, 2, cols); ws.getCell(2, 1).value = sub; ws.getCell(2, 1).font = { italic: true, color: { argb: 'FF5D6B62' } }; };
+    const tabla = (ws, fila, enc, filas, money) => { const h = ws.getRow(fila); enc.forEach((e, i) => { const c = h.getCell(i + 1); c.value = e; c.font = { bold: true, color: { argb: 'FFFFFFFF' } }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: VER } }; c.border = borde; c.alignment = { vertical: 'middle', wrapText: true }; });
+      filas.forEach((r, j) => { const row = ws.getRow(fila + 1 + j); r.forEach((v, i) => { const c = row.getCell(i + 1); c.value = v; c.border = borde; if (money.includes(i)) c.numFmt = '"$"#,##0.00'; if (j % 2) c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF7F8F5' } }; }); });
+      return fila + 1 + filas.length; };
+    const estado = x => !x.entrega ? 'POR ENTREGAR' : (D.entregas.find(e => e.id === x.entrega) || {}).cheque ? 'REPUESTA' : 'ESPERA DE CHEQUE';
+    const c = cuentas(), hoy = hoyISO();
+    // RESUMEN
+    const R = wb.addWorksheet('RESUMEN', { views: [{ showGridLines: false }] }); R.columns = [{ width: 38 }, { width: 18 }, { width: 14 }, { width: 18 }, { width: 18 }];
+    titulo(R, 'CONCENTRADO DE CAJA CHICA · MANTENIMIENTO', 'Línea Italia · actualizado el ' + fL(hoy) + ' · responsable: ' + D.responsable, 5);
+    let y = tabla(R, 4, ['¿Dónde está el fondo?', 'Monto'], [['En la caja negra (efectivo esperado)', c.caja], ['Facturas por entregar', c.pe], ['Entregado, en espera del cheque', c.enEspera], ['Vales sin factura', c.sol], ['Vales de caja', c.vales], ['TOTAL DEL FONDO', D.fondo]], [1]);
+    R.getRow(y - 1).font = { bold: true }; R.getCell(y - 1, 2).fill = R.getCell(y - 1, 1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ORO } };
+    const anios = [...new Set(D.facturas.map(x => x.fecha.slice(0, 4)))].sort();
+    y += 1; R.getCell(y, 1).value = 'GASTO POR MES'; R.getCell(y, 1).font = { bold: true, size: 12, color: { argb: VER } };
+    const filasMes = []; anios.forEach(a => MESL.forEach((mm, i) => { const L = D.facturas.filter(x => x.fecha.startsWith(a + '-' + String(i + 1).padStart(2, '0'))); if (L.length) filasMes.push([mm.toUpperCase() + ' ' + a, suma(L), L.length]); }));
+    y = tabla(R, y + 1, ['Mes', 'Gasto', 'Facturas'], filasMes, [1]) + 1;
+    R.getCell(y, 1).value = 'GASTO POR TIPO'; R.getCell(y, 1).font = { bold: true, size: 12, color: { argb: VER } };
+    const ct = {}; D.facturas.forEach(x => { ct[x.cat] = (ct[x.cat] || 0) + Number(x.monto); });
+    y = tabla(R, y + 1, ['Tipo', 'Gasto'], Object.entries(ct).sort((a, b) => b[1] - a[1]).map(([k, v]) => [catDe(k)[1], r2(v)]), [1]) + 1;
+    R.getCell(y, 1).value = 'GASTO POR DESTINO (TOP 15)'; R.getCell(y, 1).font = { bold: true, size: 12, color: { argb: VER } };
+    const cd = {}; D.facturas.forEach(x => { const k = x.destino || 'SIN DESTINO'; cd[k] = (cd[k] || 0) + Number(x.monto); });
+    tabla(R, y + 1, ['Destino', 'Gasto'], Object.entries(cd).sort((a, b) => b[1] - a[1]).slice(0, 15).map(([k, v]) => [k, r2(v)]), [1]);
+    // MOVIMIENTOS
+    const M = wb.addWorksheet('MOVIMIENTOS', { views: [{ state: 'frozen', ySplit: 4, showGridLines: false }] }); M.columns = [12, 12, 40, 34, 20, 12, 18, 11, 13, 14, 14].map(w => ({ width: w }));
+    titulo(M, 'MOVIMIENTOS DE CAJA CHICA (TODAS LAS FACTURAS)', 'Ordenadas por fecha · estado: por entregar / espera de cheque / repuesta', 11);
+    const mov = [...D.facturas].sort((a, b) => a.fecha.localeCompare(b.fecha)).map(x => { const e = D.entregas.find(z => z.id === x.entrega), s = semana(x.fecha); return [aFecha(x.fecha), 'S' + s.n + ' ' + s.a, x.proveedor, x.destino, catDe(x.cat)[1], x.folio || '', estado(x), e ? e.n : '', e ? aFecha(e.fecha) : '', e && e.cheque ? aFecha(e.cheque.fecha) : '', Number(x.monto)]; });
+    y = tabla(M, 4, ['Fecha', 'Semana', 'Proveedor / artículo', 'Destino', 'Tipo', 'Folio', 'Estado', 'Entrega N°', 'Fecha entrega', 'Fecha cheque', 'Monto'], mov, [10]);
+    [1, 9, 10].forEach(col => M.getColumn(col).numFmt = 'dd/mm/yyyy');
+    M.getCell(y, 10).value = 'TOTAL'; M.getCell(y, 11).value = { formula: 'SUM(K5:K' + (y - 1) + ')' }; M.getCell(y, 11).numFmt = '"$"#,##0.00'; M.getRow(y).font = { bold: true };
+    M.autoFilter = { from: 'A4', to: 'K' + (y - 1) };
+    // POR ENTREGAR
+    const P = wb.addWorksheet('POR ENTREGAR', { views: [{ showGridLines: false }] }); P.columns = [12, 40, 34, 20, 14].map(w => ({ width: w }));
+    titulo(P, 'FACTURAS POR ENTREGAR A FINANZAS', 'Al ' + fL(hoy), 5);
+    y = tabla(P, 4, ['Fecha', 'Proveedor / artículo', 'Destino', 'Tipo', 'Monto'], porEntregar().map(x => [aFecha(x.fecha), x.proveedor, x.destino, catDe(x.cat)[1], Number(x.monto)]), [4]);
+    P.getColumn(1).numFmt = 'dd/mm/yyyy'; P.getCell(y, 4).value = 'TOTAL'; P.getCell(y, 5).value = c.pe; P.getCell(y, 5).numFmt = '"$"#,##0.00'; P.getRow(y).font = { bold: true };
+    // ENTREGAS
+    const E = wb.addWorksheet('ENTREGAS Y CHEQUES', { views: [{ showGridLines: false }] }); E.columns = [10, 14, 24, 10, 15, 14, 15, 18, 14, 18].map(w => ({ width: w }));
+    titulo(E, 'ENTREGAS A FINANZAS Y CHEQUES DE DEVOLUCIÓN', 'Días de espera = del día de entrega al día del cheque', 10);
+    tabla(E, 4, ['Entrega N°', 'Fecha entrega', 'Periodo de facturas', 'Facturas', 'Total', 'Fecha cheque', 'Monto cheque', 'Referencia', 'Días espera', 'Efectivo en caja'],
+      D.entregas.map(e => { const L = facDe(e.id); return [e.n, aFecha(e.fecha), L.length ? fN(L[0].fecha) + ' al ' + fN(L[L.length - 1].fecha) : '', L.length, suma(L), e.cheque ? aFecha(e.cheque.fecha) : 'PENDIENTE', e.cheque ? e.cheque.monto : null, e.cheque ? e.cheque.ref : '', e.cheque ? dias(e.fecha, e.cheque.fecha) : dias(e.fecha), e.cheque && e.cheque.caja != null ? e.cheque.caja : null]; }), [4, 6, 9]);
+    [2, 6].forEach(col => E.getColumn(col).numFmt = 'dd/mm/yyyy');
+    // POR SEMANA
+    const S = wb.addWorksheet('POR SEMANA', { views: [{ showGridLines: false }] }); S.columns = [14, 26, 12, 16].map(w => ({ width: w }));
+    titulo(S, 'GASTO POR SEMANA', 'Semanas de lunes a domingo', 4);
+    const sem = {}; D.facturas.forEach(x => { const s = semana(x.fecha); (sem[s.clave] = sem[s.clave] || { s, L: [] }).L.push(x); });
+    tabla(S, 4, ['Semana', 'Del – al', 'Facturas', 'Gasto'], Object.keys(sem).sort().map(k => ['S' + sem[k].s.n + ' ' + sem[k].s.a, fN(sem[k].s.lun) + ' al ' + fN(sem[k].s.dom), sem[k].L.length, suma(sem[k].L)]), [3]);
+    const buf = await wb.xlsx.writeBuffer();
+    const xb = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    if (carpeta) await escribirArchivo(ARCH_XLS, xb); else descargar(xb, ARCH_XLS);
+    try { localStorage.setItem('cc_xls_ult', hoyISO()); } catch (e) {}
+    msg('✔ Excel actualizado'); if (avisar) toast(carpeta ? 'Excel actualizado: CAJA CHICA\\' + ARCH_XLS : 'Excel descargado: guárdalo en la carpeta CAJA CHICA');
+  } catch (e) { const t = /lock|in use|modif|NoModification|InvalidState/i.test(e.name + e.message) ? 'Cierra el Excel para poder actualizarlo.' : e.message; msg(''); toast('Excel: ' + t); }
+}
+
+// ---------- Historial
+let vistaH = 'entregas', buscaH = '';
+function pHistorial() {
+  const q = buscaH.trim().toUpperCase(), filtra = L => q ? L.filter(x => (x.proveedor + ' ' + x.destino + ' ' + x.folio).toUpperCase().includes(q)) : L;
+  let html = '<div class="card" style="margin-bottom:14px"><div class="row" style="justify-content:space-between"><h2 style="margin:0">📚 Historial de gastos</h2>' +
+    '<div class="row"><input id="hBus" placeholder="🔎 Buscar proveedor o destino" value="' + esc(buscaH) + '" style="min-width:220px"><div class="seg"><button type="button" data-v="entregas" class="' + (vistaH === 'entregas' ? 'on' : '') + '">Por entrega</button><button type="button" data-v="semanas" class="' + (vistaH === 'semanas' ? 'on' : '') + '">Por semana</button></div></div></div></div>';
+  if (vistaH === 'entregas') {
+    const pe = filtra(porEntregar());
+    if (pe.length) html += grupo('🧾', 'var(--oro-s)', 'Por entregar (aún con nosotros)', pe, '<span class="tag a">Pendiente de entregar</span>', '');
+    [...D.entregas].sort((a, b) => b.n - a.n).forEach(e => { const L = filtra(facDe(e.id)); if (!L.length && q) return;
+      const est = e.cheque ? '<span class="tag i">✅ Repuesta ' + fC(e.cheque.fecha) + ' · ' + din(e.cheque.monto) + '</span>' : '<span class="tag a">⏳ Espera de cheque (' + dias(e.fecha) + ' días)</span>';
+      html += grupo(e.cheque ? '✅' : '⏳', e.cheque ? 'var(--azul-s)' : 'var(--oro-s)', 'Entrega N° ' + e.n + ' · ' + fF(e.fecha), L, est, '<button class="btn sm" data-pdf="' + e.id + '" type="button">🖨 PDF</button>'); });
+  } else {
+    const sem = {}; filtra(D.facturas).forEach(x => { const s = semana(x.fecha); (sem[s.clave] = sem[s.clave] || { s, L: [] }).L.push(x); });
+    Object.keys(sem).sort().reverse().forEach(k => { const s = sem[k].s, L = sem[k].L.sort((a, b) => a.fecha.localeCompare(b.fecha));
+      html += grupo('🗓️', 'var(--verde-s)', 'Semana ' + s.n + ' · ' + fC(s.lun) + ' al ' + fF(s.dom), L, '', ''); });
+  }
+  $('#t-historial').innerHTML = html;
+  const b = $('#hBus'); b.oninput = () => { buscaH = b.value; clearTimeout(b._t); b._t = setTimeout(() => { pHistorial(); const n = $('#hBus'); n.focus(); n.setSelectionRange(n.value.length, n.value.length); }, 300); };
+  $$('#t-historial .seg button').forEach(x => x.onclick = () => { vistaH = x.dataset.v; pHistorial(); });
+  $$('#t-historial [data-pdf]').forEach(x => x.onclick = ev => { ev.preventDefault(); generarPDF(D.entregas.find(e => e.id === x.dataset.pdf)); });
+}
+function grupo(ic, fondo, titulo, L, extra, acc) {
+  return '<details class="grupo"><summary><span class="ico" style="background:' + fondo + '">' + ic + '</span><span class="t"><b>' + esc(titulo) + '</b><div class="small muted">' + L.length + ' facturas · ' + (L.length ? fN(L[0].fecha) + ' al ' + fN(L[L.length - 1].fecha) : '') + '</div></span>' + extra + '<b style="font-size:17px">' + din(suma(L)) + '</b>' + acc + '</summary><div class="in">' + tablaFacturas(L) + '</div></details>';
+}
+
+// ---------- Gráficas
+function pGraficas() {
+  const anios = [...new Set(D.facturas.map(x => x.fecha.slice(0, 4)))].sort().reverse(), a = pGraficas.a && anios.includes(pGraficas.a) ? pGraficas.a : anios[0];
+  const L = D.facturas.filter(x => x.fecha.startsWith(a)), tot = suma(L);
+  const porMes = MES.map((m, i) => [m, suma(L.filter(x => Number(x.fecha.slice(5, 7)) === i + 1))]);
+  const sem = {}; D.facturas.forEach(x => { const s = semana(x.fecha); (sem[s.clave] = sem[s.clave] || { s, t: 0 }).t += Number(x.monto); });
+  const ult = Object.keys(sem).sort().slice(-12).map(k => ['S' + sem[k].s.n, sem[k].t, fC(sem[k].s.lun)]);
+  const colsV = (arr, n) => { const mx = Math.max(1, ...arr.map(x => x[1])); return '<div class="colsv" style="grid-template-columns:repeat(' + n + ',minmax(0,1fr))">' + arr.map(x => '<div title="' + esc(x[2] || x[0]) + ': ' + din(x[1]) + '"><span class="n">' + (x[1] ? din0(x[1]) : '') + '</span><div class="bar" style="height:' + (x[1] / mx * 125) + 'px;min-height:' + (x[1] ? 3 : 0) + 'px"></div><span class="small muted">' + x[0] + '</span></div>').join('') + '</div>'; };
+  const agrupa = fn => { const o = {}; L.forEach(x => { const k = fn(x) || 'SIN DATO'; o[k] = (o[k] || 0) + Number(x.monto); }); return Object.entries(o).sort((p, q) => q[1] - p[1]); };
+  const barras = (arr, et) => { const mx = Math.max(1, ...arr.map(x => x[1])); return '<div class="barras">' + arr.slice(0, 10).map(([k, v]) => '<div class="br"><span class="t" title="' + esc(k) + '">' + et(k) + '</span><span class="b"><i style="width:' + (v / mx * 100) + '%"></i></span><span class="v">' + din0(v) + '</span></div>').join('') + '</div>'; };
+  const ents = D.entregas.filter(e => e.cheque).map(e => ['N°' + e.n, dias(e.fecha, e.cheque.fecha), fF(e.fecha)]);
+  $('#t-graficas').innerHTML = '<div class="card" style="margin-bottom:16px"><div class="row" style="justify-content:space-between"><h2 style="margin:0">📊 Gráficas ' + (a || '') + '</h2><select id="gA">' + anios.map(x => '<option' + (x === a ? ' selected' : '') + '>' + x + '</option>').join('') + '</select></div>' +
+    '<div class="row" style="gap:24px;margin-top:10px"><span>💸 Gastado: <b>' + din(tot) + '</b></span><span>🧾 Facturas: <b>' + L.length + '</b></span><span>📈 Promedio por factura: <b>' + din0(L.length ? tot / L.length : 0) + '</b></span><span>📤 Entregas a finanzas: <b>' + D.entregas.length + '</b></span></div></div>' +
+    '<div class="cols-g"><div class="card"><h2>📆 Gasto por mes</h2>' + colsV(porMes, 12) + '</div><div class="card"><h2>🗓️ Últimas 12 semanas</h2>' + colsV(ult, Math.max(ult.length, 1)) + '</div>' +
+    '<div class="card"><h2>🏷️ Por tipo de gasto</h2>' + barras(agrupa(x => x.cat), k => catDe(k)[0] + ' ' + catDe(k)[1]) + '</div><div class="card"><h2>🎯 Por destino</h2>' + barras(agrupa(x => x.destino), k => esc(k)) + '</div>' +
+    '<div class="card"><h2>🏪 Por proveedor / artículo</h2>' + barras(agrupa(x => x.proveedor), k => esc(k)) + '</div>' +
+    '<div class="card"><h2>🏦 Días que tardó el cheque</h2>' + (ents.length ? barras(ents.map(e => [e[0] + ' (' + e[2] + ')', e[1]]), k => esc(k)).replace(/\$(\d+)/g, '$1 días') : '<div class="vacio">Aún no hay cheques registrados.</div>') + '</div></div>';
+  $('#gA').onchange = e => { pGraficas.a = e.target.value; pGraficas(); };
+}
+
+// ---------- Quién debe
+function pDeben() {
+  const adm = esAdmin(), act = D.deudas.filter(d => d.tipo !== 'recordatorio' && saldoDeuda(d) > 0), rec = adm ? D.deudas.filter(d => d.tipo === 'recordatorio' && saldoDeuda(d) > 0) : [], pag = D.deudas.filter(d => saldoDeuda(d) <= 0 && (adm || d.tipo !== 'recordatorio'));
+  const tarjeta = d => { const s = saldoDeuda(d), t = TIPOS[d.tipo], venc = d.compromiso && d.compromiso < hoyISO() && s > 0;
+    return '<div class="deuda' + (s <= 0 ? ' pagada' : '') + '"><div class="cab"><span class="av" style="background:' + colorDe(d.persona) + '">' + esc(d.persona.trim()[0] || '?') + '</span><div style="min-width:0"><b>' + esc(d.persona) + '</b><div class="small muted">' + t[0] + ' ' + t[1] + '</div></div></div>' +
+      '<div class="monto" style="color:' + (s <= 0 ? 'var(--verde2)' : d.tipo === 'leDebe' ? 'var(--azul)' : d.tipo === 'recordatorio' ? 'var(--oro)' : 'var(--rojo)') + '">' + (s <= 0 ? '✔ Pagado' : din(s)) + '</div><div class="small">' + esc(d.concepto) + '</div>' +
+      '<div class="small muted">Desde ' + fF(d.fecha) + ' (' + dias(d.fecha) + ' días)' + (d.compromiso ? ' · paga el <b style="color:' + (venc ? 'var(--rojo)' : 'var(--ink)') + '">' + fF(d.compromiso) + (venc ? ' ⏰ vencido' : '') + '</b>' : '') + '</div>' +
+      ((d.abonos || []).length ? '<div class="small muted">Abonos: ' + d.abonos.map(a => fC(a.fecha) + ' ' + din(a.monto)).join(' · ') + '</div>' : '') +
+      (adm ? '<div class="row">' + (s > 0 ? '<button class="btn sm pri" data-ab="' + d.id + '" type="button">💵 Abonar / liquidar</button>' : '') + '<button class="btn sm" data-ed="' + d.id + '" type="button">✏️</button><button class="btn sm rojo" data-bd="' + d.id + '" type="button">🗑</button></div>' : '') + '</div>'; };
+  $('#t-deben').innerHTML = '<div class="card" style="margin-bottom:16px"><div class="row" style="justify-content:space-between"><h2 style="margin:0">🤝 Quién debe</h2>' + (adm ? '<button class="btn pri" id="nD" type="button">➕ Anotar adeudo o vale</button>' : '') + '</div>' +
+    '<div class="row small muted" style="margin-top:8px;gap:16px">' + Object.entries(TIPOS).filter(([k]) => adm || k !== 'recordatorio').map(([, t]) => '<span>' + t[0] + ' <b>' + t[1] + ':</b> ' + t[2] + '</span>').join('') + '</div></div>' +
+    (act.length ? '<div class="deudas">' + act.sort((a, b) => saldoDeuda(b) - saldoDeuda(a)).map(tarjeta).join('') + '</div>' : '<div class="card vacio"><span class="e">🎉</span>Sin vales ni adeudos que muevan la caja.</div>') +
+    (rec.length ? '<h3>📌 Recordatorios <span class="tag a">🔒 solo tú los ves</span> <span class="small muted" style="font-weight:400">· ya están sumados en el histórico de caja chica, no mueven la caja negra ni los $' + Math.round(D.fondo).toLocaleString('es-MX') + '</span></h3><div class="deudas">' + rec.map(tarjeta).join('') + '</div>' : '') +
+    (pag.length ? '<h3 class="muted">Ya pagados</h3><div class="deudas">' + pag.map(tarjeta).join('') + '</div>' : '');
+  if (!adm) return;
+  $('#nD').onclick = () => dlgDeuda();
+  $$('[data-ed]').forEach(b => b.onclick = () => dlgDeuda(b.dataset.ed));
+  $$('[data-bd]').forEach(b => b.onclick = () => { const d = D.deudas.find(x => x.id === b.dataset.bd); if (confirm('¿Borrar el registro de ' + d.persona + '?')) { D.deudas = D.deudas.filter(x => x !== d); guardar(); } });
+  $$('[data-ab]').forEach(b => b.onclick = () => { const d = D.deudas.find(x => x.id === b.dataset.ab), s = saldoDeuda(d);
+    const m = modal('💵 Abono de ' + esc(d.persona), '<p>Saldo: <b>' + din(s) + '</b></p><form class="form"><label class="f">Monto<input name="m" type="number" step="0.01" min="0.01" value="' + s.toFixed(2) + '" required></label><label class="f">Fecha<input name="f" type="date" value="' + hoyISO() + '" required></label><div class="full row"><button class="btn pri" type="submit">Registrar</button><button class="btn" type="button" data-x>Cancelar</button></div></form>');
+    $('form', m).onsubmit = e => { e.preventDefault(); (d.abonos = d.abonos || []).push({ fecha: e.target.f.value, monto: r2(e.target.m.value) }); m.remove(); guardar(); }; });
+}
+function dlgDeuda(id) {
+  const d = id ? D.deudas.find(x => x.id === id) : null;
+  const m = modal(d ? '✏️ Corregir adeudo' : '➕ Anotar adeudo o vale', '<form class="form" autocomplete="off"><label class="f full">¿Quién?<input name="p" required value="' + esc(d ? d.persona : '') + '"></label>' +
+    '<label class="f full">Tipo<select name="t">' + Object.entries(TIPOS).map(([k, t]) => '<option value="' + k + '"' + ((d ? d.tipo : 'vale') === k ? ' selected' : '') + '>' + t[0] + ' ' + t[1] + ' — ' + t[2] + '</option>').join('') + '</select></label>' +
+    '<label class="f">Monto<input name="m" type="number" step="0.01" min="0.01" required value="' + (d ? d.monto : '') + '"></label><label class="f">Fecha<input name="f" type="date" required value="' + (d ? d.fecha : hoyISO()) + '"></label>' +
+    '<label class="f">Queda de pagar el<input name="c" type="date" value="' + (d ? d.compromiso : sumaD(hoyISO(), 7)) + '"></label><label class="f">Concepto<input name="k" value="' + esc(d ? d.concepto : '') + '"></label>' +
+    '<div class="full row"><button class="btn pri" type="submit">Guardar</button><button class="btn" type="button" data-x>Cancelar</button></div></form>');
+  $('form', m).onsubmit = e => { e.preventDefault(); const F = e.target, v = { persona: F.p.value.trim().toUpperCase(), tipo: F.t.value, monto: r2(F.m.value), fecha: F.f.value, compromiso: F.c.value, concepto: F.k.value.trim() };
+    if (d) Object.assign(d, v); else D.deudas.push(Object.assign({ id: nuevoId('d'), abonos: [] }, v)); m.remove(); guardar(); };
+}
+
+// ---------- Solicitudes de caja (solo administrador)
+function pSolicitudes() {
+  const pend = D.solicitudes.filter(s => s.estado === 'pendiente'), hechas = D.solicitudes.filter(s => s.estado !== 'pendiente').slice(-30).reverse();
+  $('#t-solicitudes').innerHTML = '<div class="cols"><div class="card solo-admin"><h2>💵 Vales de caja sin factura <span class="tag r">' + din(cuentas().sol) + '</span></h2>' +
+    '<p class="small muted" style="margin-top:0">🔒 Solo tú ves este apartado. Cuando alguien se lleva dinero (ej. un billete de $500), anótalo: se resta de la caja negra. Cuando traiga la factura y la feria, captura el monto de la factura: la feria regresa sola a la caja negra y la factura pasa a "Facturas por entregar" y ya lo ven todos.</p>' +
+    (pend.length ? '<div class="tw"><table><thead><tr><th>Fecha</th><th>Quién</th><th>Para qué</th><th class="m">Se le dio</th><th></th></tr></thead><tbody>' +
+      pend.map(s => '<tr><td style="white-space:nowrap">' + fN(s.fecha) + '<div class="small muted">hace ' + dias(s.fecha) + ' días</div></td><td><b>' + esc(s.persona) + '</b></td><td>' + esc(s.motivo) + '</td><td class="m"><b>' + din(s.monto) + '</b></td>' +
+        '<td style="white-space:nowrap"><button class="btn sm pri" >🧾 Llegó la factura y la feria</button> <button class="btn sm" data-dev="' + s.id + '" type="button" title="Regresó todo el dinero">↩️</button></td></tr>').join('') + '</tbody></table></div>'
+      : '<div class="vacio"><span class="e">👌</span>No hay vales pendientes.</div>') +
+    (hechas.length ? '<h3>Comprobadas recientemente</h3><div class="tw"><table><tbody>' + hechas.map(s => '<tr><td>' + fN(s.fecha) + '</td><td>' + esc(s.persona) + '</td><td>' + esc(s.motivo) + '</td><td class="m">' + din(s.monto) + '</td><td>' + (s.estado === 'devuelta' ? '<span class="tag v">↩️ Regresó el dinero</span>' : '<span class="tag i">🧾 Factura ' + din(s.montoFactura) + '</span>' + (s.dif > 0 ? ' <span class="tag v">Regresó ' + din(s.dif) + '</span>' : s.dif < 0 ? ' <span class="tag a">Se le debe ' + din(-s.dif) + '</span>' : '')) + '</td></tr>').join('') + '</tbody></table></div>' : '') + '</div>' +
+    '<div class="card solo-admin"><h2>➕ Nuevo vale</h2><form id="fS" class="form" autocomplete="off"><label class="f full">¿Quién se lleva el dinero?<input name="p" required placeholder="Nombre"></label><label class="f full">¿Para qué?<input name="m" required placeholder="Ej. comprar fusibles para Selexx"></label>' +
+    '<label class="f">Se le dio ($)<input name="d" type="number" step="0.01" min="0.01" required></label><label class="f">Fecha<input name="f" type="date" value="' + hoyISO() + '" required></label>' +
+    '<div class="full"><button class="btn pri" type="submit">Anotar vale (se resta de la caja negra)</button></div></form></div></div>';
+  $('#fS').onsubmit = e => { e.preventDefault(); const F = e.target; D.solicitudes.push({ id: nuevoId('s'), fecha: F.f.value, persona: F.p.value.trim().toUpperCase(), motivo: F.m.value.trim(), monto: r2(F.d.value), estado: 'pendiente' }); guardar(); };
+  $$('[data-fac]').forEach(b => b.onclick = () => dlgFactura(null, D.solicitudes.find(s => s.id === b.dataset.fac)));
+  $$('[data-dev]').forEach(b => b.onclick = () => { const s = D.solicitudes.find(x => x.id === b.dataset.dev); if (confirm(s.persona + ' regresó los ' + din(s.monto) + ' completos (no se compró nada)?')) { s.estado = 'devuelta'; s.fechaFactura = hoyISO(); guardar(); } });
+}
+
+// ---------- Configuración (solo administrador)
+async function pConfig() {
+  const P = D.usuarios, filas = Object.entries(P).sort((a, b) => (a[1].n || '').localeCompare(b[1].n || ''));
+  const elim = [...D.eliminados].sort((a, b) => String(b.t).localeCompare(String(a.t)));
+  $('#t-config').innerHTML = '<div class="card solo-admin" style="margin-bottom:16px"><h2>👥 Perfiles y permisos</h2>' +
+    '<p class="small muted" style="margin-top:0">Todos entran con su <b>nómina y contraseña</b> (la misma de Control de Paros). <b>Consulta</b>: ve principal, historial, gráficas y quién debe. Márcale <b>Cargar facturas</b> para que registre y corrija facturas, y <b>Eliminar facturas</b> para que pueda borrarlas (siempre con motivo). El <b>administrador</b> tiene todo.</p>' +
+    '<div class="tw"><table><thead><tr><th>Nómina</th><th>Nombre</th><th>Perfil</th><th>Cargar facturas</th><th>Eliminar facturas</th><th>Activo</th><th>Acciones</th></tr></thead><tbody>' +
+    filas.map(([k, u]) => { const yo = k === YO.nom, adm = u.r === 'admin' || u.r === 'general';
+      return '<tr data-k="' + esc(k) + '"><td>' + esc(k) + '</td><td><input data-x="n" value="' + esc(u.n) + '" style="min-width:220px;padding:6px 8px;font-size:14px"></td>' +
+        '<td>' + (u.r === 'general' ? '<span class="tag v">🔑 Administrador general</span>' : '<select data-x="r"' + (yo ? ' disabled' : '') + '><option value="usuario"' + (u.r === 'usuario' ? ' selected' : '') + '>👁 Consulta</option><option value="admin"' + (u.r === 'admin' ? ' selected' : '') + '>🔑 Administrador</option></select>') + '</td>' +
+        '<td style="text-align:center"><input type="checkbox" data-x="cargar" style="width:20px;height:20px"' + (u.cargar || adm ? ' checked' : '') + (adm ? ' disabled' : '') + '></td>' +
+        '<td style="text-align:center"><input type="checkbox" data-x="eliminar" style="width:20px;height:20px"' + (u.eliminar || adm ? ' checked' : '') + (adm ? ' disabled' : '') + '></td>' +
+        '<td style="text-align:center"><input type="checkbox" data-x="a" style="width:20px;height:20px"' + (u.a !== false ? ' checked' : '') + (yo ? ' disabled' : '') + '></td>' +
+        '<td style="white-space:nowrap"><button class="btn sm" data-reset="' + esc(k) + '" type="button">🔑 Contraseña</button>' + (!yo && u.r !== 'general' ? ' <button class="btn sm rojo" data-qu="' + esc(k) + '" type="button">Quitar</button>' : '') + '</td></tr>'; }).join('') +
+    '</tbody></table></div><div class="row" style="margin-top:10px"><button class="btn pri" id="uGuardar" type="button">💾 Guardar permisos</button><span class="msg" id="uMsg"></span></div>' +
+    '<h3>➕ Dar acceso a otra persona</h3><form id="fU" class="form"><label class="f">Nómina<input name="n" inputmode="numeric" required></label><label class="f">Nombre completo<input name="m" required></label>' +
+    '<label class="f">Perfil<select name="r"><option value="usuario">👁 Consulta</option><option value="admin">🔑 Administrador</option></select></label><label class="f">Contraseña inicial (si no tiene cuenta)<input name="p" type="text" value="000000" autocomplete="off"></label>' +
+    '<label class="row small"><input type="checkbox" name="c" style="width:20px;height:20px"> Cargar facturas</label><label class="row small"><input type="checkbox" name="e" style="width:20px;height:20px"> Eliminar facturas</label>' +
+    '<div class="full row"><button class="btn pri" type="submit">Dar acceso</button><span class="msg" id="fUMsg"></span></div></form></div>' +
+
+    '<div class="cols"><div class="pila"><div class="card solo-admin"><h2>⚙ Datos de la caja</h2><form id="fJ" class="form">' +
+    '<label class="f">Fondo total de caja chica ($)<input name="fo" type="number" step="0.01" value="' + D.fondo + '"></label><label class="f">Responsable<input name="re" value="' + esc(D.responsable) + '"></label>' +
+    '<label class="f">Avisar entregar facturas a los … días<input name="de" type="number" min="1" value="' + D.diasEntrega + '"></label><label class="f">Avisar si el cheque tarda más de … días<input name="dc" type="number" min="1" value="' + D.diasCheque + '"></label>' +
+    '<label class="f">Avisar si en caja queda menos del (%)<input name="ap" type="number" min="5" max="90" value="' + D.alertaPct + '"></label>' +
+    '<div class="full row"><button class="btn pri" type="submit">Guardar</button></div></form></div>' +
+    '<div class="card solo-admin"><h2>🗂️ Excel, PDF y respaldo</h2><p class="small">El Excel concentrado se actualiza <b>los viernes</b>. ' + (carpeta ? '✔ En esta PC se guarda en la carpeta <b>' + esc(carpeta.name) + '</b>.' : 'Elige la carpeta <b>CAJA CHICA</b> para que el Excel y los PDF se guarden ahí (si no, se descargan).') + '</p>' +
+      '<div class="row"><button class="btn" id="jCar" type="button">📂 Elegir carpeta CAJA CHICA</button><button class="btn" id="jXls" type="button">📗 Actualizar Excel ahora</button><button class="btn" id="jRes" type="button">⬇ Descargar respaldo</button><label class="btn" style="cursor:pointer">📥 Importar respaldo<input type="file" id="jImp" accept=".json,application/json" hidden></label></div></div></div>' +
+    '<div class="pila"><div class="card solo-admin"><h2>🗑 Historial de eliminación <span class="tag r">🔒 solo tú</span></h2>' +
+      (elim.length ? '<div class="tw" style="max-height:420px;overflow:auto"><table><thead><tr><th>Cuándo</th><th>Quién</th><th>Factura</th><th>Motivo</th><th></th></tr></thead><tbody>' +
+        elim.map(e => { const d = new Date(e.t), f = e.datos || {}; return '<tr' + (e.restaurado ? ' style="opacity:.55"' : '') + '><td style="white-space:nowrap">' + d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' }) + ' ' + d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) + '</td><td>' + esc(e.porN || e.por) + '</td>' +
+          '<td><b>' + esc(f.proveedor) + '</b><div class="small muted">' + (f.fecha ? fN(f.fecha) : '') + ' · ' + din(f.monto) + '</div></td><td><b>' + esc(e.motivo) + '</b>' + (e.detalle ? '<div class="small muted">' + esc(e.detalle) + '</div>' : '') + '</td>' +
+          '<td>' + (e.restaurado ? '<span class="tag v">Restaurada</span>' : '<button class="btn sm" data-rest="' + e.id + '" type="button">↩️ Restaurar</button>') + '</td></tr>'; }).join('') + '</tbody></table></div>'
+        : '<div class="vacio" style="padding:12px"><span class="e">🧹</span>No se ha eliminado nada.</div>') + '</div>' +
+    '<div class="card solo-admin"><h2>🚪 Historial de entradas <span class="tag r">🔒 solo tú</span></h2><div id="accesos" class="small muted">Leyendo…</div></div></div></div>';
+
+  // perfiles
+  $$('#t-config [data-x=r]').forEach(s => s.onchange = () => { const tr = s.closest('tr'), adm = s.value === 'admin'; ['cargar', 'eliminar'].forEach(x => { const c = $('[data-x=' + x + ']', tr); c.disabled = adm; if (adm) c.checked = true; }); });
+  $('#uGuardar').onclick = () => {
+    $$('#t-config tr[data-k]').forEach(tr => { const u = D.usuarios[tr.dataset.k]; u.n = $('[data-x=n]', tr).value.trim().toUpperCase() || u.n;
+      const r = $('[data-x=r]', tr); if (r && !r.disabled) u.r = r.value;
+      const adm = u.r === 'admin' || u.r === 'general'; u.cargar = adm || $('[data-x=cargar]', tr).checked; u.eliminar = adm || $('[data-x=eliminar]', tr).checked;
+      const a = $('[data-x=a]', tr); if (!a.disabled) u.a = a.checked; });
+    guardar(); toast('✔ Permisos guardados');
+  };
+  $$('#t-config [data-reset]').forEach(b => b.onclick = () => window.LI.dialogoRestablecer(b.dataset.reset, (D.usuarios[b.dataset.reset] || {}).n));
+  $$('#t-config [data-qu]').forEach(b => b.onclick = () => { const k = b.dataset.qu; if (confirm('¿Quitar el acceso de ' + D.usuarios[k].n + '? Ya no podrá entrar a la caja chica.')) { delete D.usuarios[k]; guardar(); } });
+  $('#fU').onsubmit = async e => {
+    e.preventDefault(); const F = e.target, k = F.n.value.trim(), m = $('#fUMsg');
+    if (!/^\d{1,8}$/.test(k)) { m.className = 'msg e'; m.textContent = 'Nómina no válida.'; return; }
+    if (String(F.p.value).length < 6) { m.className = 'msg e'; m.textContent = 'La contraseña inicial debe tener al menos 6 caracteres.'; return; }
+    m.className = 'msg'; m.textContent = 'Creando acceso…';
+    try { const r = await window.LI.crearCuenta(k, F.p.value); const adm = F.r.value === 'admin';
+      D.usuarios[k] = { n: F.m.value.trim().toUpperCase(), r: F.r.value, a: true, cargar: adm || F.c.checked, eliminar: adm || F.e.checked }; guardar();
+      toast('✔ ' + D.usuarios[k].n + (r === 'existe' ? ' ya tenía cuenta: entra con su contraseña de siempre.' : ' entra con la contraseña inicial.'));
+    } catch (x) { m.className = 'msg e'; m.textContent = x.message || x; }
+  };
+  // datos de la caja
+  $('#fJ').onsubmit = e => { e.preventDefault(); const F = e.target; D.fondo = r2(F.fo.value) || D.fondo; D.responsable = F.re.value.trim(); D.diasEntrega = Number(F.de.value) || 7; D.diasCheque = Number(F.dc.value) || 7; D.alertaPct = Number(F.ap.value) || 30; guardar(); toast('✔ Datos de la caja guardados'); };
+  $('#jCar').onclick = elegirCarpeta;
+  $('#jXls').onclick = async () => { if (soporta) await pedirPermiso(); actualizarExcel(true); };
+  $('#jRes').onclick = () => { const x = {}; ['fondo', 'responsable', 'diasEntrega', 'diasCheque', 'alertaPct'].concat(COLS).forEach(k => x[k] = D[k]); const b = new Blob([JSON.stringify(x, null, 1)], { type: 'application/json' }); if (carpeta) escribirArchivo('caja-chica-respaldo-' + hoyISO() + '.json', b).then(() => toast('Respaldo guardado en CAJA CHICA')).catch(() => descargar(b, 'caja-chica-respaldo-' + hoyISO() + '.json')); else descargar(b, 'caja-chica-respaldo-' + hoyISO() + '.json'); };
+  $('#jImp').onchange = async e => { const f = e.target.files[0]; if (!f) return; if (!confirm('Importar reemplaza las facturas, entregas, vales y adeudos actuales por los del archivo. ¿Continuar?')) return; try { importar(JSON.parse(await f.text())); toast('✔ Respaldo importado'); } catch (x) { toast('No se pudo leer: ' + x.message); } };
+  // eliminados
+  $$('#t-config [data-rest]').forEach(b => b.onclick = () => { const e = D.eliminados.find(x => x.id === b.dataset.rest); if (!e) return;
+    D.facturas.push(Object.assign({}, e.datos, { id: e.ref || nuevoId('g') })); e.restaurado = true; e.restT = new Date().toISOString(); e.restPor = YO.nom; guardar(); toast('✔ Factura restaurada'); });
+  // entradas
+  const A = await leerAccesos(), box = $('#accesos'); if (!box) return;
+  box.innerHTML = A.length ? '<div class="tw" style="max-height:420px;overflow:auto"><table><thead><tr><th>Fecha y hora</th><th>Nómina</th><th>Nombre</th><th>Equipo</th></tr></thead><tbody>' +
+    A.map(a => { const d = new Date(a.t); return '<tr><td style="white-space:nowrap">' + d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) + ' ' + d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) + '</td><td>' + esc(a.nom) + '</td><td>' + esc((D.usuarios[a.nom] || {}).n || a.n) + '</td><td>' + esc(a.eq || '') + '</td></tr>'; }).join('') + '</tbody></table></div>'
+    : 'Aún no hay entradas registradas.';
+}
+
+// ===================== arranque =====================
+// la sesión (nómina + contraseña) la maneja li-firebase.js; al entrar se conectan los datos en vivo
+if (window.claude && window.LI) conectar();
+else document.querySelector('main').innerHTML = '<div class="card vacio" style="margin-top:20px"><span class="e">🌐</span>Abre la caja chica desde su liga en internet (no como archivo).</div>';
+if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body></html>

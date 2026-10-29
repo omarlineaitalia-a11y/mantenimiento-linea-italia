@@ -1,0 +1,15 @@
+{
+  "name": "Caja Chica · Mantenimiento Línea Italia",
+  "short_name": "Caja Chica",
+  "description": "Facturas por entregar, entregas a finanzas, cheques y caja negra del fondo de Mantenimiento",
+  "lang": "es-MX",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#1E5B3A",
+  "theme_color": "#1E5B3A",
+  "icons": [
+    { "src": "icono-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icono-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
