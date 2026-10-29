@@ -157,6 +157,10 @@ td.n{font-family:"IBM Plex Mono",monospace;text-align:right;white-space:nowrap}
 .modo:hover:not(:disabled){border-color:var(--accent);background:var(--accent-soft)}.modo:disabled{opacity:.5;cursor:not-allowed}
 .modo span{font-size:34px;line-height:1}.modo b{font-size:18px;color:var(--navy)}.modo small{color:var(--muted);font-size:13.5px}
 .nomOk{font-size:13px;font-weight:700;color:var(--ok)}.nomMal{font-size:13px;font-weight:700;color:var(--bad)}
+.quien{display:flex;align-items:center;gap:14px;border:2px solid var(--accent);background:var(--accent-soft)}
+.quien>span{font-size:30px}.quien small{display:block;font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700}.quien b{display:block;font-size:18px;color:var(--navy);overflow-wrap:anywhere}
+.entrar{max-width:440px;margin:24px auto;text-align:center}.entrar .ic{font-size:46px;display:block}.entrar form{display:flex;flex-direction:column;gap:10px;margin-top:8px;text-align:left}
+body.modoRep #li-cuenta{display:none!important}
 footer.pie{text-align:center;color:var(--muted);font-size:12px;padding:20px 16px 0}
 </style></head><body>
 
@@ -222,7 +226,7 @@ function leerLocal(k, d) { try { const v = localStorage.getItem(k); return v == 
 // ====================== modo demostración (sin Firebase) ======================
 function prepararDemo() {
   let A = leerLocal('rech_demo', null);
-  if (!A) A = { 'config/personal': { p: Object.assign({}, window.LI_PERSONAL_INICIAL) } };
+  if (!A) A = { 'config/personal': { p: Object.assign({ '1234': { n: 'ANETTE RANGEL (EJEMPLO)', r: 'usuario', a: true } }, window.LI_PERSONAL_INICIAL) } };
   const subs = [];
   const guardar = () => { guardarLocal('rech_demo', A); subs.forEach(f => f()); };
   const copia = o => o == null ? o : JSON.parse(JSON.stringify(o));
@@ -351,25 +355,33 @@ function pestanas() {
   if (S.modo === 'consulta') {
     if (S.yo.ver) t.push(['tablero', '📊 Tablero'], ['base', '🗂 Base de datos']);
     if (S.yo.admin) t.push(['config', '⚙ Configuración']);
-  }
-  $('#tabs').innerHTML = t.map(([k, l]) => '<button type="button" data-v="' + k + '" class="' + (S.vista === k ? 'on' : '') + '">' + l + '</button>').join('') +
-    '<button type="button" id="bModo" title="Cambiar el uso de este equipo">' + (S.modo === 'consulta' ? '🖥 Equipo de consulta' : '📱 Equipo de reporte') + ' · cambiar</button>';
+  } else if (personaEsAdmin()) t.push(['config', '⚙ Configuración']);
+  $('#tabs').innerHTML = t.map(([k, l]) => '<button type="button" data-v="' + k + '" class="' + (S.vista === k ? 'on' : '') + '">' + l + '</button>').join('');
   $$('#tabs button[data-v]').forEach(b => b.onclick = () => irA(b.dataset.v));
-  $('#bModo').onclick = () => elegirModo(true);
+  // en equipos de reporte el usuario no ve el menú de cuenta (cerrar sesión / contraseña); solo un administrador
+  document.body.classList.toggle('modoRep', S.modo === 'reporte' && !personaEsAdmin());
+}
+// administrador que entró con su nómina en un equipo de reporte (puede cambiar el uso del equipo)
+function personaEsAdmin() { const p = S.modo === 'reporte' ? quienReporta() : null; const q = p && S.personal[p.nom]; return !!(q && (q.r === 'admin' || q.r === 'general')); }
+function puedeConfig() { return S.modo === 'consulta' ? S.yo.admin : personaEsAdmin(); }
+function cambiarModo(m) {
+  if (m === 'consulta' && !S.yo.ver) { toast('Uso del equipo', 'La sesión de este equipo (' + S.yo.n + ') no tiene permiso de consulta. Cierra sesión y entra con una cuenta de administrador.', null, 9000); return false; }
+  S.modo = m; guardarLocal('rech_modo', m); if (m === 'consulta') guardarLocal('rech_persona', null);
+  irA(m === 'consulta' ? (S.yo.admin ? 'tablero' : 'base') : 'reporte'); revisarAlarmas(); toast('Uso del equipo', m === 'consulta' ? 'Este equipo queda para consultar y administrar.' : 'Este equipo queda para levantar reportes.'); return true;
 }
 // cada equipo se marca una vez: para LEVANTAR REPORTES (campo) o para CONSULTAR Y ADMINISTRAR la base
 function elegirModo(cambiar) {
   const puedeC = S.yo.ver || S.yo.admin;
   const M = modal('¿Para qué se usará este equipo?',
-    '<p class="muted" style="margin-top:0">Se pregunta una sola vez por equipo. Se puede cambiar después con el botón de arriba.</p>' +
+    '<p class="muted" style="margin-top:0">Se pregunta una sola vez por equipo. Después solo un administrador lo cambia en ⚙ Configuración → Uso de este equipo.</p>' +
     '<div class="modos"><button type="button" class="modo" data-m="reporte"><span>📱</span><b>Levantar reportes</b><small>Teléfono o tableta en piso: solo el formato de no conformidad. Cada reporte pide la nómina de quien lo levanta.</small></button>' +
     '<button type="button" class="modo" data-m="consulta"' + (puedeC ? '' : ' disabled') + '><span>🖥</span><b>Consultar y administrar</b><small>' + (puedeC ? 'Tablero, base de datos, alarmas, Excel, PDF y configuración (según permisos).' : 'Tu nómina no tiene permiso de consulta. Pídelo a un administrador.') + '</small></button></div>', !cambiar);
   if (!cambiar) $('.cer', M.el).hidden = true;
-  $$('.modo', M.el).forEach(b => b.onclick = () => { S.modo = b.dataset.m; guardarLocal('rech_modo', S.modo); M.cerrar(); irA(S.modo === 'consulta' ? (S.yo.admin ? 'tablero' : 'base') : 'reporte'); revisarAlarmas(); });
+  $$('.modo', M.el).forEach(b => b.onclick = () => { if (cambiarModo(b.dataset.m)) M.cerrar(); });
 }
 function irA(v, alarmas) {
   if ((v === 'tablero' || v === 'base') && !(S.yo.ver && S.modo === 'consulta')) v = 'reporte';
-  if (v === 'config' && !(S.yo.admin && S.modo === 'consulta')) v = 'reporte';
+  if (v === 'config' && !puedeConfig()) v = 'reporte';
   S.vista = v; guardarLocal('rech_vista', v);
   ['reporte', 'tablero', 'base', 'config'].forEach(k => $('#v' + k[0].toUpperCase() + k.slice(1)).hidden = k !== v);
   pestanas();
@@ -396,20 +408,22 @@ function listasSugeridas() {
   return { areas: unir(c.areas, r => r.areaGenero), maquinas: unir(c.maquinas, r => r.maquina), analistas: unir([], r => r.analista), piezas: unir([], r => (r.piezas || []).map(p => p.pieza)), defectos: unir([], r => r.defecto) };
 }
 function pintarReporte() {
+  const P = quienReporta();
+  if (!P) { pantallaNomina(); return; }
   if (!S.form) S.form = formNuevo();
   const F = S.form, L = listasSugeridas();
+  F.analista = P.n;
   const dl = (id, arr) => '<datalist id="' + id + '">' + arr.map(v => '<option value="' + esc(v) + '">').join('') + '</datalist>';
   const opts = (campo, lista, multi, cls) => '<div class="opts" data-campo="' + campo + '" data-multi="' + (multi ? 1 : 0) + '">' + lista.map(([v, l]) => {
     const on = multi ? (F[campo] || []).includes(v) : F[campo] === v; return '<span class="opt ' + (cls ? cls(v) : '') + (on ? ' on' : '') + '" data-v="' + esc(v) + '">' + esc(l) + '</span>'; }).join('') + '</div>';
   const inp = (campo, etq, extra) => '<label class="f"><span>' + etq + '</span><input data-c="' + campo + '" value="' + esc(F[campo]) + '" ' + (extra || '') + '></label>';
   $('#vReporte').innerHTML =
     '<form id="fRep" autocomplete="off" novalidate>' +
-    '<div class="card" style="border:2px solid var(--accent)"><h2><span class="n">0</span>¿Quién levanta el reporte?</h2><div class="grid">' +
-      '<label class="f"><span>Número de nómina <span class="req">*</span></span><input data-c="nomina" id="inNom" inputmode="numeric" autocomplete="off" value="' + esc(F.nomina) + '" placeholder="Tu número de nómina"></label>' +
-      '<div class="f"><span>Nombre</span><span id="nomTxt" style="padding:10px 0;font-size:16px"></span></div></div></div>' +
+    '<div class="card quien"><span>👤</span><div style="flex:1;min-width:0"><small>Reporta</small><b>' + esc(P.n) + '</b><small>Nómina ' + esc(P.nom) + '</small></div>' +
+      (S.modo === 'reporte' ? '<button type="button" class="btn" id="bSalirP">Salir</button>' : '') + '</div>' +
     '<div class="card"><h2><span class="n">1</span>Detección</h2><div class="grid">' +
       inp('fecha', 'Fecha de detección <span class="req">*</span>', 'type="date"') +
-      inp('analista', 'Analista de calidad <span class="req">*</span>', 'list="dlAn"') +
+      '<label class="f"><span>Analista de calidad</span><input value="' + esc(P.n) + '" readonly tabindex="-1" style="background:var(--panel2);color:var(--muted)"></label>' +
       inp('no', 'N° de rechazo', 'inputmode="numeric" placeholder="Siguiente: ' + siguienteNo() + '"') +
       inp('op', 'N° OP', 'placeholder="Ej. 1102 / 1070"') +
       inp('areaGenero', 'Área que generó la anomalía <span class="req">*</span>', 'list="dlAr"') +
@@ -439,12 +453,13 @@ function pintarReporte() {
       '<input type="file" id="inFoto" accept="image/*" capture="environment" hidden></div>' +
 
     '<div class="card"><p class="msg e" id="mRep"></p><button type="submit" class="btn pri big" id="bEnviar">Enviar reporte</button>' +
-      '<p class="muted small" style="margin:10px 0 0">Se guarda en la base de datos al momento, a nombre de la nómina que escribiste arriba. Equipo con sesión de ' + esc(S.yo.n) + '.</p></div>' +
-    '</form>' + dl('dlAn', L.analistas) + dl('dlAr', L.areas) + dl('dlMq', L.maquinas) + dl('dlPz', L.piezas) + dl('dlDf', L.defectos) +
+      '<p class="muted small" style="margin:10px 0 0">Se guarda en la base de datos al momento, a nombre de <b>' + esc(P.n) + '</b> (nómina ' + esc(P.nom) + ').</p></div>' +
+    '</form>' + dl('dlAr', L.areas) + dl('dlMq', L.maquinas) + dl('dlPz', L.piezas) + dl('dlDf', L.defectos) +
     '<div class="card" style="margin-top:14px"><h2>Mis reportes recientes</h2><div class="lst" id="misRep"></div></div>';
 
   const fr = $('#fRep');
-  fr.addEventListener('input', e => { const c = e.target.dataset.c; if (c) F[c] = e.target.value; if (c === 'nomina') verNomina(true); });
+  fr.addEventListener('input', e => { const c = e.target.dataset.c; if (c) F[c] = e.target.value; tocarPersona(); });
+  const bs = $('#bSalirP'); if (bs) bs.onclick = () => salirPersona();
   $$('.opts[data-campo]', fr).forEach(g => g.addEventListener('click', e => {
     const o = e.target.closest('.opt'); if (!o) return; const c = g.dataset.campo, v = o.dataset.v;
     if (g.dataset.multi === '1') { const a = F[c] || []; F[c] = a.includes(v) ? a.filter(x => x !== v) : a.concat(v); o.classList.toggle('on'); }
@@ -454,18 +469,33 @@ function pintarReporte() {
   $('#bAddPz').onclick = () => { F.piezas.push({ modelo: '', lote: '', auditada: '', rechazada: '', pieza: '' }); pintarPiezas(); };
   $('#inFoto').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) comprimirFoto(f).then(d => { F.fotos.push(d); pintarFotos(); }).catch(() => toast('Foto', 'No se pudo leer la imagen.')); };
   fr.addEventListener('submit', e => { e.preventDefault(); enviarReporte(); });
-  pintarPiezas(); pintarFotos(); pintarMisReportes(); verNomina(false);
+  pintarPiezas(); pintarFotos(); pintarMisReportes();
 }
-// nómina de quien levanta el reporte (debe estar dada de alta y activa en Personal)
+// ---- quién reporta: en equipos de REPORTE se entra solo con la nómina (sin contraseña);
+// el reporte queda a nombre de esa persona y no se puede escoger otro nombre.
+// En equipos de CONSULTA reporta la persona de la sesión (nómina + contraseña).
+const MIN_INACTIVO = 15;
 function personaDe(nom) { const k = String(nom || '').trim(), p = S.personal[k]; return k && p && p.a !== false ? p : null; }
 function idEquipo() { let id = leerLocal('rech_equipo', ''); if (!id) { id = Math.random().toString(36).slice(2, 12); guardarLocal('rech_equipo', id); } return id; }
-function verNomina(llenar) {
-  const F = S.form, t = $('#nomTxt'); if (!t) return;
-  const p = personaDe(F.nomina);
-  if (!F.nomina) { t.className = ''; t.textContent = '—'; return; }
-  if (!p) { t.className = 'nomMal'; t.textContent = 'No está dada de alta o está desactivada'; return; }
-  t.className = 'nomOk'; t.textContent = '✔ ' + p.n;
-  if (llenar && (!F.analista || F.analista === F._auto)) { F.analista = F._auto = p.n; const a = $('[data-c=analista]'); if (a) a.value = p.n; }
+function quienReporta() {
+  if (S.modo !== 'reporte') return { nom: S.yo.nom, n: S.yo.n };
+  const s = leerLocal('rech_persona', null);
+  if (!s || Date.now() - (s.t || 0) > MIN_INACTIVO * 60000 || !personaDe(s.nom)) { if (s) guardarLocal('rech_persona', null); return null; }
+  return { nom: s.nom, n: personaDe(s.nom).n };
+}
+function tocarPersona() { const s = leerLocal('rech_persona', null); if (s) { s.t = Date.now(); guardarLocal('rech_persona', s); } }
+function salirPersona() { guardarLocal('rech_persona', null); S.form = null; S.vista = 'reporte'; ['Tablero', 'Base', 'Config'].forEach(k => $('#v' + k).hidden = true); $('#vReporte').hidden = false; pestanas(); pintarReporte(); }
+function pantallaNomina() {
+  $('#vReporte').innerHTML = '<div class="card entrar"><span class="ic">👤</span><h2 style="justify-content:center">Entrar para levantar un reporte</h2>' +
+    '<form id="fNom" autocomplete="off"><label class="f"><span>Número de nómina</span><input id="inNom" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="Tu nómina" style="font-size:28px;text-align:center;letter-spacing:.12em"></label>' +
+    '<p class="msg e" id="mNom"></p><button type="submit" class="btn pri big">Entrar</button></form>' +
+    '<p class="muted small" style="margin:12px 0 0">Solo con tu nómina. El reporte queda a tu nombre. Si no estás dado de alta, pídelo a un administrador.</p></div>';
+  const inp = $('#inNom'); setTimeout(() => inp.focus(), 50);
+  $('#fNom').onsubmit = e => {
+    e.preventDefault(); const nom = inp.value.trim(), p = personaDe(nom);
+    if (!p) { $('#mNom').textContent = nom ? 'La nómina ' + nom + ' no está dada de alta o está desactivada.' : 'Escribe tu número de nómina.'; inp.select(); return; }
+    guardarLocal('rech_persona', { nom, t: Date.now() }); if (!S._keep) S.form = null; S._keep = false; pestanas(); pintarReporte(); toast('Bienvenido', p.n, null, 3000);
+  };
 }
 function pintarPiezas() {
   const F = S.form, w = $('#pzs');
@@ -494,7 +524,8 @@ function comprimirFoto(file) {
 async function enviarReporte() {
   const F = S.form, m = $('#mRep'), b = $('#bEnviar');
   const falta = [];
-  const quien = personaDe(F.nomina); if (!quien) { m.className = 'msg e'; m.textContent = F.nomina ? 'La nómina ' + F.nomina + ' no está dada de alta o está desactivada. Pide tu alta a un administrador.' : 'Escribe tu número de nómina (sección 0).'; $('#inNom').focus(); return; }
+  const quien = quienReporta(); if (!quien) { toast('Sesión vencida', 'Vuelve a entrar con tu nómina; lo capturado se conserva.'); S._keep = true; pantallaNomina(); return; }
+  F.analista = quien.n;
   if (!F.fecha) falta.push('fecha'); if (!F.analista.trim()) falta.push('analista'); if (!F.como) falta.push('cómo se encontró');
   if (!F.areaGenero.trim()) falta.push('área que generó'); if (!F.defecto.trim()) falta.push('descripción del defecto');
   const pz = F.piezas.filter(p => p.pieza.trim() || p.rechazada || p.modelo.trim());
@@ -510,7 +541,7 @@ async function enviarReporte() {
     piezas: pz.map(p => ({ modelo: up(p.modelo), lote: p.lote.trim(), auditada: p.auditada.trim(), rechazada: p.rechazada.trim(), pieza: up(p.pieza) })),
     defecto: up(F.defecto), accion: F.accion.trim(), definicion: F.definicion, metodo: F.metodo.trim(), fechaRetrabajo: F.fechaRetrabajo, materialIdent: !!F.materialIdent,
     zona: F.zona.trim(), pzRetrabajo: F.pzRetrabajo.trim(), pzNG: F.pzNG.trim(), seisM: F.seisM, fotos: F.fotos,
-    estado: 'abierta', creado: new Date().toISOString(), por: String(F.nomina).trim(), porN: quien.n, cuenta: S.yo.nom, equipo: idEquipo(), seg: [] };
+    estado: 'abierta', creado: new Date().toISOString(), por: quien.nom, porN: quien.n, cuenta: S.yo.nom, equipo: idEquipo(), seg: [] };
   b.disabled = true; m.className = 'msg'; m.textContent = 'Guardando…';
   try {
     const ref = await DB.collection('nc').add(rec); rec.id = ref.id;
@@ -597,13 +628,27 @@ function pintarTablero() {
       '<div class="card"><h2>6 Ms</h2>' + barras(contar(L, r => (r.seisM || []).map(k => (SEISM.find(s => s[0] === k) || [k, k])[1]))) + '</div>' +
       '<div class="card"><h2>Piezas rechazadas por área</h2>' + barras(contar(L, r => r.areaGenero, piezasRech)) + '</div>' +
       '<div class="card"><h2>Cómo se detectó</h2>' + barras(contar(L, r => r.como)) + '</div>' +
-    '</div>';
+    '</div>' + tablaQuien(L);
   $('#fPer').onchange = e => { f.per = e.target.value; if (f.per === 'rango' && !f.desde) { f.desde = desde; f.hasta = hasta; } pintarTablero(); };
   const de = $('#fDe'), ha = $('#fHa'); if (de) { de.onchange = () => { f.desde = de.value; pintarTablero(); }; ha.onchange = () => { f.hasta = ha.value; pintarTablero(); }; }
   $('#fAr').onchange = e => { f.area = e.target.value; pintarTablero(); };
   $('#bXls').onclick = descargarExcel;
   const bp = $('#bPdf'); if (bp) bp.onclick = () => dialogoPDF();
   $$('#vTablero .vc[data-id]').forEach(x => x.onclick = () => verDetalle(x.dataset.id));
+  $$('#vTablero tr[data-q]').forEach(tr => tr.onclick = () => { S.base.q = tr.dataset.q; S.base.est = ''; S.base.pag = 0; irA('base'); });
+}
+
+// quién ha reportado en el periodo (nombre de cada usuario, cuántos, último y abiertos)
+function tablaQuien(L) {
+  const m = new Map();
+  L.forEach(r => { const k = r.por || norm(r.analista) || '—'; const e = m.get(k) || { nom: r.por || '', n: r.porN || r.analista || 'SIN NOMBRE', c: 0, pz: 0, ab: 0, ult: '', ultNo: '' };
+    e.c++; e.pz += piezasRech(r); if (r.estado && r.estado !== 'cerrada') e.ab++; if ((r.fecha || '') >= e.ult) { e.ult = r.fecha || ''; e.ultNo = r.no; } m.set(k, e); });
+  const l = [...m.values()].sort((a, b) => b.c - a.c);
+  return '<div class="card" style="margin-top:14px"><h2>👤 Quién ha reportado</h2>' + (l.length ?
+    '<div class="tw"><table class="cfgt"><thead><tr><th>Nombre</th><th>Nómina</th><th>Reportes</th><th>Piezas</th><th>Abiertos</th><th>Último reporte</th></tr></thead><tbody>' +
+    l.map(e => '<tr data-q="' + esc(e.n) + '" style="cursor:pointer"><td><b>' + esc(e.n) + '</b></td><td class="n">' + esc(e.nom || '—') + '</td><td class="n">' + e.c + '</td><td class="n">' + Math.round(e.pz) + '</td><td class="n">' + (e.ab || '') + '</td><td class="n">' + fmtF(e.ult) + ' · N° ' + esc(e.ultNo) + '</td></tr>').join('') +
+    '</tbody></table></div><p class="muted small" style="margin:8px 0 0">Toca un nombre para ver sus reportes en la base de datos. Los del histórico de Excel aparecen con el nombre del analista, sin nómina.</p>'
+    : '<p class="muted" style="margin:0">Sin reportes en el periodo.</p>') + '</div>';
 }
 
 // ====================== 3. BASE DE DATOS ======================
@@ -840,7 +885,15 @@ async function imprimirFormato(r) {
 function pintarConfig() {
   const P = S.personal, c = S.cfg, cr = c.correo || {}, al = c.alertas || {}, ct = c.catalogos || {};
   const filas = Object.entries(P).sort((a, b) => (a[1].n || '').localeCompare(b[1].n || ''));
-  $('#vConfig').innerHTML =
+  const cardEquipo = '<div class="card"><h2>🖥 Uso de este equipo</h2><p class="muted small" style="margin:0 0 10px">Solo administradores. Los usuarios no ven esta opción.</p>' +
+    '<div class="modos"><button type="button" class="modo" data-m="reporte"' + (S.modo === 'reporte' ? ' style="border-color:var(--accent);background:var(--accent-soft)"' : '') + '><span>📱</span><b>Levantar reportes' + (S.modo === 'reporte' ? ' ✔' : '') + '</b><small>Teléfono o tableta en piso: entran con su nómina y solo ven el formato.</small></button>' +
+    '<button type="button" class="modo" data-m="consulta"' + (S.modo === 'consulta' ? ' style="border-color:var(--accent);background:var(--accent-soft)"' : '') + '><span>🖥</span><b>Consultar y administrar' + (S.modo === 'consulta' ? ' ✔' : '') + '</b><small>Tablero, base de datos, alarmas, Excel, PDF y configuración. Sesión del equipo: ' + esc(S.yo.n) + '.</small></button></div></div>';
+  if (S.modo !== 'consulta') {
+    $('#vConfig').innerHTML = cardEquipo + '<p class="muted small">El resto de la configuración (personal, correo, alertas, catálogos, eliminados) está en los equipos de consulta.</p>';
+    $$('#vConfig .modo').forEach(b => b.onclick = () => { if (b.dataset.m !== S.modo) cambiarModo(b.dataset.m); });
+    return;
+  }
+  $('#vConfig').innerHTML = cardEquipo +
     '<div class="card"><h2>👥 Personal y permisos</h2>' +
     '<p class="muted small" style="margin:0 0 10px">Todos entran con su <b>número de nómina</b> y contraseña. <b>Usuario</b>: solo levanta reportes. Márcale <b>Ver tablero</b> para que consulte tablero y base de datos, y <b>Modificar base</b> para que pueda dar seguimiento y cerrar no conformidades. Los <b>administradores</b> tienen todo.</p>' +
     '<div class="tw"><table class="cfgt"><thead><tr><th>Nómina</th><th>Nombre</th><th>Rol</th><th>Ver tablero</th><th>Modificar base</th><th>Activo</th><th>Contraseña</th></tr></thead><tbody>' +
@@ -888,6 +941,7 @@ function pintarConfig() {
       '<div class="row" style="margin-top:10px"><button type="button" class="btn pri" id="kGuardar">Guardar catálogos</button><span class="msg" id="kMsg"></span></div></div>';
 
   // personal
+  $$('#vConfig .modo').forEach(b => b.onclick = () => { if (b.dataset.m !== S.modo) cambiarModo(b.dataset.m); });
   $('#cGuardarP').onclick = async () => {
     const nuevo = JSON.parse(JSON.stringify(P)), m = $('#cMsgP');
     $$('#vConfig tr[data-k]').forEach(tr => { const k = tr.dataset.k, p = nuevo[k]; p.n = $('[data-x=n]', tr).value.trim().toUpperCase() || p.n; const r = $('[data-x=r]', tr); if (!r.disabled) p.r = r.value;
@@ -1158,7 +1212,7 @@ async function iniciar() {
     if (!primero || !S.yo || !S.listo) return; primero = false; $('#cargando').hidden = true;
     S.modo = leerLocal('rech_modo', '');
     if (S.modo === 'consulta' && !S.yo.ver) S.modo = 'reporte';
-    if (!S.modo) { irA('reporte'); elegirModo(false); return; }
+    if (!S.modo) { if (S.yo.admin) { irA('reporte'); elegirModo(false); return; } S.modo = 'reporte'; guardarLocal('rech_modo', 'reporte'); }
     irA(S.modo === 'consulta' ? (leerLocal('rech_vista', '') || (S.yo.admin ? 'tablero' : 'base')) : 'reporte'); resumenDelDia(); revisarAlarmas();
   };
   DB.doc('config/personal').onSnapshot(s => { S.personal = ((s.data && s.data()) || {}).p || {}; yoActual(); if (!primero) { pestanas(); if (S.vista === 'config') pintarConfig(); } listoTodo(); });
