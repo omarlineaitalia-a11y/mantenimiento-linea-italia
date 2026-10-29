@@ -253,7 +253,7 @@ async function conectar() {
 function identificar() {
   let nom = ''; try { nom = sessionStorage.getItem('cc_nom') || ''; } catch (e) {}
   const u = nom && D.usuarios[nom];
-  YO = u && u.a !== false ? { nom, n: u.n, rol: u.r === 'admin' || u.r === 'general' ? 'admin' : 'consulta', general: u.r === 'general', cargar: !!u.cargar, eliminar: !!u.eliminar } : null;
+  YO = u && u.a !== false ? { nom, n: u.n, rol: u.r === 'admin' || u.r === 'general' ? 'admin' : 'consulta', general: u.r === 'general', cargar: !!u.cargar, eliminar: !!u.eliminar, imprimir: u.imprimir !== false } : null;
 }
 function pantallaNomina(msg) {
   let d = $('#nomina');
@@ -353,6 +353,7 @@ async function revisarViernes() {
 const esAdmin = () => !!(YO && YO.rol === 'admin');
 const puedeCargar = () => esAdmin() || !!(YO && YO.cargar);
 const puedeEliminar = () => esAdmin() || !!(YO && YO.eliminar);
+const puedeImprimir = () => esAdmin() || !!(YO && YO.imprimir);
 const porEntregar = () => D.facturas.filter(x => !x.entrega).sort((a, b) => a.fecha.localeCompare(b.fecha));
 const facDe = id => D.facturas.filter(x => x.entrega === id).sort((a, b) => a.fecha.localeCompare(b.fecha));
 const suma = L => r2(L.reduce((s, x) => s + Number(x.monto || 0), 0));
@@ -475,7 +476,7 @@ function pPrincipal() {
   ];
   $('#t-principal').innerHTML = '<div class="ciclo">' + E.map((e, i) => '<button type="button" class="etapa' + (i + 1 === etapa || (etapa === 2 && i === 0) ? ' on' : '') + '" data-ir="' + e[6] + '" style="--c:' + e[1] + ';--cs:' + e[2] + '"><span class="paso-n">' + (i + 1) + '</span>' + ILU[e[0]] + '<b>' + e[3] + '</b><span class="m" style="color:' + e[1] + '">' + e[4] + '</span><small>' + e[5] + '</small></button>').join('') + '</div>' +
     '<div class="cols"><div class="card" id="cFac"><h2>🧾 Facturas por entregar a finanzas <span class="tag a">' + din(c.pe) + '</span></h2>' +
-    (puedeCargar() || adm ? '<div class="row" style="margin-bottom:12px">' + (puedeCargar() ? '<button class="btn pri" id="bNueva" type="button">➕ Registrar factura</button>' : '') + (adm ? '<button class="btn" id="bPdf" type="button"' + (pe.length ? '' : ' disabled') + '>🖨 PDF con fecha de corte</button><button class="btn oro" id="bEntregar" type="button"' + (pe.length ? '' : ' disabled') + '>📤 Ya se entregaron facturas</button><button class="btn" id="bXls" type="button">📗 Actualizar Excel</button>' : '') + '<span class="msg" id="xMsg"></span></div>' : '') +
+    (puedeCargar() || puedeImprimir() || adm ? '<div class="row" style="margin-bottom:12px">' + (puedeCargar() ? '<button class="btn pri" id="bNueva" type="button">➕ Registrar factura</button>' : '') + (puedeImprimir() ? '<button class="btn" id="bPdf" type="button"' + (pe.length ? '' : ' disabled') + '>🖨 PDF de facturas por entregar</button>' : '') + (adm ? '<button class="btn oro" id="bEntregar" type="button"' + (pe.length ? '' : ' disabled') + '>📤 Ya se entregaron facturas</button><button class="btn" id="bXls" type="button">📗 Actualizar Excel</button>' : '') + '<span class="msg" id="xMsg"></span></div>' : '') +
     tablaFacturas(pe, { editar: puedeCargar(), borrar: puedeEliminar(), vacio: 'No hay facturas pendientes de entregar.' }) + '</div>' +
     '<div class="pila"><div class="card" id="cChq"><h2>🏦 En espera del cheque</h2>' +
       (c.espera.length ? c.espera.map(e => '<div class="ent" style="margin-bottom:10px"><span class="e" style="background:var(--azul-s)">⏳</span><div><b>Entrega N° ' + e.n + '</b> · ' + fF(e.fecha) + '<div class="small muted">' + facDe(e.id).length + ' facturas · <b style="color:var(--ink)">' + din(suma(facDe(e.id))) + '</b> · hace ' + dias(e.fecha) + ' días</div></div>' +
@@ -493,8 +494,8 @@ function pPrincipal() {
   if ($('#bNueva')) $('#bNueva').onclick = () => dlgFactura();
   $$('#t-principal [data-e]').forEach(b => b.onclick = () => dlgFactura(b.dataset.e));
   $$('#t-principal [data-b]').forEach(b => b.onclick = () => dlgEliminar(D.facturas.find(y => y.id === b.dataset.b)));
+  if ($('#bPdf')) $('#bPdf').onclick = () => dlgEntrega(false);
   if (!adm) return;
-  $('#bPdf').onclick = () => dlgEntrega(false);
   $('#bEntregar').onclick = () => dlgEntrega(true);
   $('#bXls').onclick = async () => { if (soporta) await pedirPermiso(); actualizarExcel(true); };
   $$('[data-chq]').forEach(b => b.onclick = () => dlgCheque(b.dataset.chq));
@@ -562,7 +563,7 @@ function dlgFactura(id, solicitud) {
 // ---------- entrega a finanzas (PDF con fecha de corte)
 function dlgEntrega(marcar) {
   const pe = porEntregar();
-  const m = modal(marcar ? '📤 Entregar facturas a finanzas' : '🖨 PDF con fecha de corte',
+  const m = modal(marcar ? '📤 Entregar facturas a finanzas' : '🖨 PDF de facturas por entregar',
     '<form class="form"><label class="f">Fecha de corte: incluir facturas hasta el<input name="corte" type="date" value="' + hoyISO() + '" required></label>' +
     '<label class="f">' + (marcar ? 'Fecha de entrega a finanzas' : 'Fecha que aparece en el PDF') + '<input name="ent" type="date" value="' + hoyISO() + '" required></label>' +
     '<div class="full"><div class="small muted" style="font-weight:600;margin-bottom:6px">Facturas que van (puedes quitar alguna)</div><div class="tw" style="max-height:300px;overflow:auto;border:1px solid var(--line);border-radius:10px"><table><tbody>' +
@@ -804,19 +805,20 @@ async function pConfig() {
   const P = D.usuarios, filas = Object.entries(P).sort((a, b) => (a[1].n || '').localeCompare(b[1].n || ''));
   const elim = [...D.eliminados].sort((a, b) => String(b.t).localeCompare(String(a.t)));
   $('#t-config').innerHTML = '<div class="card solo-admin" style="margin-bottom:16px"><h2>👥 Perfiles y permisos</h2>' +
-    '<p class="small muted" style="margin-top:0">Todos entran <b>solo con su nómina</b>. La primera vez en cada PC, un administrador entra una sola vez con nómina y contraseña de Paros para dejar abierta la sesión del equipo. <b>Consulta</b>: ve principal, historial, gráficas y quién debe. Márcale <b>Agregar facturas</b> para que le aparezca el botón "➕ Registrar factura" (y pueda corregirlas), y <b>Eliminar facturas</b> para que pueda borrarlas (siempre con motivo). Con el <b>Perfil</b> puedes hacer <b>Administrador</b> a quien quieras: tendrá todo, incluida esta Configuración.</p>' +
-    '<div class="tw"><table><thead><tr><th>Nómina</th><th>Nombre</th><th>Perfil</th><th>➕ Agregar facturas</th><th>Eliminar facturas</th><th>Activo</th><th>Acciones</th></tr></thead><tbody>' +
+    '<p class="small muted" style="margin-top:0">Todos entran <b>solo con su nómina</b>. La primera vez en cada PC, un administrador entra una sola vez con nómina y contraseña de Paros para dejar abierta la sesión del equipo. <b>Consulta</b>: ve principal, historial, gráficas y quién debe. Márcale <b>Agregar facturas</b> para que le aparezca el botón "➕ Registrar factura" (y pueda corregirlas), <b>Eliminar facturas</b> para que pueda borrarlas (siempre con motivo) y <b>🖨 PDF por entregar</b> para que pueda sacar e imprimir el PDF de las facturas por entregar. Con el <b>Perfil</b> puedes hacer <b>Administrador</b> a quien quieras: tendrá todo, incluida esta Configuración.</p>' +
+    '<div class="tw"><table><thead><tr><th>Nómina</th><th>Nombre</th><th>Perfil</th><th>➕ Agregar facturas</th><th>Eliminar facturas</th><th>🖨 PDF por entregar</th><th>Activo</th><th>Acciones</th></tr></thead><tbody>' +
     filas.map(([k, u]) => { const yo = k === YO.nom, adm = u.r === 'admin' || u.r === 'general';
       return '<tr data-k="' + esc(k) + '"><td>' + esc(k) + '</td><td><input data-x="n" value="' + esc(u.n) + '" style="min-width:220px;padding:6px 8px;font-size:14px"></td>' +
         '<td>' + (u.r === 'general' ? '<span class="tag v">🔑 Administrador general</span>' : '<select data-x="r"' + (yo ? ' disabled' : '') + '><option value="usuario"' + (u.r === 'usuario' ? ' selected' : '') + '>👁 Consulta</option><option value="admin"' + (u.r === 'admin' ? ' selected' : '') + '>🔑 Administrador</option></select>') + '</td>' +
         '<td style="text-align:center"><input type="checkbox" data-x="cargar" style="width:20px;height:20px"' + (u.cargar || adm ? ' checked' : '') + (adm ? ' disabled' : '') + '></td>' +
         '<td style="text-align:center"><input type="checkbox" data-x="eliminar" style="width:20px;height:20px"' + (u.eliminar || adm ? ' checked' : '') + (adm ? ' disabled' : '') + '></td>' +
+        '<td style="text-align:center"><input type="checkbox" data-x="imprimir" style="width:20px;height:20px"' + (u.imprimir !== false || adm ? ' checked' : '') + (adm ? ' disabled' : '') + '></td>' +
         '<td style="text-align:center"><input type="checkbox" data-x="a" style="width:20px;height:20px"' + (u.a !== false ? ' checked' : '') + (yo ? ' disabled' : '') + '></td>' +
         '<td style="white-space:nowrap"><button class="btn sm" data-reset="' + esc(k) + '" type="button">🔑 Contraseña</button>' + (!yo && u.r !== 'general' ? ' <button class="btn sm rojo" data-qu="' + esc(k) + '" type="button">Quitar</button>' : '') + '</td></tr>'; }).join('') +
     '</tbody></table></div><div class="row" style="margin-top:10px"><button class="btn pri" id="uGuardar" type="button">💾 Guardar permisos</button><span class="msg" id="uMsg"></span></div>' +
     '<h3>➕ Dar acceso a otra persona</h3><form id="fU" class="form"><label class="f">Nómina<input name="n" inputmode="numeric" required></label><label class="f">Nombre completo<input name="m" required></label>' +
     '<label class="f">Perfil<select name="r"><option value="usuario">👁 Consulta</option><option value="admin">🔑 Administrador</option></select></label><label class="f">Contraseña inicial (si no tiene cuenta)<input name="p" type="text" value="000000" autocomplete="off"></label>' +
-    '<label class="row small"><input type="checkbox" name="c" style="width:20px;height:20px"> ➕ Agregar facturas</label><label class="row small"><input type="checkbox" name="e" style="width:20px;height:20px"> Eliminar facturas</label>' +
+    '<label class="row small"><input type="checkbox" name="c" style="width:20px;height:20px"> ➕ Agregar facturas</label><label class="row small"><input type="checkbox" name="i" checked style="width:20px;height:20px"> 🖨 PDF de facturas por entregar</label><label class="row small"><input type="checkbox" name="e" style="width:20px;height:20px"> Eliminar facturas</label>' +
     '<div class="full row"><button class="btn pri" type="submit">Dar acceso</button><span class="msg" id="fUMsg"></span></div></form></div>' +
 
     '<div class="cols"><div class="pila"><div class="card solo-admin"><h2>⚙ Datos de la caja</h2><form id="fJ" class="form">' +
@@ -836,11 +838,11 @@ async function pConfig() {
     '<div class="card solo-admin"><h2>🚪 Historial de entradas <span class="tag r">🔒 solo tú</span></h2><div id="accesos" class="small muted">Leyendo…</div></div></div></div>';
 
   // perfiles
-  $$('#t-config [data-x=r]').forEach(s => s.onchange = () => { const tr = s.closest('tr'), adm = s.value === 'admin'; ['cargar', 'eliminar'].forEach(x => { const c = $('[data-x=' + x + ']', tr); c.disabled = adm; if (adm) c.checked = true; }); });
+  $$('#t-config [data-x=r]').forEach(s => s.onchange = () => { const tr = s.closest('tr'), adm = s.value === 'admin'; ['cargar', 'eliminar', 'imprimir'].forEach(x => { const c = $('[data-x=' + x + ']', tr); c.disabled = adm; if (adm) c.checked = true; }); });
   $('#uGuardar').onclick = () => {
     $$('#t-config tr[data-k]').forEach(tr => { const u = D.usuarios[tr.dataset.k]; u.n = $('[data-x=n]', tr).value.trim().toUpperCase() || u.n;
       const r = $('[data-x=r]', tr); if (r && !r.disabled) u.r = r.value;
-      const adm = u.r === 'admin' || u.r === 'general'; u.cargar = adm || $('[data-x=cargar]', tr).checked; u.eliminar = adm || $('[data-x=eliminar]', tr).checked;
+      const adm = u.r === 'admin' || u.r === 'general'; u.cargar = adm || $('[data-x=cargar]', tr).checked; u.eliminar = adm || $('[data-x=eliminar]', tr).checked; u.imprimir = adm || $('[data-x=imprimir]', tr).checked;
       const a = $('[data-x=a]', tr); if (!a.disabled) u.a = a.checked; });
     guardar(); toast('✔ Permisos guardados');
   };
@@ -852,7 +854,7 @@ async function pConfig() {
     if (String(F.p.value).length < 6) { m.className = 'msg e'; m.textContent = 'La contraseña inicial debe tener al menos 6 caracteres.'; return; }
     m.className = 'msg'; m.textContent = 'Creando acceso…';
     try { const r = await window.LI.crearCuenta(k, F.p.value); const adm = F.r.value === 'admin';
-      D.usuarios[k] = { n: F.m.value.trim().toUpperCase(), r: F.r.value, a: true, cargar: adm || F.c.checked, eliminar: adm || F.e.checked }; guardar();
+      D.usuarios[k] = { n: F.m.value.trim().toUpperCase(), r: F.r.value, a: true, cargar: adm || F.c.checked, eliminar: adm || F.e.checked, imprimir: adm || F.i.checked }; guardar();
       toast('✔ ' + D.usuarios[k].n + (r === 'existe' ? ' ya tenía cuenta: entra con su contraseña de siempre.' : ' entra con la contraseña inicial.'));
     } catch (x) { m.className = 'msg e'; m.textContent = x.message || x; }
   };
