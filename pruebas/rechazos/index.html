@@ -898,14 +898,15 @@ function pintarConfig() {
   $('#vConfig').innerHTML = cardEquipo +
     '<div class="card"><h2>👥 Personal y permisos</h2>' +
     '<p class="muted small" style="margin:0 0 10px">Todos entran con su <b>número de nómina</b> y contraseña. <b>Usuario</b>: solo levanta reportes. Márcale <b>Ver tablero</b> para que consulte tablero y base de datos, y <b>Modificar base</b> para que pueda dar seguimiento y cerrar no conformidades. Los <b>administradores</b> tienen todo.</p>' +
-    '<div class="tw"><table class="cfgt"><thead><tr><th>Nómina</th><th>Nombre</th><th>Rol</th><th>Ver tablero</th><th>Modificar base</th><th>Activo</th><th>Contraseña</th></tr></thead><tbody>' +
+    '<div class="tw"><table class="cfgt"><thead><tr><th>Nómina</th><th>Nombre</th><th>Rol</th><th>Ver tablero</th><th>Modificar base</th><th>Activo</th><th>Acciones</th></tr></thead><tbody>' +
     filas.map(([k, p]) => { const yo = k === S.yo.nom, adm = p.r === 'admin' || p.r === 'general';
       return '<tr data-k="' + esc(k) + '"><td class="n">' + esc(k) + '</td><td><input data-x="n" value="' + esc(p.n) + '" style="min-width:220px;padding:6px 8px;font-size:14px"></td>' +
         '<td><select data-x="r"' + (yo ? ' disabled' : '') + '>' + Object.entries(ROLES).filter(([rk]) => rk !== 'general' || p.r === 'general' || S.yo.general).map(([rk, rl]) => '<option value="' + rk + '"' + (p.r === rk ? ' selected' : '') + '>' + rl + '</option>').join('') + '</select></td>' +
         '<td style="text-align:center"><input type="checkbox" data-x="ver"' + (p.ver || adm ? ' checked' : '') + (adm ? ' disabled' : '') + '></td>' +
         '<td style="text-align:center"><input type="checkbox" data-x="mod"' + (p.mod || adm ? ' checked' : '') + (adm ? ' disabled' : '') + '></td>' +
         '<td style="text-align:center"><input type="checkbox" data-x="a"' + (p.a !== false ? ' checked' : '') + (yo ? ' disabled' : '') + '></td>' +
-        '<td><button type="button" class="btn sm" data-reset="' + esc(k) + '">🔑 Restablecer</button></td></tr>'; }).join('') +
+        '<td style="white-space:nowrap"><button type="button" class="btn sm" data-reset="' + esc(k) + '">🔑 Restablecer</button>' +
+        (!yo && (p.r !== 'general' || S.yo.general) ? ' <button type="button" class="btn sm" data-del="' + esc(k) + '">🗑 Quitar</button>' : '') + '</td></tr>'; }).join('') +
     '</tbody></table></div><div class="row" style="margin-top:10px"><button type="button" class="btn pri" id="cGuardarP">Guardar cambios de personal</button><span class="msg" id="cMsgP"></span></div></div>' +
 
     '<div class="card"><h2>➕ Dar de alta personal</h2><div class="grid">' +
@@ -953,6 +954,13 @@ function pintarConfig() {
     try { await DB.doc('config/personal').set({ p: nuevo }); m.className = 'msg o'; m.textContent = '✔ Guardado'; } catch (e) { m.className = 'msg e'; m.textContent = e.message || e.code; }
   };
   $$('#vConfig [data-reset]').forEach(b => b.onclick = () => window.LI.dialogoRestablecer(b.dataset.reset, (P[b.dataset.reset] || {}).n));
+  $$('#vConfig [data-del]').forEach(b => b.onclick = async () => {
+    const k = b.dataset.del, m = $('#cMsgP');
+    if (!confirm('¿Quitar a ' + ((P[k] || {}).n || k) + ' (nómina ' + k + ') de esta aplicación? Ya no podrá entrar ni reportar. Sus reportes se conservan.')) return;
+    const nuevo = JSON.parse(JSON.stringify(S.personal)); delete nuevo[k];
+    m.className = 'msg'; m.textContent = 'Quitando…';
+    try { await DB.doc('config/personal').set({ p: nuevo }); m.className = 'msg o'; m.textContent = '✔ Se quitó la nómina ' + k; setTimeout(pintarConfig, 900); } catch (e) { m.className = 'msg e'; m.textContent = e.message || e.code; }
+  });
   $$('#vConfig tr[data-k] [data-x=r]').forEach(s => s.onchange = () => { const tr = s.closest('tr'), adm = s.value !== 'usuario'; ['ver', 'mod'].forEach(x => { const c = $('[data-x=' + x + ']', tr); c.disabled = adm; if (adm) c.checked = true; }); });
   // altas
   const alta = async (nom, nombre, rol, pass, ver, mod) => {

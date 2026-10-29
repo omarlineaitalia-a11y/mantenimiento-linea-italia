@@ -6,7 +6,7 @@ self.addEventListener('fetch', () => {}); // necesario para que Android permita 
 self.addEventListener('notificationclick', e => {
   e.notification.close();
   e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(cs => {
-    const c = cs.find(x => x.url.includes('/rechazos/'));
+    const c = cs.find(x => x.url.startsWith(self.registration.scope));
     if (c) return c.focus();
     return self.clients.openWindow('./');
   }));
