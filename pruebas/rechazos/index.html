@@ -51,6 +51,7 @@ nav.tabs button.on{color:#fff;border-bottom-color:#F5B700}
 #alarmBar .pulse{width:12px;height:12px;border-radius:50%;background:#fff;animation:pl 1s infinite;flex:none}
 @keyframes pl{0%,100%{opacity:1}50%{opacity:.2}}
 #alarmBar button,#mailBar button{border:1px solid rgba(255,255,255,.6);background:rgba(255,255,255,.15);color:#fff;border-radius:8px;padding:4px 12px;font-weight:600;cursor:pointer}
+#xlsBar{background:#1E5B3A;color:#fff;display:flex;align-items:center;gap:10px;padding:8px 16px;font-weight:600;flex-wrap:wrap}#xlsBar button{border:1px solid rgba(255,255,255,.6);background:rgba(255,255,255,.15);color:#fff;border-radius:8px;padding:4px 12px;font-weight:600;cursor:pointer}
 #mailBar{background:var(--navy2);color:#fff;display:flex;align-items:center;gap:10px;padding:8px 16px;font-weight:600;flex-wrap:wrap}
 main{max-width:1280px;margin:0 auto;padding:16px;padding-block:16px}
 /* tarjetas */
@@ -174,6 +175,7 @@ footer.pie{text-align:center;color:var(--muted);font-size:12px;padding:20px 16px
   <nav class="tabs" id="tabs"></nav>
   <div id="alarmBar" hidden></div>
   <div id="mailBar" hidden></div>
+  <div id="xlsBar" hidden></div>
 </header>
 
 <main id="app">
@@ -316,7 +318,7 @@ function nuevaNC(r) {
 
 // alarma del administrador: no conformidades abiertas con más de N días
 function revisarAlarmas() {
-  const hoy = hoyISO();
+  const hoy = hoyISO(); excelSemanal().catch(() => {});
   $('#chHoy').textContent = 'Hoy: ' + Object.values(S.nc).filter(r => (r.creado ? fechaISO(new Date(r.creado)) : r.fecha) === hoy).length;
   const bar = $('#alarmBar'), mb = $('#mailBar');
   if (!S.yo || !S.yo.admin || S.modo !== 'consulta') { bar.hidden = true; mb.hidden = true; return; }
@@ -601,7 +603,7 @@ function pintarTablero() {
       '<label class="f"' + (f.per === 'rango' ? '' : ' hidden') + '>Desde<input type="date" id="fDe" value="' + esc(f.desde) + '"></label>' +
       '<label class="f"' + (f.per === 'rango' ? '' : ' hidden') + '>Hasta<input type="date" id="fHa" value="' + esc(f.hasta) + '"></label>' +
       '<label class="f">Área que generó<select id="fAr"><option value="">Todas</option>' + areas.map(a => '<option' + (norm(a) === norm(f.area) ? ' selected' : '') + '>' + esc(a) + '</option>').join('') + '</select></label>' +
-      '<span style="flex:1"></span><button type="button" class="btn" id="bXls">⬇ Descargar concentrado Excel</button>' +
+      '<span style="flex:1"></span><button type="button" class="btn" id="bXls">📗 Excel anual (actualizar)</button>' +
       (S.yo.admin ? '<button type="button" class="btn pri" id="bPdf">📄 PDF para dirección</button>' : '') +
     '</div><p class="muted small" style="margin:8px 0 0">Del ' + (f.per === 'todo' ? 'inicio' : fmtF(desde)) + ' al ' + (f.per === 'todo' ? 'día de hoy' : fmtF(hasta)) + ' · incluye el histórico de la matriz F-CAL-08 (' + histVigente().length + ' rechazos).</p></div>' +
 
@@ -632,7 +634,7 @@ function pintarTablero() {
   $('#fPer').onchange = e => { f.per = e.target.value; if (f.per === 'rango' && !f.desde) { f.desde = desde; f.hasta = hasta; } pintarTablero(); };
   const de = $('#fDe'), ha = $('#fHa'); if (de) { de.onchange = () => { f.desde = de.value; pintarTablero(); }; ha.onchange = () => { f.hasta = ha.value; pintarTablero(); }; }
   $('#fAr').onchange = e => { f.area = e.target.value; pintarTablero(); };
-  $('#bXls').onclick = descargarExcel;
+  $('#bXls').onclick = dialogoExcel;
   const bp = $('#bPdf'); if (bp) bp.onclick = () => dialogoPDF();
   $$('#vTablero .vc[data-id]').forEach(x => x.onclick = () => verDetalle(x.dataset.id));
   $$('#vTablero tr[data-q]').forEach(tr => tr.onclick = () => { S.base.q = tr.dataset.q; S.base.est = ''; S.base.pag = 0; irA('base'); });
@@ -658,13 +660,13 @@ function pintarBase() {
     '<label class="f" style="flex:1;min-width:200px">Buscar (N°, OP, modelo, pieza, área, máquina, defecto, analista)<input id="bQ" value="' + esc(B.q) + '" placeholder="Ej. despostillado, M210S, 1102"></label>' +
     '<label class="f">Estado<select id="bEst"><option value="">Todos</option><option value="pend"' + (B.est === 'pend' ? ' selected' : '') + '>Abiertas y en proceso</option><option value="venc"' + (B.est === 'venc' ? ' selected' : '') + '>Vencidas (más de ' + umbral() + ' días)</option>' +
       Object.entries(ESTADOS).map(([k, l]) => '<option value="' + k + '"' + (B.est === k ? ' selected' : '') + '>' + l + '</option>').join('') + '</select></label>' +
-    '<button type="button" class="btn" id="bXls2">⬇ Descargar concentrado Excel</button></div>' +
+    '<button type="button" class="btn" id="bXls2">📗 Excel anual (actualizar)</button></div>' +
     '<p class="muted small" style="margin:8px 0 0">' + (S.yo.mod ? 'Toca un renglón para ver el detalle, darle seguimiento o cerrarlo.' : 'Tienes permiso de consulta: toca un renglón para ver el detalle.') + ' Los rechazos del histórico (matriz de Excel) son de solo consulta.</p></div>' +
     '<div class="card" style="margin-top:14px;padding:0"><div class="tw" style="border:0;max-height:70vh"><table><thead><tr><th>N°</th><th>Fecha</th><th>Estado</th><th>Días</th><th>Área que generó</th><th>Máquina</th><th>Modelo · pieza</th><th>Pzs</th><th>Defecto</th><th>Definición</th><th>Analista</th></tr></thead><tbody id="tBase"></tbody></table></div>' +
     '<div class="row" style="padding:10px 14px"><span class="muted small" id="bCnt"></span><span style="flex:1"></span><button type="button" class="btn sm" id="bAnt">◀ Anteriores</button><button type="button" class="btn sm" id="bSig">Siguientes ▶</button></div></div>';
   let tm; $('#bQ').oninput = e => { clearTimeout(tm); tm = setTimeout(() => { B.q = e.target.value; B.pag = 0; pintarListaBase(); }, 200); };
   $('#bEst').onchange = e => { B.est = e.target.value; B.pag = 0; pintarListaBase(); };
-  $('#bXls2').onclick = descargarExcel;
+  $('#bXls2').onclick = dialogoExcel;
   $('#bAnt').onclick = () => { B.pag = Math.max(0, B.pag - 1); pintarListaBase(); };
   $('#bSig').onclick = () => { B.pag++; pintarListaBase(); };
   pintarListaBase();
@@ -921,7 +923,7 @@ function pintarConfig() {
 
     '<div class="card"><h2>📧 Reporte semanal por correo (PDF para dirección)</h2><div class="grid">' +
       '<label class="f" style="grid-column:1/-1">Destinatarios (uno por renglón)<textarea id="mDest" placeholder="direccion@lineaitalia.com.mx">' + esc((cr.dest || []).join('\n')) + '</textarea></label>' +
-      '<label class="f">Día de envío<select id="mDia">' + DIAS_SEM.map((d, i) => '<option value="' + i + '"' + (Number(cr.dia) === i ? ' selected' : '') + '>' + d + '</option>').join('') + '</select></label>' +
+      '<label class="f">Día de envío (y de actualización del Excel anual)<select id="mDia">' + DIAS_SEM.map((d, i) => '<option value="' + i + '"' + (Number(cr.dia) === i ? ' selected' : '') + '>' + d + '</option>').join('') + '</select></label>' +
       '<label class="f">Hora<input id="mHora" type="time" value="' + esc(cr.hora || '09:00') + '"></label>' +
       '<label class="f" style="grid-column:span 2">Asunto<input id="mAsunto" value="' + esc(cr.asunto || '') + '"></label>' +
       '<label class="row small" style="font-weight:600"><input type="checkbox" id="mAct" style="width:20px;height:20px"' + (cr.activo ? ' checked' : '') + '> Envío programado activo</label></div>' +
@@ -1005,78 +1007,256 @@ const cargadas = {};
 function cargarJS(src) { if (!cargadas[src]) cargadas[src] = new Promise((ok, mal) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = () => { delete cargadas[src]; mal(new Error('No se pudo cargar ' + src)); }; document.head.appendChild(s); }); return cargadas[src]; }
 function descargarBlob(blob, nombre) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = nombre; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000); }
 
-// ====================== Excel: concentrado completo (se genera al descargar) ======================
-async function descargarExcel() {
-  toast('Excel', 'Armando el concentrado…', null, 3000);
-  try { await cargarJS('https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js'); } catch (e) { toast('Excel', e.message); return; }
-  const wb = new ExcelJS.Workbook(); wb.creator = 'Control de Rechazos LI'; wb.created = new Date();
-  const NAVY = 'FF12324A', AZ = 'FF1F6FB2', borde = { top: { style: 'thin', color: { argb: 'FFD3DAE1' } }, left: { style: 'thin', color: { argb: 'FFD3DAE1' } }, bottom: { style: 'thin', color: { argb: 'FFD3DAE1' } }, right: { style: 'thin', color: { argb: 'FFD3DAE1' } } };
-  const cab = c => { c.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 10 }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAVY } }; c.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true }; c.border = borde; };
-  const L = todos().slice().sort((a, b) => (parseInt(a.no, 10) || 0) - (parseInt(b.no, 10) || 0));
+// ====================== Excel anual: un archivo por año que se actualiza (no se generan copias) ======================
+// En Chrome/Edge de computadora se elige una vez dónde guardarlo y después se reescribe ese mismo archivo
+// (el permiso se guarda en IndexedDB por año). En teléfonos se descarga con nombre fijo del año.
+const MESES = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+const MES3 = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
+const nombreXls = a => 'Concentrado No Conformidades F-CAL-08 ' + a + '.xlsx';
+const puedeElegirArchivo = () => 'showSaveFilePicker' in window && window.self === window.top;
+function idb() { return new Promise((ok, mal) => { const r = indexedDB.open('rech_archivos', 1); r.onupgradeneeded = () => r.result.createObjectStore('h'); r.onsuccess = () => ok(r.result); r.onerror = () => mal(r.error); }); }
+async function idbGet(k) { try { const d = await idb(); return await new Promise(ok => { const q = d.transaction('h').objectStore('h').get(k); q.onsuccess = () => ok(q.result || null); q.onerror = () => ok(null); }); } catch (e) { return null; } }
+async function idbSet(k, v) { try { const d = await idb(); await new Promise(ok => { const t = d.transaction('h', 'readwrite'); t.objectStore('h').put(v, k); t.oncomplete = ok; t.onerror = ok; }); } catch (e) {} }
+function aniosDisponibles() { const s = new Set(todos().map(r => (r.fecha || '').slice(0, 4)).filter(Boolean)); s.add(hoyISO().slice(0, 4)); return [...s].sort().reverse(); }
 
-  // 1) MATRIZ DE RECHAZOS (mismas columnas que la matriz F-CAL-08 + columnas de la aplicación)
-  const ws = wb.addWorksheet('MATRIZ DE RECHAZOS', { views: [{ state: 'frozen', ySplit: 2, xSplit: 1 }] });
+function dialogoExcel() {
+  const anios = aniosDisponibles();
+  const M = modal('Excel anual de no conformidades',
+    '<p class="muted" style="margin-top:0">Un solo archivo por año con todo lo del año: <b>resumen para dirección</b> y <b>una pestaña por mes</b>, más abiertas y eliminados. Cada vez que lo guardas se <b>actualiza el mismo archivo</b>; al empezar un año nuevo se crea el archivo de ese año.</p>' +
+    '<div class="grid"><label class="f">Año<select id="xA">' + anios.map(a => '<option>' + a + '</option>').join('') + '</select></label></div>' +
+    '<p class="hint" id="xArch" style="margin:12px 0"></p>' +
+    '<div class="row"><button type="button" class="btn pri" id="xGuardar">💾 Guardar / actualizar Excel</button><button type="button" class="btn" id="xOtro">📁 Guardar en otro lugar…</button></div><p class="msg" id="xMsg"></p>');
+  const pinta = async () => {
+    const a = $('#xA', M.el).value, h = puedeElegirArchivo() ? await idbGet('xls-' + a) : null;
+    $('#xArch', M.el).innerHTML = puedeElegirArchivo()
+      ? (h ? 'Se actualizará el archivo <b>' + esc(h.name) + '</b> en la carpeta que elegiste. Ciérralo en Excel antes de actualizar.' : 'La primera vez te pregunta <b>dónde guardarlo</b>. Las siguientes veces actualiza ese mismo archivo.')
+      : 'En este equipo el navegador no deja elegir carpeta: se descarga <b>' + esc(nombreXls(a)) + '</b> en Descargas. Para actualizar siempre el mismo archivo, usa Chrome o Edge en la computadora.';
+    $('#xOtro', M.el).hidden = !puedeElegirArchivo();
+  };
+  $('#xA', M.el).onchange = pinta; pinta();
+  const go = async nuevo => {
+    const a = $('#xA', M.el).value, m = $('#xMsg', M.el); let h = null;
+    m.className = 'msg'; m.textContent = '';
+    try {
+      if (puedeElegirArchivo()) {   // primero el archivo (necesita el clic), después se arma el libro
+        h = nuevo ? null : await idbGet('xls-' + a);
+        if (h && (await h.queryPermission({ mode: 'readwrite' })) !== 'granted' && (await h.requestPermission({ mode: 'readwrite' })) !== 'granted') h = null;
+        if (!h) { h = await window.showSaveFilePicker({ suggestedName: nombreXls(a), types: [{ description: 'Libro de Excel', accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] } }] }); await idbSet('xls-' + a, h); }
+      }
+      m.textContent = 'Armando el Excel de ' + a + '…';
+      const blob = await armarExcel(a);
+      if (h) { const w = await h.createWritable(); await w.write(blob); await w.close(); m.className = 'msg o'; m.textContent = '✔ Actualizado: ' + h.name; }
+      else { descargarBlob(blob, nombreXls(a)); m.className = 'msg o'; m.textContent = '✔ Descargado: ' + nombreXls(a); }
+      pinta();
+    } catch (e) {
+      if (e && e.name === 'AbortError') return;
+      m.className = 'msg e';
+      m.textContent = e && (e.name === 'NoModificationAllowedError' || e.name === 'InvalidStateError') ? 'El archivo está abierto en Excel: ciérralo y vuelve a intentar.' : 'No se pudo guardar: ' + ((e && e.message) || e);
+    }
+  };
+  $('#xGuardar', M.el).onclick = () => go(false);
+  $('#xOtro', M.el).onclick = () => go(true);
+}
+
+// cada semana (mismo día que el reporte semanal, viernes por omisión) se actualiza el Excel anual:
+// solo si el navegador conserva el permiso del archivo; si no, se muestra un aviso con un botón.
+let xlsRevisado = false;
+async function excelSemanal() {
+  const bar = $('#xlsBar'), c = S.cfg.correo || {}, hoy = hoyISO(), a = hoy.slice(0, 4);
+  if (!S.yo || !S.yo.admin || S.modo !== 'consulta' || new Date().getDay() !== Number(c.dia == null ? 5 : c.dia) || leerLocal('rech_xls_ult', '') === hoy) { bar.hidden = true; return; }
+  const h = puedeElegirArchivo() ? await idbGet('xls-' + a) : null;
+  if (h && !xlsRevisado) {
+    xlsRevisado = true;
+    try { if ((await h.queryPermission({ mode: 'readwrite' })) === 'granted') {
+      const blob = await armarExcel(a), w = await h.createWritable(); await w.write(blob); await w.close();
+      guardarLocal('rech_xls_ult', hoy); bar.hidden = true; toast('Excel anual actualizado', h.name + ' · actualización semanal.'); return; } } catch (e) {}
+  }
+  bar.innerHTML = '<span>📗 Hoy toca actualizar el Excel anual ' + a + (h ? ' (' + esc(h.name) + ')' : '') + '.</span><button type="button" id="bXlsSem">Actualizar ahora</button>';
+  bar.hidden = false;
+  $('#bXlsSem').onclick = () => { dialogoExcel(); setTimeout(() => { const b = $('#xGuardar'); if (b) b.addEventListener('click', () => { guardarLocal('rech_xls_ult', hoy); setTimeout(() => { bar.hidden = true; }, 500); }); }, 50); };
+}
+
+async function armarExcel(anio) {
+  await cargarJS('https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js');
+  const A = String(anio), um = umbral();
+  const L = todos().filter(r => (r.fecha || '').startsWith(A)).sort((a, b) => (parseInt(a.no, 10) || 0) - (parseInt(b.no, 10) || 0));
+  const sinFecha = todos().filter(r => !r.fecha).length;
+  const wb = new ExcelJS.Workbook(); wb.creator = 'Control de Rechazos LI'; wb.created = new Date(); wb.calcProperties.fullCalcOnLoad = true;
+  const NAVY = 'FF12324A', AZ = 'FF1F6FB2', AMAR = 'FFF5B700', GRISF = 'FFF4F6F8', LINEA = 'FFD3DAE1', ROJO = 'FFC62828', TXT = 'FF16212B', MUTED = 'FF5A6774';
+  const fino = { style: 'thin', color: { argb: LINEA } }, borde = { top: fino, left: fino, bottom: fino, right: fino };
+  const relleno = c => ({ type: 'pattern', pattern: 'solid', fgColor: { argb: c } });
+  const cab = c => { c.font = { name: 'Calibri', bold: true, color: { argb: 'FFFFFFFF' }, size: 10 }; c.fill = relleno(NAVY); c.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true }; c.border = borde; };
+  const trimestre = [AZ, 'FF2E7D32', 'FFA35F00', 'FF6A3FA0'];
+  const ngDe = l => l.filter(r => defin(r).startsWith('NG')).length, rtDe = l => l.filter(r => defin(r).startsWith('RETRABAJO')).length;
+  const pzDe = l => l.reduce((s, r) => s + piezasRech(r), 0);
+  const actualizado = new Date().toLocaleString('es-MX', { dateStyle: 'long', timeStyle: 'short' });
+
+  // ---------- 1) RESUMEN PARA DIRECCIÓN ----------
+  const wr = wb.addWorksheet('RESUMEN ' + A, { properties: { tabColor: { argb: NAVY } }, views: [{ showGridLines: false }],
+    pageSetup: { paperSize: 1, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0, margins: { left: .4, right: .4, top: .5, bottom: .5, header: .2, footer: .2 } } });
+  wr.columns = [{ width: 2 }].concat(Array.from({ length: 12 }, () => ({ width: 12.5 }))).concat([{ width: 2 }]);
+  const mrg = (r, c1, c2) => { if (c2 > c1) wr.mergeCells(r, c1, r, c2); return wr.getCell(r, c1); };
+  [2, 3, 4].forEach(r => { for (let c = 2; c <= 13; c++) wr.getCell(r, c).fill = relleno(NAVY); });
+  let c = mrg(2, 2, 13); c.value = 'LÍNEA ITALIA · CALIDAD · FORMATO F-CAL-08'; c.font = { size: 9, bold: true, color: { argb: 'FFBFD0DE' } }; c.alignment = { indent: 1 };
+  c = mrg(3, 2, 13); c.value = 'Concentrado de No Conformidades ' + A; c.font = { size: 20, bold: true, color: { argb: 'FFFFFFFF' } }; c.alignment = { indent: 1, vertical: 'middle' };
+  c = mrg(4, 2, 13); c.value = 'Material no conformante · ' + (L.length ? 'del ' + fmtF(L.reduce((m, r) => r.fecha < m ? r.fecha : m, '9')) + ' al ' + fmtF(L.reduce((m, r) => r.fecha > m ? r.fecha : m, '0')) : 'sin registros') + ' · actualizado el ' + actualizado;
+  c.font = { size: 10, color: { argb: 'FFDCE6EF' } }; c.alignment = { indent: 1 };
+  wr.getRow(2).height = 18; wr.getRow(3).height = 34; wr.getRow(4).height = 18;
+  for (let cc = 2; cc <= 13; cc++) wr.getCell(5, cc).fill = relleno(AMAR); wr.getRow(5).height = 4;
+
+  // indicadores
+  const ab = L.filter(r => r.estado && r.estado !== 'cerrada'), venc = ab.filter(r => diasAbierta(r) > um);
+  const mesesCon = new Set(L.map(r => r.fecha.slice(5, 7))).size || 1;
+  const kpis = [[L.length, 'No conformidades'], [Math.round(pzDe(L)), 'Piezas rechazadas'], [L.length ? ngDe(L) / L.length : 0, 'Definidas NG', '0%'],
+    [ab.length, 'Abiertas hoy'], [venc.length, 'Más de ' + um + ' días sin cerrar'], [Math.round(L.length / mesesCon * 10) / 10, 'Promedio por mes', '0.0']];
+  kpis.forEach(([v, t, fmt], i) => { const c1 = 2 + i * 2, rojo = i === 4 && v > 0;
+    const cv = mrg(7, c1, c1 + 1); cv.value = v; if (fmt) cv.numFmt = fmt; cv.font = { size: 22, bold: true, color: { argb: rojo ? ROJO : NAVY } }; cv.alignment = { horizontal: 'center', vertical: 'middle' };
+    const ct = mrg(8, c1, c1 + 1); ct.value = t; ct.font = { size: 9, bold: true, color: { argb: MUTED } }; ct.alignment = { horizontal: 'center', vertical: 'top', wrapText: true };
+    [7, 8].forEach(r => { for (let k = c1; k <= c1 + 1; k++) { const x = wr.getCell(r, k); x.fill = relleno(rojo ? 'FFFDECEC' : GRISF); x.border = { top: r === 7 ? { style: 'medium', color: { argb: rojo ? ROJO : AZ } } : undefined }; } }); });
+  wr.getRow(7).height = 34; wr.getRow(8).height = 26;
+
+  const titulo = (r, c1, c2, t) => { const x = mrg(r, c1, c2); x.value = t; x.font = { size: 11, bold: true, color: { argb: NAVY } }; for (let k = c1; k <= c2; k++) wr.getCell(r, k).border = { bottom: { style: 'medium', color: { argb: AZ } } }; wr.getRow(r).height = 20; };
+  const encab = (r, defs) => { defs.forEach(([c1, c2, t]) => { const x = mrg(r, c1, c2); x.value = t; for (let k = c1; k <= c2; k++) cab(wr.getCell(r, k)); }); wr.getRow(r).height = 22; };
+  const fila = (r, defs, zebra) => { defs.forEach(([c1, c2, v, fmt, al]) => { const x = mrg(r, c1, c2); x.value = v; if (fmt) x.numFmt = fmt; x.font = { size: 10, color: { argb: TXT } }; x.alignment = { horizontal: al || (typeof v === 'number' ? 'center' : 'left'), vertical: 'middle', wrapText: true, indent: al || typeof v === 'number' ? 0 : 1 };
+    for (let k = c1; k <= c2; k++) { const y = wr.getCell(r, k); y.border = borde; if (zebra) y.fill = relleno(GRISF); } }); };
+  // escala de color (formato clásico: Excel la abre sin pedir reparar el archivo)
+  const barra = (ref, color) => wr.addConditionalFormatting({ ref, rules: [{ type: 'colorScale', priority: 1, cfvo: [{ type: 'min' }, { type: 'max' }], color: [{ argb: 'FFFFFFFF' }, { argb: color || 'FF8DB9E2' }] }] });
+
+  // lo más relevante (conclusiones automáticas para dirección)
+  let r = 10; titulo(r, 2, 13, 'LO MÁS RELEVANTE'); r++;
+  const corto = (s2, n2) => String(s2).length > n2 ? String(s2).slice(0, n2 - 1) + '…' : s2;
+  const pct = (a, b) => b ? Math.round((a - b) / b * 100) : null, signo = x => (x > 0 ? '+' : '') + x + '%';
+  const porMes = MESES.map((m, i) => L.filter(x => +x.fecha.slice(5, 7) === i + 1));
+  const conDatos = porMes.map((l, i) => ({ i, l })).filter(o => o.l.length);
+  const pts = [];
+  if (!L.length) pts.push(['Sin no conformidades registradas en ' + A + '.', '']);
+  else {
+    const peor = conDatos.reduce((a, b) => b.l.length > a.l.length ? b : a), mejor = conDatos.reduce((a, b) => b.l.length < a.l.length ? b : a);
+    pts.push(['Volumen', 'En ' + A + ' van ' + L.length + ' no conformidades con ' + Math.round(pzDe(L)) + ' piezas rechazadas (promedio ' + (Math.round(L.length / mesesCon * 10) / 10) + ' por mes). Mes más alto: ' + MESES[peor.i] + ' (' + peor.l.length + '); más bajo: ' + MESES[mejor.i] + ' (' + mejor.l.length + ').']);
+    const ult = conDatos[conDatos.length - 1], ant = porMes[ult.i - 1] || [];
+    if (ult && ant.length) { const v = pct(ult.l.length, ant.length), vp = pct(pzDe(ult.l), pzDe(ant));
+      pts.push(['Tendencia', MESES[ult.i] + ': ' + ult.l.length + ' NC contra ' + ant.length + ' de ' + MESES[ult.i - 1] + ' (' + signo(v) + '); piezas ' + signo(vp) + '. ' + (v > 10 ? 'Va en aumento: revisar las áreas que subieron.' : v < -10 ? 'Va a la baja: mantener las acciones.' : 'Se mantiene estable.')]); }
+    const ar = contar(L, x => x.areaGenero);
+    if (ar[0]) { const sub = L.filter(x => norm(x.areaGenero) === ar[0].k), d0 = contar(sub, x => x.defecto)[0];
+      pts.push(['Área crítica', ar[0].l + ' genera el ' + Math.round(ar[0].n / L.length * 100) + '% de las NC (' + ar[0].n + ')' + (d0 ? ', principalmente por "' + d0.l + '" (' + d0.n + ')' : '') + '.' + (ar[1] ? ' Le siguen ' + ar[1].l + ' (' + ar[1].n + ')' + (ar[2] ? ' y ' + ar[2].l + ' (' + ar[2].n + ')' : '') + '.' : '')]); }
+    const df = contar(L, x => x.defecto).slice(0, 3);
+    if (df.length) pts.push(['Por qué', 'Los 3 defectos más repetidos suman el ' + Math.round(df.reduce((s2, e) => s2 + e.n, 0) / L.length * 100) + '% del año: ' + df.map(e => e.l + ' (' + e.n + ')').join(', ') + '.']);
+    const mq = contar(L, x => x.maquina);
+    if (mq[0]) pts.push(['Máquina', 'La máquina con más rechazos es ' + mq[0].l + ' (' + mq[0].n + ' NC). Coordinar con mantenimiento su revisión y ajuste.']);
+    const ng = L.length ? Math.round(ngDe(L) / L.length * 100) : 0, ngU = ult && ult.l.length ? Math.round(ngDe(ult.l) / ult.l.length * 100) : 0;
+    pts.push(['Costo (NG)', ng + '% de las NC del año se definieron como NG (pieza perdida)' + (ult ? '; en ' + MESES[ult.i] + ' fue ' + ngU + '%.' : '.') + ' El resto se recuperó con retrabajo u otra disposición.']);
+    const rep = contar(L, x => norm(x.areaGenero) + ' | ' + norm(x.defecto)).filter(e => e.n >= 5).slice(0, 3);
+    if (rep.length) pts.push(['Reincidencia', rep.map(e => { const [a2, d2] = e.l.split(' | '); return '"' + d2 + '" en ' + a2 + ' (' + e.n + ' veces)'; }).join('; ') + '. Se recomienda análisis de causa raíz (5 porqués / Ishikawa).']);
+    const m6 = contar(L, x => (x.seisM || []).map(k => (SEISM.find(s2 => s2[0] === k) || [k, k])[1]))[0];
+    if (m6) pts.push(['6 Ms', 'La causa que más aparece es ' + m6.l + ' (' + m6.n + ').']);
+    pts.push(['Pendientes', ab.length ? ab.length + (ab.length === 1 ? ' no conformidad sigue abierta; ' : ' no conformidades siguen abiertas; ') + venc.length + (venc.length === 1 ? ' lleva' : ' llevan') + ' más de ' + um + ' días' + (venc[0] ? ' (la más antigua N° ' + venc.sort((x, y) => diasAbierta(y) - diasAbierta(x))[0].no + ', ' + diasAbierta(venc[0]) + ' días)' : '') + '.' : 'No hay no conformidades abiertas.']);
+  }
+  pts.forEach(([t, txt], i) => {
+    const ct = wr.getCell(r, 2); ct.value = t; ct.font = { size: 9.5, bold: true, color: { argb: AZ } }; ct.alignment = { vertical: 'top', wrapText: true };
+    const cx = mrg(r, 3, 13); cx.value = txt; cx.font = { size: 10, color: { argb: TXT } }; cx.alignment = { vertical: 'top', wrapText: true };
+    for (let k = 2; k <= 13; k++) { const y = wr.getCell(r, k); y.border = { bottom: fino }; if (i % 2) y.fill = relleno(GRISF); }
+    wr.getRow(r).height = Math.max(20, Math.ceil(txt.length / 120) * 14 + 6); r++; });
+  r++;
+
+  // por mes
+  titulo(r, 2, 13, 'NO CONFORMIDADES POR MES'); r++;
+  encab(r, [[2, 3, 'MES'], [4, 4, 'NC'], [5, 5, 'PIEZAS'], [6, 6, 'NG'], [7, 7, 'RETRABAJO'], [8, 8, '% NG'], [9, 9, 'ABIERTAS'], [10, 11, 'ÁREA CON MÁS NC'], [12, 13, 'DEFECTO PRINCIPAL']]); r++;
+  const r0m = r;
+  MESES.forEach((mes, i) => { const l = L.filter(x => +x.fecha.slice(5, 7) === i + 1), a1 = contar(l, x => x.areaGenero)[0], d1 = contar(l, x => x.defecto)[0];
+    fila(r, [[2, 3, mes], [4, 4, l.length], [5, 5, Math.round(pzDe(l))], [6, 6, ngDe(l)], [7, 7, rtDe(l)], [8, 8, l.length ? ngDe(l) / l.length : 0, '0%'], [9, 9, l.filter(x => x.estado && x.estado !== 'cerrada').length],
+      [10, 11, a1 ? corto(a1.l, 22) + ' (' + a1.n + ')' : ''], [12, 13, d1 ? corto(d1.l, 24) + ' (' + d1.n + ')' : '']], i % 2 === 1); wr.getRow(r).height = 18; r++; });
+  fila(r, [[2, 3, 'TOTAL ' + A], [4, 4, L.length], [5, 5, Math.round(pzDe(L))], [6, 6, ngDe(L)], [7, 7, rtDe(L)], [8, 8, L.length ? ngDe(L) / L.length : 0, '0%'], [9, 9, ab.length], [10, 11, ''], [12, 13, '']]);
+  for (let k = 2; k <= 13; k++) { const x = wr.getCell(r, k); x.font = { bold: true, color: { argb: 'FFFFFFFF' } }; x.fill = relleno(AZ); }
+  barra('D' + r0m + ':D' + (r0m + 11)); r += 2;
+
+  // tablas lado a lado: izquierda B:G, derecha H:M
+  const pareja = (t1, l1, t2, l2, max, h1, h2) => {
+    titulo(r, 2, 7, t1); titulo(r, 8, 13, t2); r++;
+    encab(r, [[2, 4, h1], [5, 5, 'NC'], [6, 6, '%'], [7, 7, 'PIEZAS'], [8, 11, h2], [12, 12, 'NC'], [13, 13, '%']]); r++;
+    const ini = r, n = Math.max(Math.min(max, l1.length), Math.min(max, l2.length), 1), tot1 = l1.reduce((s, e) => s + e.n, 0) || 1, tot2 = l2.reduce((s, e) => s + e.n, 0) || 1;
+    for (let i = 0; i < n; i++) { const a = l1[i], b = l2[i];
+      fila(r, [[2, 4, a ? a.l : (i === 0 && !l1.length ? 'Sin registros todavía' : '')], [5, 5, a ? a.n : ''], [6, 6, a ? a.n / tot1 : '', '0%'], [7, 7, a ? Math.round(a.pz || 0) : ''], [8, 11, b ? b.l : ''], [12, 12, b ? b.n : ''], [13, 13, b ? b.n / tot2 : '', '0%']], i % 2 === 1);
+      wr.getRow(r).height = 18; r++; }
+    barra('E' + ini + ':E' + (r - 1)); barra('L' + ini + ':L' + (r - 1), 'FFF2C46D'); r++;
+  };
+  const conPz = (lista, fn) => contar(lista, fn).map(e => Object.assign(e, { pz: pzDe(lista.filter(x => [].concat(fn(x)).some(v => norm(v) === e.k))) }));
+  pareja('POR ÁREA QUE GENERÓ', conPz(L, x => x.areaGenero), 'DEFECTOS MÁS REPETIDOS (POR QUÉ)', contar(L, x => x.defecto), 12, 'ÁREA', 'DEFECTO');
+  wr.getRow(r - 1).addPageBreak();
+  pareja('POR MÁQUINA QUE LA GENERÓ', conPz(L, x => x.maquina), 'QUIÉN REPORTÓ', contar(L, x => x.porN || x.analista), 10, 'MÁQUINA', 'NOMBRE');
+  pareja('POR 6 Ms', conPz(L, x => (x.seisM || []).map(k => (SEISM.find(s => s[0] === k) || [k, k])[1])), 'CÓMO SE DETECTÓ', contar(L, x => x.como), 6, '6 M', 'CÓMO SE DETECTÓ');
+  c = mrg(r, 2, 13); c.value = 'Fuente: Control de Rechazos F-CAL-08 (aplicación) + histórico de la matriz de Excel. ' + (sinFecha ? sinFecha + ' registro(s) sin fecha no se incluyen. ' : '') + 'Pestañas por mes con el detalle de cada rechazo.';
+  c.font = { size: 8.5, italic: true, color: { argb: MUTED } }; c.alignment = { wrapText: true }; wr.getRow(r).height = 24;
+  wr.headerFooter.oddFooter = '&L&8Línea Italia · Concentrado de No Conformidades ' + A + '&R&8Página &P de &N';
+
+  // ---------- 2) UNA PESTAÑA POR MES (mismas columnas que la matriz F-CAL-08) ----------
   const H1 = ['N° DE RECHAZO', 'FECHA DE DETECCION', 'OCURRENCIA', 'ANALISTA', 'MODELO', 'CANTIDAD', 'No. OP', 'AREA QUE GENERO', 'PIEZA', 'DESCRIPCION DE LA ANOMALIA', 'COMO SE DETECTO LA ANOMALIA', 'CARACTERISTICA DE LA ANOMALIA', 'NORMA', 'REAL', 'DEFINICION DE ANOMALIA', 'METODO DE RETRABAJO', 'FECHA DE RETRABAJO', 'ZONA DE RESGUARDO'];
   const H6 = ['MATERIAL', 'MAQUINA', 'MANO DE OBRA', 'MEDIO AMBIENTE', 'MEDICION', 'METODO'];
-  const HX = ['AREA DONDE SE ENCONTRO', 'MAQUINA QUE LA GENERO', 'ACCION INMEDIATA', 'ESTADO', 'DIAS ABIERTA', 'RESPONSABLE', 'REGISTRO', 'ORIGEN'];
-  const anch = [10, 12, 9, 18, 14, 9, 11, 20, 22, 38, 20, 16, 12, 12, 14, 22, 12, 22, 9, 9, 9, 9, 9, 9, 20, 18, 30, 11, 9, 18, 22, 11];
-  ws.columns = anch.map(w => ({ width: w }));
-  const r1 = ws.getRow(1), r2 = ws.getRow(2);
-  H1.forEach((h, i) => { r1.getCell(i + 1).value = h; ws.mergeCells(1, i + 1, 2, i + 1); });
-  r1.getCell(19).value = '6 Ms'; ws.mergeCells(1, 19, 1, 24); H6.forEach((h, i) => r2.getCell(19 + i).value = h);
-  HX.forEach((h, i) => { r1.getCell(25 + i).value = h; ws.mergeCells(1, 25 + i, 2, 25 + i); });
-  for (let c = 1; c <= 32; c++) { cab(r1.getCell(c)); cab(r2.getCell(c)); }
-  r1.height = 32; r2.height = 30;
-  const um = umbral();
-  L.forEach(r => {
-    const d = diasAbierta(r);
-    (r.piezas && r.piezas.length ? r.piezas : [{}]).forEach(p => {
-      const row = ws.addRow([parseInt(r.no, 10) || r.no, r.fecha ? aFecha(r.fecha) : '', 1, r.analista, p.modelo || '', num(p.rechazada) || '', r.op, r.areaGenero, p.pieza || '', r.defecto, r.como,
-        Array.isArray(r.caract) ? r.caract.join(', ') : (r.caract || ''), r.norma, r.real, defin(r), r.metodo, r.fechaRetrabajo ? aFecha(r.fechaRetrabajo) : (r.fechaRetrabajoTxt || ''), r.zona,
-        ...SEISM.map(([k]) => (r.seisM || []).includes(k) ? 1 : 0),
-        r.areaEncontro || '', r.maquina || '', r.accion || '', ESTADOS[r.estado || 'cerrada'], r.estado === 'cerrada' ? '' : d, r.resp || '', r.porN || '', r.h ? 'Histórico Excel' : 'Aplicación']);
-      row.getCell(2).numFmt = 'dd/mm/yyyy'; row.getCell(17).numFmt = 'dd/mm/yyyy';
-      row.eachCell({ includeEmpty: true }, c => { c.border = borde; c.alignment = { vertical: 'top', wrapText: true }; c.font = { size: 10 }; });
-      if (r.estado !== 'cerrada' && d > um) { row.getCell(28).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFDECEC' } }; row.getCell(28).font = { size: 10, bold: true, color: { argb: 'FFC62828' } }; row.getCell(29).font = { size: 10, bold: true, color: { argb: 'FFC62828' } }; }
+  const HX = ['AREA DONDE SE ENCONTRO', 'MAQUINA QUE LA GENERO', 'ACCION INMEDIATA', 'ESTADO', 'DIAS ABIERTA', 'RESPONSABLE', 'REPORTO', 'ORIGEN'];
+  const anch = [9, 11, 8, 18, 14, 9, 11, 19, 22, 38, 19, 15, 11, 11, 13, 22, 11, 20, 8, 8, 8, 8, 8, 8, 18, 17, 30, 11, 8, 17, 22, 11];
+  const ultimoMes = A === hoyISO().slice(0, 4) ? +hoyISO().slice(5, 7) : 12;
+  for (let mi = 0; mi < 12; mi++) {
+    const l = L.filter(x => +x.fecha.slice(5, 7) === mi + 1);
+    if (!l.length && mi + 1 > ultimoMes) continue;
+    const ws = wb.addWorksheet(MES3[mi] + ' ' + A, { properties: { tabColor: { argb: trimestre[Math.floor(mi / 3)] } }, views: [{ state: 'frozen', ySplit: 5, xSplit: 1, showGridLines: false }],
+      pageSetup: { paperSize: 1, orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0, printTitlesRow: '4:5', margins: { left: .3, right: .3, top: .4, bottom: .4, header: .2, footer: .2 } } });
+    ws.columns = anch.map(w => ({ width: w }));
+    ws.mergeCells(1, 1, 1, 32); ws.mergeCells(2, 1, 2, 32);
+    const t = ws.getCell(1, 1); t.value = MESES[mi] + ' ' + A + ' · No conformidades F-CAL-08'; t.font = { size: 16, bold: true, color: { argb: 'FFFFFFFF' } }; t.fill = relleno(NAVY); t.alignment = { vertical: 'middle', indent: 1 };
+    const a1 = contar(l, x => x.areaGenero)[0], d1 = contar(l, x => x.defecto)[0];
+    const s = ws.getCell(2, 1); s.value = l.length + ' no conformidades · ' + Math.round(pzDe(l)) + ' piezas rechazadas · NG ' + (l.length ? Math.round(ngDe(l) / l.length * 100) : 0) + '% · abiertas ' + l.filter(x => x.estado && x.estado !== 'cerrada').length +
+      (a1 ? ' · área con más NC: ' + a1.l + ' (' + a1.n + ')' : '') + (d1 ? ' · defecto principal: ' + d1.l + ' (' + d1.n + ')' : '');
+    s.font = { size: 10, color: { argb: NAVY }, bold: true }; s.fill = relleno('FFE3EEF8'); s.alignment = { vertical: 'middle', indent: 1 };
+    ws.getRow(1).height = 30; ws.getRow(2).height = 20; ws.getRow(3).height = 6;
+    const r4 = ws.getRow(4), r5 = ws.getRow(5);
+    H1.forEach((h, i) => { r4.getCell(i + 1).value = h; ws.mergeCells(4, i + 1, 5, i + 1); });
+    r4.getCell(19).value = '6 Ms'; ws.mergeCells(4, 19, 4, 24); H6.forEach((h, i) => r5.getCell(19 + i).value = h);
+    HX.forEach((h, i) => { r4.getCell(25 + i).value = h; ws.mergeCells(4, 25 + i, 5, 25 + i); });
+    for (let k = 1; k <= 32; k++) { cab(r4.getCell(k)); cab(r5.getCell(k)); }
+    r4.height = 30; r5.height = 28;
+    let n = 0;
+    l.forEach(x => { const d = diasAbierta(x);
+      (x.piezas && x.piezas.length ? x.piezas : [{}]).forEach(p => {
+        const row = ws.addRow([parseInt(x.no, 10) || x.no, aFecha(x.fecha), 1, x.analista, p.modelo || '', num(p.rechazada) || '', x.op, x.areaGenero, p.pieza || '', x.defecto, x.como,
+          Array.isArray(x.caract) ? x.caract.join(', ') : (x.caract || ''), x.norma, x.real, defin(x), x.metodo, x.fechaRetrabajo ? aFecha(x.fechaRetrabajo) : (x.fechaRetrabajoTxt || ''), x.zona,
+          ...SEISM.map(([k]) => (x.seisM || []).includes(k) ? 1 : 0),
+          x.areaEncontro || '', x.maquina || '', x.accion || '', ESTADOS[x.estado || 'cerrada'], x.estado === 'cerrada' ? '' : d, x.resp || '', x.porN || '', x.h ? 'Histórico Excel' : 'Aplicación']);
+        row.getCell(2).numFmt = 'dd/mm/yyyy'; row.getCell(17).numFmt = 'dd/mm/yyyy';
+        const zebra = n % 2 === 1; n++;
+        row.eachCell({ includeEmpty: true }, cc => { cc.border = borde; cc.alignment = { vertical: 'top', wrapText: true, horizontal: cc.col <= 3 || cc.col === 6 || (cc.col >= 19 && cc.col <= 24) || cc.col === 29 ? 'center' : 'left' }; cc.font = { size: 9.5, color: { argb: TXT } }; if (zebra) cc.fill = relleno(GRISF); });
+        const ce = row.getCell(28), est = x.estado || 'cerrada';
+        ce.font = { size: 9.5, bold: true, color: { argb: est === 'cerrada' ? 'FF2E7D32' : est === 'proceso' ? AZ : 'FFA35F00' } };
+        if (est !== 'cerrada' && d > um) { ce.fill = relleno('FFFDECEC'); ce.font = { size: 9.5, bold: true, color: { argb: ROJO } }; row.getCell(29).font = { size: 9.5, bold: true, color: { argb: ROJO } }; }
+        if (defin(x).startsWith('NG')) row.getCell(15).font = { size: 9.5, bold: true, color: { argb: ROJO } };
+      });
     });
-  });
-  ws.autoFilter = { from: { row: 2, column: 1 }, to: { row: 2, column: 32 } };
+    const fin = ws.rowCount, tot = ws.addRow([]);
+    tot.getCell(1).value = 'TOTAL'; ws.mergeCells(tot.number, 1, tot.number, 5);
+    tot.getCell(6).value = l.length ? { formula: 'SUM(F6:F' + fin + ')', result: l.reduce((s2, x) => s2 + pzDe([x]), 0) } : 0;
+    tot.getCell(8).value = l.length + ' NC';
+    for (let k = 1; k <= 32; k++) { const cc = tot.getCell(k); cc.font = { bold: true, color: { argb: 'FFFFFFFF' } }; cc.fill = relleno(AZ); cc.alignment = { horizontal: k === 1 ? 'left' : 'center', indent: k === 1 ? 1 : 0 }; }
+    if (l.length) ws.autoFilter = { from: { row: 5, column: 1 }, to: { row: fin, column: 32 } };
+    ws.headerFooter.oddFooter = '&L&8' + MESES[mi] + ' ' + A + ' · Control de Rechazos F-CAL-08&R&8Página &P de &N';
+  }
 
-  // 2) ABIERTAS
-  const wa = wb.addWorksheet('ABIERTAS', { views: [{ state: 'frozen', ySplit: 1 }] });
-  wa.columns = [{ header: 'N°', width: 9 }, { header: 'FECHA', width: 12 }, { header: 'DÍAS ABIERTA', width: 11 }, { header: 'ESTADO', width: 12 }, { header: 'ÁREA QUE GENERÓ', width: 22 }, { header: 'MÁQUINA', width: 18 }, { header: 'DEFECTO (POR QUÉ)', width: 42 }, { header: 'MODELO · PIEZA', width: 30 }, { header: 'PZS', width: 7 }, { header: 'RESPONSABLE', width: 18 }, { header: 'ANALISTA', width: 18 }];
+  // ---------- 3) ABIERTAS y 4) ELIMINADOS del año ----------
+  const wa = wb.addWorksheet('ABIERTAS', { properties: { tabColor: { argb: ROJO } }, views: [{ state: 'frozen', ySplit: 1, showGridLines: false }], pageSetup: { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0 } });
+  wa.columns = [{ header: 'N°', width: 9 }, { header: 'FECHA', width: 12 }, { header: 'DÍAS ABIERTA', width: 11 }, { header: 'ESTADO', width: 12 }, { header: 'ÁREA QUE GENERÓ', width: 22 }, { header: 'MÁQUINA', width: 18 }, { header: 'DEFECTO (POR QUÉ)', width: 42 }, { header: 'MODELO · PIEZA', width: 30 }, { header: 'PZS', width: 7 }, { header: 'RESPONSABLE', width: 18 }, { header: 'REPORTÓ', width: 22 }];
   wa.getRow(1).eachCell(cab); wa.getRow(1).height = 26;
-  abiertas().sort((a, b) => diasAbierta(b) - diasAbierta(a)).forEach(r => { const d = diasAbierta(r);
-    const row = wa.addRow([parseInt(r.no, 10) || r.no, aFecha(r.fecha), d, ESTADOS[r.estado], r.areaGenero, r.maquina || '', r.defecto, piezasTxt(r), piezasRech(r), r.resp || '', r.analista]);
-    row.getCell(2).numFmt = 'dd/mm/yyyy'; row.eachCell(c => { c.border = borde; c.alignment = { vertical: 'top', wrapText: true }; });
-    if (d > um) row.eachCell(c => { c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFDECEC' } }; c.font = { color: { argb: 'FFC62828' }, bold: c.col === 3 }; }); });
+  ab.sort((x, y) => diasAbierta(y) - diasAbierta(x)).forEach((x, i) => { const d = diasAbierta(x);
+    const row = wa.addRow([parseInt(x.no, 10) || x.no, aFecha(x.fecha), d, ESTADOS[x.estado], x.areaGenero, x.maquina || '', x.defecto, piezasTxt(x), piezasRech(x), x.resp || '', x.porN || x.analista]);
+    row.getCell(2).numFmt = 'dd/mm/yyyy'; row.eachCell(cc => { cc.border = borde; cc.alignment = { vertical: 'top', wrapText: true }; if (i % 2) cc.fill = relleno(GRISF); });
+    if (d > um) row.eachCell(cc => { cc.fill = relleno('FFFDECEC'); cc.font = { color: { argb: ROJO }, bold: cc.col === 3 }; }); });
+  if (!ab.length) wa.addRow(['', '', '', '', 'Sin no conformidades abiertas']);
 
-  // 3) RESUMEN
-  const wr = wb.addWorksheet('RESUMEN');
-  wr.getColumn(1).width = 34; wr.getColumn(2).width = 14; wr.getColumn(3).width = 14; wr.getColumn(5).width = 34; wr.getColumn(6).width = 14;
-  wr.getCell('A1').value = 'Concentrado de No Conformidades F-CAL-08 · Línea Italia'; wr.getCell('A1').font = { bold: true, size: 14, color: { argb: NAVY } };
-  wr.getCell('A2').value = 'Generado el ' + new Date().toLocaleString('es-MX') + ' · ' + L.length + ' rechazos (' + histVigente().length + ' del histórico de Excel + ' + Object.keys(S.nc).length + ' de la aplicación)';
-  const tabla = (fila, col, titulo, cols, datos) => { const c0 = wr.getCell(fila, col); c0.value = titulo; c0.font = { bold: true, color: { argb: AZ } };
-    cols.forEach((h, i) => { const c = wr.getCell(fila + 1, col + i); c.value = h; cab(c); });
-    datos.forEach((d, j) => d.forEach((v, i) => { const c = wr.getCell(fila + 2 + j, col + i); c.value = v; c.border = borde; })); return fila + 3 + datos.length; };
-  const porMes = {}; L.forEach(r => { if (!r.fecha) return; const k = r.fecha.slice(0, 7); porMes[k] = porMes[k] || [0, 0]; porMes[k][0]++; porMes[k][1] += piezasRech(r); });
-  let f1 = tabla(4, 1, 'Por mes', ['MES', 'NC', 'PIEZAS'], Object.keys(porMes).sort().map(k => [k, porMes[k][0], porMes[k][1]]));
-  tabla(f1 + 1, 1, 'Defectos más repetidos (top 20)', ['DEFECTO', 'NC'], contar(L, r => r.defecto).slice(0, 20).map(e => [e.l, e.n]));
-  const pa = contar(L, r => r.areaGenero, piezasRech), na = contar(L, r => r.areaGenero);
-  let f2 = tabla(4, 5, 'Por área que generó', ['ÁREA', 'NC', 'PIEZAS'], na.map(e => [e.l, e.n, (pa.find(x => x.k === e.k) || { n: 0 }).n]));
-  tabla(f2 + 1, 5, 'Por máquina (reportes de la aplicación)', ['MÁQUINA', 'NC'], contar(L, r => r.maquina).map(e => [e.l, e.n]));
-
-  // 4) ELIMINADOS (registro)
-  const we = wb.addWorksheet('ELIMINADOS', { views: [{ state: 'frozen', ySplit: 1 }] });
+  const we = wb.addWorksheet('ELIMINADOS', { properties: { tabColor: { argb: 'FF808080' } }, views: [{ state: 'frozen', ySplit: 1, showGridLines: false }] });
   we.columns = [{ header: 'ELIMINADO EL', width: 19 }, { header: 'N°', width: 8 }, { header: 'FECHA DEL RECHAZO', width: 12 }, { header: 'ÁREA', width: 20 }, { header: 'DEFECTO', width: 38 }, { header: 'MOTIVO', width: 18 }, { header: 'DETALLE', width: 34 }, { header: 'ELIMINÓ', width: 24 }, { header: 'ORIGEN', width: 11 }, { header: 'RESTAURADO', width: 19 }];
-  we.getRow(1).eachCell(cab);
-  Object.values(S.elim).sort((a, b) => (a.t || '').localeCompare(b.t || '')).forEach(e => { const dd = e.datos || {};
+  we.getRow(1).eachCell(cab); we.getRow(1).height = 26;
+  Object.values(S.elim).filter(e => ((e.datos || {}).fecha || e.t || '').startsWith(A)).sort((x, y) => (x.t || '').localeCompare(y.t || '')).forEach(e => { const dd = e.datos || {};
     const row = we.addRow([new Date(e.t), e.no, dd.fecha ? aFecha(dd.fecha) : '', dd.areaGenero || '', dd.defecto || '', e.motivo, e.detalle || '', (e.porN || '') + ' (' + e.por + ')', e.origen === 'historico' ? 'Histórico' : 'Aplicación', e.restaurado ? new Date(e.restaurado) : '']);
-    row.getCell(1).numFmt = 'dd/mm/yyyy hh:mm'; row.getCell(3).numFmt = 'dd/mm/yyyy'; row.getCell(10).numFmt = 'dd/mm/yyyy hh:mm'; row.eachCell(c => { c.border = borde; c.alignment = { vertical: 'top', wrapText: true }; }); });
+    row.getCell(1).numFmt = 'dd/mm/yyyy hh:mm'; row.getCell(3).numFmt = 'dd/mm/yyyy'; row.getCell(10).numFmt = 'dd/mm/yyyy hh:mm'; row.eachCell(cc => { cc.border = borde; cc.alignment = { vertical: 'top', wrapText: true }; }); });
 
   const buf = await wb.xlsx.writeBuffer();
-  descargarBlob(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), 'Concentrado Rechazos F-CAL-08 ' + hoyISO() + '.xlsx');
-  toast('Excel listo', 'Se descargó el concentrado actualizado con ' + L.length + ' rechazos.');
+  return new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
 }
 
 // ====================== PDF para dirección ======================
