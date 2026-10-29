@@ -122,6 +122,10 @@ details.grupo .in{padding:10px 14px 14px}
 @media (prefers-reduced-motion:reduce){.etapa.on::before{animation:none}.etapa,.etapa svg,.compo i{transition:none}}
 .resalta{animation:resalta 1.6s ease}
 @keyframes resalta{0%,100%{box-shadow:var(--sombra)}30%{box-shadow:0 0 0 4px var(--oro)}}
+#nomina{position:fixed;inset:0;z-index:100;background:linear-gradient(140deg,#163F29,#1E5B3A 55%,#2E7D4F);display:grid;place-items:center;padding:16px}
+#nomina .card{width:min(400px,100%);text-align:center;padding:26px}#nomina svg{width:110px;height:88px}
+#nomina input{font-size:26px;text-align:center;letter-spacing:.12em;width:100%}
+#li-cuenta{display:none!important}
 footer{margin-top:28px;text-align:center;color:var(--muted);font-size:12.5px}
 </style>
 <link rel="manifest" href="manifest.json"><meta name="theme-color" content="#1E5B3A"><link rel="icon" href="icono-192.png"><link rel="apple-touch-icon" href="icono-192.png">
@@ -225,8 +229,8 @@ const catDe = k => CATS[k] || CATS.otro;
 // ===================== estado (vive en Firebase: apps/cajachica/) =====================
 // Colecciones: facturas, entregas, solicitudes (vales), deudas, conteos, eliminados, accesos · config/ajustes · config/personal
 const COLS = ['facturas', 'entregas', 'solicitudes', 'deudas', 'conteos', 'eliminados'];
-const AJUSTES = ['fondo', 'responsable', 'diasEntrega', 'diasCheque', 'alertaPct'];
-const VACIO = () => ({ fondo: 9000, responsable: 'AMÍLCAR OMAR ANDRACA HERRERA', diasEntrega: 7, diasCheque: 7, alertaPct: 30, usuarios: {}, facturas: [], entregas: [], solicitudes: [], deudas: [], conteos: [], eliminados: [] });
+const AJUSTES = ['fondo', 'responsable', 'diasEntrega', 'diasCheque', 'alertaPct', 'pin'];
+const VACIO = () => ({ fondo: 9000, responsable: 'AMÍLCAR OMAR ANDRACA HERRERA', diasEntrega: 7, diasCheque: 7, alertaPct: 30, pin: '', usuarios: {}, facturas: [], entregas: [], solicitudes: [], deudas: [], conteos: [], eliminados: [] });
 let D = VACIO(), DB = null, YO = null, tab = 'principal', carpeta = null, errorArch = '';
 const listo = {}, ULT = {}; COLS.forEach(c => ULT[c] = {}); let ULT_AJ = '', ULT_US = '';
 // texto canónico (llaves ordenadas) para saber si un registro cambió
@@ -235,21 +239,45 @@ const limpio = o => JSON.parse(JSON.stringify(o));
 
 async function conectar() {
   DB = await window.claude.use('db'); if (!DB) return;
-  const nom = window.LI.nomina();
   DB.doc('config/personal').onSnapshot(s => {
-    const p = (s.data() || {}).p || {}, u = p[nom];
-    D.usuarios = p; ULT_US = canon(p);
-    YO = u ? { nom, n: u.n, rol: u.r === 'admin' || u.r === 'general' ? 'admin' : 'consulta', general: u.r === 'general', cargar: !!u.cargar, eliminar: !!u.eliminar } : null;
+    const p = (s.data() || {}).p || {};
+    D.usuarios = p; ULT_US = canon(p); identificar();
     listo.per = true; refrescar();
   });
   DB.doc('config/ajustes').onSnapshot(s => { const a = s.data() || {}; AJUSTES.forEach(k => { if (a[k] != null) D[k] = a[k]; }); ULT_AJ = canon(AJUSTES.map(k => D[k])); listo.aj = true; refrescar(); }, () => { listo.aj = true; refrescar(); });
   COLS.forEach(c => DB.collection(c).onSnapshot(q => {
     D[c] = q.docs.map(d => Object.assign({}, d.data(), { id: d.id })).sort((a, b) => c === 'entregas' ? a.n - b.n : String(a.fecha || a.t || '').localeCompare(String(b.fecha || b.t || '')) || a.id.localeCompare(b.id)); ULT[c] = {}; D[c].forEach(x => ULT[c][x.id] = canon(x)); listo[c] = true; refrescar();
   }, () => { listo[c] = true; refrescar(); }));
-  registrarAcceso(nom);
+}
+// quién usa la app: se entra solo con la nómina (la sesión de Firebase del equipo se hace una sola vez con contraseña)
+function identificar() {
+  let nom = ''; try { nom = sessionStorage.getItem('cc_nom') || ''; } catch (e) {}
+  const u = nom && D.usuarios[nom];
+  YO = u && u.a !== false ? { nom, n: u.n, rol: u.r === 'admin' || u.r === 'general' ? 'admin' : 'consulta', general: u.r === 'general', cargar: !!u.cargar, eliminar: !!u.eliminar } : null;
+}
+function pantallaNomina(msg) {
+  let d = $('#nomina');
+  if (!d) {
+    d = document.createElement('div'); d.id = 'nomina';
+    d.innerHTML = '<div class="card">' + ILU.caja + '<h2 style="justify-content:center;margin:6px 0 2px">Caja Chica · Mantenimiento</h2><p class="muted small" style="margin:0 0 16px">Línea Italia. Entra con tu número de nómina.</p>' +
+      '<form autocomplete="off" style="display:grid;gap:10px"><input name="n" inputmode="numeric" placeholder="Nómina" required><input name="p" type="password" placeholder="Clave de administrador" hidden style="font-size:18px;letter-spacing:normal">' +
+      '<p class="msg e" style="margin:0"></p><button class="btn pri" type="submit" style="justify-content:center;font-size:17px;padding:12px">Entrar</button></form></div>';
+    document.body.appendChild(d);
+    const F = $('form', d);
+    F.n.oninput = () => { const u = D.usuarios[F.n.value.trim()]; F.p.hidden = !(u && (u.r === 'admin' || u.r === 'general') && D.pin); };
+    F.onsubmit = e => {
+      e.preventDefault(); const n = F.n.value.trim(), u = D.usuarios[n], m = $('.msg', d);
+      if (!u || u.a === false) { m.textContent = 'La nómina ' + n + ' no tiene acceso a la caja chica.'; F.n.select(); return; }
+      if ((u.r === 'admin' || u.r === 'general') && D.pin && F.p.value !== D.pin) { m.textContent = 'Clave de administrador incorrecta.'; return; }
+      try { sessionStorage.setItem('cc_nom', n); } catch (x) {}
+      identificar(); registrarAcceso(n); d.remove(); pintar(); revisarViernes();
+    };
+  }
+  if (msg) $('.msg', d).textContent = msg;
+  setTimeout(() => { const i = $('input[name=n]', d); if (i) i.focus(); }, 50);
 }
 let tR;
-function refrescar() { clearTimeout(tR); tR = setTimeout(() => { if (listo.per && COLS.every(c => listo[c])) { pintar(); revisarViernes(); } }, 60); }
+function refrescar() { clearTimeout(tR); tR = setTimeout(() => { if (!(listo.per && COLS.every(c => listo[c]))) return; if (!YO) return pantallaNomina(); pintar(); revisarViernes(); }, 60); }
 
 // guardar = mandar a Firebase solo lo que cambió (así varios pueden capturar a la vez sin pisarse)
 let enviando = Promise.resolve();
@@ -275,7 +303,7 @@ async function sincronizar() {
 function equipo() { const u = navigator.userAgent; return /Android/i.test(u) ? 'Android' : /iPhone|iPad/i.test(u) ? 'iPhone/iPad' : /Windows/i.test(u) ? 'PC Windows' : /Mac/i.test(u) ? 'Mac' : 'Otro'; }
 function registrarAcceso(nom) {
   if (sessionStorage.getItem('cc_acc') === nom) return; sessionStorage.setItem('cc_acc', nom);
-  DB.collection('accesos').add({ t: new Date().toISOString(), nom, n: (window.LI_PERSONAL_INICIAL[nom] || {}).n || '', eq: equipo() }).catch(() => {});
+  DB.collection('accesos').add({ t: new Date().toISOString(), nom, n: (D.usuarios[nom] || {}).n || '', eq: equipo(), cuenta: window.LI.nomina() }).catch(() => {});
 }
 async function leerAccesos() { try { const q = await DB.collection('accesos').orderBy('t', 'desc').limit(300).get(); return q.docs.map(d => d.data()); } catch (e) { return []; } }
 
@@ -376,7 +404,7 @@ function pintar() {
 function pintarEstado() {
   $('#hoy').textContent = '📅 ' + new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   $('#quien').textContent = (esAdmin() ? '🔑 ' : '👤 ') + YO.n.split(' ')[0] + ' · ' + YO.nom + ' · Salir';
-  $('#quien').onclick = () => window.LI.salir();
+  $('#quien').onclick = () => { try { sessionStorage.removeItem('cc_nom'); } catch (e) {} YO = null; pantallaNomina(); };
   const b = $('#estadoArch');
   b.hidden = !esAdmin();
   if (esAdmin()) {
@@ -776,7 +804,7 @@ async function pConfig() {
   const P = D.usuarios, filas = Object.entries(P).sort((a, b) => (a[1].n || '').localeCompare(b[1].n || ''));
   const elim = [...D.eliminados].sort((a, b) => String(b.t).localeCompare(String(a.t)));
   $('#t-config').innerHTML = '<div class="card solo-admin" style="margin-bottom:16px"><h2>👥 Perfiles y permisos</h2>' +
-    '<p class="small muted" style="margin-top:0">Todos entran con su <b>nómina y contraseña</b> (la misma de Control de Paros). <b>Consulta</b>: ve principal, historial, gráficas y quién debe. Márcale <b>Agregar facturas</b> para que le aparezca el botón "➕ Registrar factura" (y pueda corregirlas), y <b>Eliminar facturas</b> para que pueda borrarlas (siempre con motivo). Con el <b>Perfil</b> puedes hacer <b>Administrador</b> a quien quieras: tendrá todo, incluida esta Configuración.</p>' +
+    '<p class="small muted" style="margin-top:0">Todos entran <b>solo con su nómina</b>. La primera vez en cada PC, un administrador entra una sola vez con nómina y contraseña de Paros para dejar abierta la sesión del equipo. <b>Consulta</b>: ve principal, historial, gráficas y quién debe. Márcale <b>Agregar facturas</b> para que le aparezca el botón "➕ Registrar factura" (y pueda corregirlas), y <b>Eliminar facturas</b> para que pueda borrarlas (siempre con motivo). Con el <b>Perfil</b> puedes hacer <b>Administrador</b> a quien quieras: tendrá todo, incluida esta Configuración.</p>' +
     '<div class="tw"><table><thead><tr><th>Nómina</th><th>Nombre</th><th>Perfil</th><th>➕ Agregar facturas</th><th>Eliminar facturas</th><th>Activo</th><th>Acciones</th></tr></thead><tbody>' +
     filas.map(([k, u]) => { const yo = k === YO.nom, adm = u.r === 'admin' || u.r === 'general';
       return '<tr data-k="' + esc(k) + '"><td>' + esc(k) + '</td><td><input data-x="n" value="' + esc(u.n) + '" style="min-width:220px;padding:6px 8px;font-size:14px"></td>' +
@@ -795,9 +823,10 @@ async function pConfig() {
     '<label class="f">Fondo total de caja chica ($)<input name="fo" type="number" step="0.01" value="' + D.fondo + '"></label><label class="f">Responsable<input name="re" value="' + esc(D.responsable) + '"></label>' +
     '<label class="f">Avisar entregar facturas a los … días<input name="de" type="number" min="1" value="' + D.diasEntrega + '"></label><label class="f">Avisar si el cheque tarda más de … días<input name="dc" type="number" min="1" value="' + D.diasCheque + '"></label>' +
     '<label class="f">Avisar si en caja queda menos del (%)<input name="ap" type="number" min="5" max="90" value="' + D.alertaPct + '"></label>' +
+    '<label class="f">Clave de administrador (opcional)<input name="pin" type="password" value="' + esc(D.pin || '') + '" placeholder="Vacío = solo nómina" autocomplete="new-password"></label>' +
     '<div class="full row"><button class="btn pri" type="submit">Guardar</button></div></form></div>' +
     '<div class="card solo-admin"><h2>🗂️ Excel, PDF y respaldo</h2><p class="small">El Excel concentrado se actualiza <b>los viernes</b>. ' + (carpeta ? '✔ En esta PC se guarda en la carpeta <b>' + esc(carpeta.name) + '</b>.' : 'Elige la carpeta <b>CAJA CHICA</b> para que el Excel y los PDF se guarden ahí (si no, se descargan).') + '</p>' +
-      '<div class="row"><button class="btn" id="jCar" type="button">📂 Elegir carpeta CAJA CHICA</button><button class="btn" id="jXls" type="button">📗 Actualizar Excel ahora</button><button class="btn" id="jRes" type="button">⬇ Descargar respaldo</button><label class="btn" style="cursor:pointer">📥 Importar respaldo<input type="file" id="jImp" accept=".json,application/json" hidden></label></div></div></div>' +
+      '<div class="row"><button class="btn" id="jCar" type="button">📂 Elegir carpeta CAJA CHICA</button><button class="btn" id="jXls" type="button">📗 Actualizar Excel ahora</button><button class="btn" id="jRes" type="button">⬇ Descargar respaldo</button><button class="btn rojo" id="jOut" type="button">🔒 Cerrar la sesión de este equipo</button><label class="btn" style="cursor:pointer">📥 Importar respaldo<input type="file" id="jImp" accept=".json,application/json" hidden></label></div></div></div>' +
     '<div class="pila"><div class="card solo-admin"><h2>🗑 Historial de eliminación <span class="tag r">🔒 solo tú</span></h2>' +
       (elim.length ? '<div class="tw" style="max-height:420px;overflow:auto"><table><thead><tr><th>Cuándo</th><th>Quién</th><th>Factura</th><th>Motivo</th><th></th></tr></thead><tbody>' +
         elim.map(e => { const d = new Date(e.t), f = e.datos || {}; return '<tr' + (e.restaurado ? ' style="opacity:.55"' : '') + '><td style="white-space:nowrap">' + d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' }) + ' ' + d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) + '</td><td>' + esc(e.porN || e.por) + '</td>' +
@@ -828,8 +857,9 @@ async function pConfig() {
     } catch (x) { m.className = 'msg e'; m.textContent = x.message || x; }
   };
   // datos de la caja
-  $('#fJ').onsubmit = e => { e.preventDefault(); const F = e.target; D.fondo = r2(F.fo.value) || D.fondo; D.responsable = F.re.value.trim(); D.diasEntrega = Number(F.de.value) || 7; D.diasCheque = Number(F.dc.value) || 7; D.alertaPct = Number(F.ap.value) || 30; guardar(); toast('✔ Datos de la caja guardados'); };
+  $('#fJ').onsubmit = e => { e.preventDefault(); const F = e.target; D.fondo = r2(F.fo.value) || D.fondo; D.responsable = F.re.value.trim(); D.diasEntrega = Number(F.de.value) || 7; D.diasCheque = Number(F.dc.value) || 7; D.alertaPct = Number(F.ap.value) || 30; D.pin = F.pin.value; guardar(); toast('✔ Datos de la caja guardados'); };
   $('#jCar').onclick = elegirCarpeta;
+  $('#jOut').onclick = () => { if (confirm('Este equipo ya no podrá entrar con solo la nómina hasta que alguien vuelva a entrar con nómina y contraseña. ¿Cerrar la sesión?')) { try { sessionStorage.removeItem('cc_nom'); } catch (e) {} window.LI.salir(); } };
   $('#jXls').onclick = async () => { if (soporta) await pedirPermiso(); actualizarExcel(true); };
   $('#jRes').onclick = () => { const x = {}; ['fondo', 'responsable', 'diasEntrega', 'diasCheque', 'alertaPct'].concat(COLS).forEach(k => x[k] = D[k]); const b = new Blob([JSON.stringify(x, null, 1)], { type: 'application/json' }); if (carpeta) escribirArchivo('caja-chica-respaldo-' + hoyISO() + '.json', b).then(() => toast('Respaldo guardado en CAJA CHICA')).catch(() => descargar(b, 'caja-chica-respaldo-' + hoyISO() + '.json')); else descargar(b, 'caja-chica-respaldo-' + hoyISO() + '.json'); };
   $('#jImp').onchange = async e => { const f = e.target.files[0]; if (!f) return; if (!confirm('Importar reemplaza las facturas, entregas, vales y adeudos actuales por los del archivo. ¿Continuar?')) return; try { importar(JSON.parse(await f.text())); toast('✔ Respaldo importado'); } catch (x) { toast('No se pudo leer: ' + x.message); } };
