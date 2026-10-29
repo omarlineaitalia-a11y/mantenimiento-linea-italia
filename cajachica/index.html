@@ -776,8 +776,8 @@ async function pConfig() {
   const P = D.usuarios, filas = Object.entries(P).sort((a, b) => (a[1].n || '').localeCompare(b[1].n || ''));
   const elim = [...D.eliminados].sort((a, b) => String(b.t).localeCompare(String(a.t)));
   $('#t-config').innerHTML = '<div class="card solo-admin" style="margin-bottom:16px"><h2>👥 Perfiles y permisos</h2>' +
-    '<p class="small muted" style="margin-top:0">Todos entran con su <b>nómina y contraseña</b> (la misma de Control de Paros). <b>Consulta</b>: ve principal, historial, gráficas y quién debe. Márcale <b>Cargar facturas</b> para que registre y corrija facturas, y <b>Eliminar facturas</b> para que pueda borrarlas (siempre con motivo). El <b>administrador</b> tiene todo.</p>' +
-    '<div class="tw"><table><thead><tr><th>Nómina</th><th>Nombre</th><th>Perfil</th><th>Cargar facturas</th><th>Eliminar facturas</th><th>Activo</th><th>Acciones</th></tr></thead><tbody>' +
+    '<p class="small muted" style="margin-top:0">Todos entran con su <b>nómina y contraseña</b> (la misma de Control de Paros). <b>Consulta</b>: ve principal, historial, gráficas y quién debe. Márcale <b>Agregar facturas</b> para que le aparezca el botón "➕ Registrar factura" (y pueda corregirlas), y <b>Eliminar facturas</b> para que pueda borrarlas (siempre con motivo). Con el <b>Perfil</b> puedes hacer <b>Administrador</b> a quien quieras: tendrá todo, incluida esta Configuración.</p>' +
+    '<div class="tw"><table><thead><tr><th>Nómina</th><th>Nombre</th><th>Perfil</th><th>➕ Agregar facturas</th><th>Eliminar facturas</th><th>Activo</th><th>Acciones</th></tr></thead><tbody>' +
     filas.map(([k, u]) => { const yo = k === YO.nom, adm = u.r === 'admin' || u.r === 'general';
       return '<tr data-k="' + esc(k) + '"><td>' + esc(k) + '</td><td><input data-x="n" value="' + esc(u.n) + '" style="min-width:220px;padding:6px 8px;font-size:14px"></td>' +
         '<td>' + (u.r === 'general' ? '<span class="tag v">🔑 Administrador general</span>' : '<select data-x="r"' + (yo ? ' disabled' : '') + '><option value="usuario"' + (u.r === 'usuario' ? ' selected' : '') + '>👁 Consulta</option><option value="admin"' + (u.r === 'admin' ? ' selected' : '') + '>🔑 Administrador</option></select>') + '</td>' +
@@ -788,7 +788,7 @@ async function pConfig() {
     '</tbody></table></div><div class="row" style="margin-top:10px"><button class="btn pri" id="uGuardar" type="button">💾 Guardar permisos</button><span class="msg" id="uMsg"></span></div>' +
     '<h3>➕ Dar acceso a otra persona</h3><form id="fU" class="form"><label class="f">Nómina<input name="n" inputmode="numeric" required></label><label class="f">Nombre completo<input name="m" required></label>' +
     '<label class="f">Perfil<select name="r"><option value="usuario">👁 Consulta</option><option value="admin">🔑 Administrador</option></select></label><label class="f">Contraseña inicial (si no tiene cuenta)<input name="p" type="text" value="000000" autocomplete="off"></label>' +
-    '<label class="row small"><input type="checkbox" name="c" style="width:20px;height:20px"> Cargar facturas</label><label class="row small"><input type="checkbox" name="e" style="width:20px;height:20px"> Eliminar facturas</label>' +
+    '<label class="row small"><input type="checkbox" name="c" style="width:20px;height:20px"> ➕ Agregar facturas</label><label class="row small"><input type="checkbox" name="e" style="width:20px;height:20px"> Eliminar facturas</label>' +
     '<div class="full row"><button class="btn pri" type="submit">Dar acceso</button><span class="msg" id="fUMsg"></span></div></form></div>' +
 
     '<div class="cols"><div class="pila"><div class="card solo-admin"><h2>⚙ Datos de la caja</h2><form id="fJ" class="form">' +
