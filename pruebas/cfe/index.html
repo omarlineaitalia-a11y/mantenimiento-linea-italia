@@ -62,6 +62,17 @@ tr.tot td{font-weight:800;border-top:2px solid var(--ink)}
 .halo{animation:halo 2.2s ease-in-out infinite;transform-origin:center}
 @keyframes halo{50%{opacity:.25}}
 .estado-lec{font-weight:700;border-radius:10px;padding:8px 10px;font-size:14px}
+/* captura guiada: una tarjeta por pantalla del medidor */
+.guia{display:grid;grid-template-columns:200px 1fr;gap:12px;align-items:center;background:#F6F8FB;border-radius:12px;padding:10px;font-size:14px}.guia .lcd{width:100%}
+@media (max-width:560px){.guia{grid-template-columns:1fr}}
+.pants{display:grid;gap:10px}
+.pant{display:grid;grid-template-columns:minmax(0,190px) minmax(0,1fr);gap:12px;align-items:center;border:2px solid var(--line);border-radius:14px;padding:8px;transition:background .3s,border-color .3s}
+.pant.obl{border-color:#F2B8B3;background:#FFF8F7}.pant.ok{border-color:var(--verde);background:var(--verde-s)}
+.pant .foto{position:relative}.pant img{width:100%;border-radius:8px;display:block}
+.pant .paso{position:absolute;top:-6px;left:-6px;width:26px;height:26px;border-radius:50%;background:var(--ambar);color:#14212E;font-weight:800;display:grid;place-items:center;font-size:13px}
+.pant .cod{flex:none;display:grid;place-items:center;min-width:52px;height:48px;padding:0 8px;border-radius:10px;background:var(--navy);color:#fff;font-weight:800;font-size:24px;font-family:Consolas,monospace}
+.pant .dato{display:grid;gap:6px}.pant input.medio{font-size:24px;font-weight:700;text-align:center;letter-spacing:.04em;padding:10px}
+@media (max-width:560px){.pant{grid-template-columns:1fr}}
 .barra{height:12px;border-radius:99px;background:#E6ECF2;overflow:hidden}.barra i{display:block;height:100%;border-radius:99px;transition:width 1s cubic-bezier(.2,.8,.2,1)}
 .kp{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kp div{background:#F6F8FB;border-radius:10px;padding:8px 10px}.kp b{display:block;font-size:18px}.kp span{font-size:12px;color:var(--muted)}
 /* captura */
@@ -205,10 +216,20 @@ function cambioTemporada(desde) { const d = aFecha(desde), a = d.getFullYear(); 
 
 // ===================== estado y datos (Firebase: apps/cfe/) =====================
 const COLS = ['lecturas', 'recibos', 'acciones', 'cargas'];
+// pantallas que se anotan, en el orden en que las muestra el medidor (sacadas de las fotos del 30-oct-2026).
+// Comprobación: en V366EB y GGH742, base + intermedia + punta = kWh total.
+const CAMPOS = {
+  lec: ['kWh TOTAL', 'La lectura de siempre. Obligatoria.'], kwhB: ['kWh BASE', 'Energía en horario base'], kwhI: ['kWh INTERMEDIA', 'Energía en horario intermedio'], kwhP: ['kWh PUNTA', 'Energía en horario punta'],
+  kvarh: ['kVArh', 'Energía reactiva: con ella sale el factor de potencia'], kwB: ['kW máx. BASE', 'Demanda máxima del mes en base (dice "Demand")'], kwI: ['kW máx. INTERMEDIA', 'Demanda máxima del mes en intermedio'], kwP: ['kW máx. PUNTA', 'Demanda máxima del mes en punta: es la que cobra capacidad'],
+  kwMax: ['kW máx.', 'Demanda máxima del mes (dice MAX kW)'], expB: ['kWh A CFE · BASE', 'Lo que los paneles entregan a CFE en base (domingos)'], expI: ['kWh A CFE · INTERMEDIA', 'Lo que los paneles entregan a CFE en intermedio']
+};
 const MED_DEF = [
-  { id: 'V366EB', nombre: 'Fuerza 220 V', kva: 300, volt: 220, tarifa: 'GDMTH', mult: 80, contratada: 180, conectada: 180, vuelta: 100000, corte: 31, bt: true, netmet: true, color: '#F5A623', servicio: '', multDem: 80, codigos: {} },
-  { id: 'GGH742', nombre: 'Fuerza 440 V', kva: 225, volt: 440, tarifa: 'GDMTH', mult: 80, contratada: 135, conectada: 135, vuelta: 100000, corte: 31, bt: true, netmet: false, color: '#1F6FD1', servicio: '', multDem: 80, codigos: { lec: '4', kvarh: '5', kwMax: '81' } },
-  { id: 'PT477E', nombre: 'Servicio 220 V', kva: 112.5, volt: 220, tarifa: 'GDMTO', mult: 1, contratada: 68, conectada: 68, vuelta: 100000, corte: 15, bt: true, netmet: false, color: '#1E8E5A', servicio: '', multDem: 1, codigos: {} }
+  { id: 'V366EB', nombre: 'Fuerza 220 V', kva: 300, volt: 220, tarifa: 'GDMTH', mult: 80, contratada: 180, conectada: 180, vuelta: 100000, corte: 31, bt: true, netmet: true, color: '#F5A623', servicio: '', multDem: 80, marca: 'Elster A3RL',
+    pantallas: [['expI', '102'], ['expB', '101'], ['kvarh', '5'], ['lec', '1'], ['kwP', '43'], ['kwhP', '13'], ['kwI', '42'], ['kwhI', '12'], ['kwB', '41'], ['kwhB', '11']] },
+  { id: 'GGH742', nombre: 'Fuerza 440 V', kva: 225, volt: 440, tarifa: 'GDMTH', mult: 80, contratada: 135, conectada: 135, vuelta: 100000, corte: 31, bt: true, netmet: false, color: '#1F6FD1', servicio: '', multDem: 80, marca: 'Wasion Libra3',
+    pantallas: [['kvarh', '5'], ['lec', '4'], ['kwP', '43'], ['kwhP', '13'], ['kwI', '42'], ['kwhI', '12'], ['kwB', '41'], ['kwhB', '11']] },
+  { id: 'PT477E', nombre: 'Servicio 220 V', kva: 112.5, volt: 220, tarifa: 'GDMTO', mult: 1, contratada: 68, conectada: 68, vuelta: 100000, corte: 15, bt: true, netmet: false, color: '#1E8E5A', servicio: '', multDem: 1, marca: 'Elster A3RAL',
+    pantallas: [['kvarh', '35'], ['kwMax', '6'], ['lec', '5']] }
 ];
 const AJ_DEF = { hora: '10:00', avisoMin: 30, retencionFotos: 35 };
 let D = { usuarios: {}, ajustes: Object.assign({}, AJ_DEF), medidores: JSON.parse(JSON.stringify(MED_DEF)), tarifas: {}, lecturas: [], recibos: [], acciones: [], cargas: [] };
@@ -336,14 +357,20 @@ function estimar(m, alDia) {
   const diasCub = Math.max(1, dias(ini.fecha, fin.fecha)), q = delta(m, ini.lec, fin.lec) * m.mult;
   const regs = ['kwhB', 'kwhI', 'kwhP'].every(k => ini[k] != null && fin[k] != null);
   let B, I, P; if (regs) { B = delta(m, ini.kwhB, fin.kwhB) * m.mult; I = delta(m, ini.kwhI, fin.kwhI) * m.mult; P = delta(m, ini.kwhP, fin.kwhP) * m.mult; } else { B = q * ref.pB; I = q * ref.pI; P = q * ref.pP; }
-  const exp = m.netmet && ini.kwhExp != null && fin.kwhExp != null ? delta(m, ini.kwhExp, fin.kwhExp) * m.mult : null;
+  // NETMET (paneles en V366EB): CFE cobra la energía neta de cada horario = consumida − entregada
+  const dExp = k => m.netmet && ini[k] != null && fin[k] != null ? delta(m, ini[k], fin[k]) * m.mult : null;
+  const eB = dExp('expB'), eI = dExp('expI'), exp = eB != null || eI != null ? (eB || 0) + (eI || 0) : null;
+  if (regs && exp != null) { B = Math.max(0, B - (eB || 0)); I = Math.max(0, I - (eI || 0)); }
   const kvarh = ini.kvarh != null && fin.kvarh != null ? delta(m, ini.kvarh, fin.kvarh) * m.mult : null;
   const fp = kvarh != null && q > 0 ? 100 * q / Math.sqrt(q * q + kvarh * kvarh) : ref.fp;
-  const dmax = fin.kwMax != null ? fin.kwMax * (m.multDem || 1) : ref.dmax, dpunta = fin.kwPunta != null ? fin.kwPunta * (m.multDem || 1) : ref.dpunta;
+  // demanda: los registros guardan la máxima del mes en curso (se reinician en el corte de CFE)
+  const md = m.multDem || 1, porPer = ['kwB', 'kwI', 'kwP'].filter(k => fin[k] != null);
+  const dmax = porPer.length ? Math.max(...porPer.map(k => fin[k])) * md : fin.kwMax != null ? fin.kwMax * md : ref.dmax;
+  const dpunta = fin.kwP != null ? fin.kwP * md : m.tarifa === 'GDMTO' && fin.kwMax != null ? fin.kwMax * md : ref.dpunta;
   const f = diasPer / diasCub;
   const proy = factura(m, t, { B: B * f, I: I * f, P: P * f, dias: diasPer, fp, dmax, dpunta, dapPct: ref.dapPct });
   const real = factura(m, tarifaPeriodo(m.tarifa, per.ini, fin.fecha > per.ini ? fin.fecha : sumaD(per.ini, 1)) || t, { B, I, P, dias: diasCub, fp, dmax, dpunta, dapPct: ref.dapPct });
-  return { per, ref, t, diasPer, diasCub, q, B, I, P, exp, fp, fpMedido: kvarh != null, regs, dmax, dpunta, demMedida: fin.kwMax != null, proy, real, kwhDia: q / diasCub, ultima: fin, primera: ini };
+  return { per, ref, t, diasPer, diasCub, q, B, I, P, exp, fp, fpMedido: kvarh != null, regs, dmax, dpunta, demMedida: porPer.length > 0 || fin.kwMax != null, proy, real, kwhDia: q / diasCub, ultima: fin, primera: ini };
 }
 // serie del pronóstico día a día del periodo (cómo va cambiando lo que vamos a pagar)
 function serieProno(m) {
@@ -429,47 +456,67 @@ function vLecturas() {
 function dlgLectura(m) {
   const s = hoyISO(), L = lecturasDe(m.id), hoyL = L.find(l => l.fecha === s), prev = [...L].reverse().find(l => l.fecha < s);
   const cd = consumoDiario(m).slice(-6), prom = cd.length ? cd.reduce((a, x) => a + x.kwh, 0) / cd.length : null;
-  const extra = [['kwhB', 'kWh base'], ['kwhI', 'kWh intermedia'], ['kwhP', 'kWh punta'], ['kwMax', 'kW demanda máxima'], ['kwPunta', 'kW demanda en punta'], ['kvarh', 'kVArh (reactivos)']].concat(m.netmet ? [['kwhExp', 'kWh entregados a CFE (paneles)']] : []);
+  const P = m.pantallas || [['lec', '']];
+  const tarjeta = ([k, cod], i) => { const c = CAMPOS[k] || [k, ''], v = hoyL && hoyL[k] != null ? hoyL[k] : '', ant = prev && prev[k] != null ? prev[k] : null;
+    return '<div class="pant' + (k === 'lec' ? ' obl' : '') + (v !== '' ? ' ok' : '') + '" data-p="' + k + '"><div class="foto"><img src="pantallas/' + m.id + '_' + cod + '.jpg" alt="Pantalla con el código ' + esc(cod) + '" onerror="this.remove()"><span class="paso">' + (i + 1) + '</span></div>' +
+      '<div class="dato"><div class="row" style="gap:10px;flex-wrap:nowrap"><span class="cod" title="Número chico de la izquierda">' + esc(cod) + '</span><div style="min-width:0"><b>' + c[0] + (k === 'lec' ? ' <span class="tag r">OBLIGATORIA</span>' : '') + '</b><div class="small muted">' + c[1] + '</div></div></div>' +
+      '<input ' + (k === 'lec' ? 'id="lLec" class="grande"' : 'class="medio"') + ' data-k="' + k + '" inputmode="decimal" placeholder="' + (ant != null ? 'antes ' + ant : 'número grande') + '" value="' + v + '"></div></div>'; };
   const mm = modal('📷 Lectura ' + m.id + ' · ' + m.kva + ' kVA', '<div class="lecbox">' +
-    '<div class="row" style="justify-content:space-between"><span class="tag i">' + esc(m.nombre) + ' · ×' + m.mult + '</span><span class="small muted">' + DIAS[aFecha(s).getDay()] + ' ' + fN(s) + ' · ' + new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) + '</span></div>' +
+    '<div class="row" style="justify-content:space-between"><span class="tag i">' + esc(m.nombre) + ' · ' + esc(m.marca || '') + ' · ×' + m.mult + '</span><span class="small muted">' + DIAS[aFecha(s).getDay()] + ' ' + fN(s) + ' · ' + new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) + '</span></div>' +
+    '<div class="guia">' + lcdGuia(m) + '<div><b>¿Cómo se lee?</b> El medidor cambia de pantalla solo cada 5 segundos. Fíjate en el <b>número chico de la izquierda</b> (el código) y anota el <b>número grande</b> en la casilla con ese mismo código. Van en el orden en que salen; las demás pantallas (fechas, horas) no se anotan.</div></div>' +
     (prev ? '<div class="small">Lectura anterior: <b>' + num(prev.lec, 1) + '</b> del ' + DIAS[aFecha(prev.fecha).getDay()] + ' ' + fN(prev.fecha) + ' (' + esc((prev.porN || '').split(' ')[0]) + ')</div>' : '<div class="small muted">Primera lectura de este medidor.</div>') +
-    '<label class="f"><span>Lectura del medidor: pantalla de kWh total' + ((m.codigos || {}).lec ? ' · <b style="color:var(--azul)">código ' + esc(m.codigos.lec) + '</b>' : '') + '</span><input class="grande" id="lLec" inputmode="decimal" placeholder="00000" value="' + (hoyL ? hoyL.lec : '') + '"></label>' +
+    '<div class="small" style="font-weight:700" id="lProg"></div>' +
+    '<div class="pants">' + P.map(tarjeta).join('') + '</div>' +
     '<div class="calc" id="lCalc">Escribe la lectura y te calculo el consumo.</div>' +
-    '<details' + (hoyL && extra.some(([k]) => hoyL[k] != null) ? ' open' : '') + '><summary style="cursor:pointer;font-weight:700">➕ Otras pantallas del medidor (para que el cálculo salga igual al recibo)</summary><div class="form" style="margin-top:8px">' +
-      extra.map(([k, t]) => '<label class="f"><span>' + t + ((m.codigos || {})[k] ? ' · <b style="color:var(--azul)">código ' + esc(m.codigos[k]) + '</b>' : '') + '</span><input data-k="' + k + '" inputmode="decimal" value="' + (hoyL && hoyL[k] != null ? hoyL[k] : '') + '"></label>').join('') + '</div>' +
-      '<p class="small muted">El medidor va cambiando de pantalla sola: anota cada valor con su código. Con base, intermedia, punta, demanda y kVArh, el recibo estimado sale exacto.</p></details>' +
-    '<div class="row"><label class="btn" style="cursor:pointer">📷 Foto del medidor (opcional)<input type="file" id="lFoto" accept="image/*" capture="environment" hidden></label><span class="small muted" id="lFotoMsg">' + (hoyL && hoyL.foto ? '📷 Ya tiene foto' : 'La foto es solo comprobante: se borra sola a los ' + D.ajustes.retencionFotos + ' días.') + '</span></div>' +
+    '<div class="row"><label class="btn" style="cursor:pointer">📷 Foto del medidor (opcional)<input type="file" id="lFoto" accept="image/*" capture="environment" hidden></label><span class="small muted" id="lFotoMsg">' + (hoyL && hoyL.foto ? '📷 Ya tiene foto' : 'Solo comprobante: se borra sola a los ' + D.ajustes.retencionFotos + ' días.') + '</span></div>' +
     '<label class="f">Nota (opcional)<input id="lNota" value="' + esc(hoyL ? hoyL.nota || '' : '') + '" placeholder="Ej. el medidor marca alarma"></label>' +
     '<p class="small" id="lMsg" style="margin:0;color:var(--rojo)"></p>' +
     '<div class="row"><button class="btn ok big" id="lOk" type="button">✅ Guardar lectura</button><button class="btn" type="button" data-x>Cancelar</button></div></div>');
   let foto = null;
-  const calc = () => { const v = $('#lLec', mm).value.replace(',', '.'), c = $('#lCalc', mm);
-    if (!v || isNaN(Number(v))) { c.innerHTML = 'Escribe la lectura y te calculo el consumo.'; return null; }
-    if (!prev) { c.innerHTML = 'Primera lectura: el consumo se calcula a partir de mañana.'; return { ok: true }; }
-    const d = delta(m, prev.lec, Number(v)), n = Math.max(1, dias(prev.fecha, s));
-    if (d == null || d < 0) { c.innerHTML = '⚠️ <b>La lectura es menor que la anterior (' + num(prev.lec, 1) + ').</b> Revisa el número.'; return { ok: false, motivo: 'menor' }; }
-    const kwh = d * m.mult, dia = kwh / n, raro = prom && (dia > prom * 2 || dia < prom * 0.5);
+  const val = k => { const i = $('[data-k="' + k + '"]', mm); if (!i) return null; const x = i.value.replace(',', '.').trim(); return x !== '' && !isNaN(Number(x)) ? Number(x) : null; };
+  const calc = () => {
+    $$('.pant', mm).forEach(p => p.classList.toggle('ok', val(p.dataset.p) != null));
+    const llenos = P.filter(([k]) => val(k) != null).length; $('#lProg', mm).textContent = 'Pantallas anotadas: ' + llenos + ' de ' + P.length + (llenos === P.length ? ' ✅ completa' : '');
+    const v = val('lec'), c = $('#lCalc', mm), avisos = [];
+    if (v == null) { c.innerHTML = 'Escribe la lectura de <b>kWh total</b> (casilla roja) y te calculo el consumo.'; return null; }
+    // comprobación: base + intermedia + punta = total
+    const b = val('kwhB'), i = val('kwhI'), p = val('kwhP');
+    if (b != null && i != null && p != null && Math.abs(b + i + p - v) > Math.max(1, v * 0.001)) avisos.push('⚠️ <b>Base + intermedia + punta (' + num(b + i + p, 1) + ') no da el total (' + num(v, 1) + ').</b> Revisa esos números.');
+    if (prev) P.forEach(([k]) => { const x = val(k); if (k !== 'lec' && !/^kw[BIPM]/.test(k) && x != null && prev[k] != null && x < prev[k] && delta(m, prev[k], x) < 0) avisos.push('⚠️ <b>' + CAMPOS[k][0] + ' quedó menor que ayer (' + prev[k] + ').</b>'); });
+    if (!prev) { c.innerHTML = 'Primera lectura: el consumo se calcula a partir de mañana.' + (avisos.length ? '<br>' + avisos.join('<br>') : ''); return { ok: true, raro: avisos.length > 0 }; }
+    const d = delta(m, prev.lec, v), n = Math.max(1, dias(prev.fecha, s));
+    if (d == null || d < 0) { c.innerHTML = '⚠️ <b>La lectura es menor que la anterior (' + num(prev.lec, 1) + ').</b> Revisa el número.'; return { ok: false }; }
+    const kwh = d * m.mult, dia = kwh / n; if (prom && (dia > prom * 2 || dia < prom * 0.5)) avisos.push('⚠️ <b>Es muy diferente al promedio.</b> Revísala antes de guardar.');
+    const kv = val('kvarh'); let fpTxt = '';
+    if (kv != null && prev.kvarh != null) { const dk = delta(m, prev.kvarh, kv); if (dk != null && d > 0) { const fp = 100 * d / Math.sqrt(d * d + dk * dk); fpTxt = '<br>Factor de potencia del día: <b style="color:' + (fp < 90 ? 'var(--rojo)' : 'var(--verde)') + '">' + num(fp, 1) + ' %</b>' + (fp < 90 ? ' (abajo de 90 %: CFE penaliza)' : ''); } }
     c.innerHTML = 'Consumo: ' + num(d, 1) + ' × ' + m.mult + ' = <b>' + num(kwh) + ' kWh</b>' + (n > 1 ? ' en ' + n + ' días (' + num(dia) + ' por día)' : '') +
-      (Number(v) < Number(prev.lec) ? ' <span class="tag i">dio la vuelta el contador</span>' : '') + (prom ? '<br><span class="small muted">Promedio de los últimos días: ' + num(prom) + ' kWh/día</span>' : '') +
-      (raro ? '<br>⚠️ <b>Es muy diferente al promedio.</b> Revísala antes de guardar.' : '');
-    return { ok: true, raro };
+      (v < Number(prev.lec) ? ' <span class="tag i">dio la vuelta el contador</span>' : '') + (prom ? '<br><span class="small muted">Promedio de los últimos días: ' + num(prom) + ' kWh/día</span>' : '') + fpTxt + (avisos.length ? '<br>' + avisos.join('<br>') : '');
+    return { ok: true, raro: avisos.length > 0 };
   };
-  $('#lLec', mm).oninput = calc; calc();
+  $$('[data-k]', mm).forEach(i => i.oninput = calc); calc();
   $('#lFoto', mm).onchange = async e => { const f = e.target.files[0]; if (!f) return; $('#lFotoMsg', mm).textContent = 'Reduciendo foto…'; foto = await reducir(f); $('#lFotoMsg', mm).textContent = '📷 Foto lista (' + Math.round(foto.length * 0.75 / 1024) + ' KB)'; };
   let confirmado = false;
   $('#lOk', mm).onclick = async () => {
-    const v = $('#lLec', mm).value.replace(',', '.'), r = calc();
-    if (!r) { $('#lMsg', mm).textContent = 'Escribe la lectura.'; return; }
-    if (r.ok === false) { $('#lMsg', mm).textContent = 'La lectura no puede ser menor que la anterior. Revísala.'; return; }
-    if (r.raro && !confirmado) { confirmado = true; $('#lMsg', mm).textContent = 'El consumo es muy distinto al de los otros días. Si estás seguro, vuelve a dar Guardar.'; return; }
+    const v = val('lec'), r = calc();
+    if (v == null) { $('#lMsg', mm).textContent = 'Falta la lectura de kWh total (casilla roja).'; $('#lLec', mm).focus(); return; }
+    if (r && r.ok === false) { $('#lMsg', mm).textContent = 'La lectura no puede ser menor que la anterior. Revísala.'; return; }
+    if (r && r.raro && !confirmado) { confirmado = true; $('#lMsg', mm).textContent = 'Hay datos que no cuadran (en amarillo arriba). Si estás seguro, vuelve a dar Guardar.'; return; }
     const o = hoyL || { id: s + '_' + m.id, med: m.id, fecha: s };
-    Object.assign(o, { lec: Number(v), hora: new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false }), por: YO.nom, porN: YO.n, t: new Date().toISOString(), nota: $('#lNota', mm).value.trim() });
-    $$('[data-k]', mm).forEach(i => { const x = i.value.replace(',', '.'); if (x !== '' && !isNaN(Number(x))) o[i.dataset.k] = Number(x); else delete o[i.dataset.k]; });
+    Object.assign(o, { lec: v, hora: new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false }), por: YO.nom, porN: YO.n, t: new Date().toISOString(), nota: $('#lNota', mm).value.trim() });
+    P.forEach(([k]) => { if (k === 'lec') return; const x = val(k); if (x != null) o[k] = x; else delete o[k]; });
     if (foto) { const fid = 'f' + s.replace(/-/g, '') + m.id; o.foto = fid; DB.doc('fotos/' + fid).set({ d: foto, fecha: s, med: m.id }).catch(() => {}); }
     if (!hoyL) D.lecturas.push(o);
     mm.remove(); guardar(); toast('✅ Lectura de ' + m.id + ' guardada' + (pendientesHoy().length ? '. Faltan: ' + pendientesHoy().map(x => x.id).join(', ') : '. ¡Listas las tres!'));
   };
   setTimeout(() => $('#lLec', mm).focus(), 60);
+}
+// dibujo de la pantalla del medidor señalando dónde está el código y dónde el número
+function lcdGuia(m) {
+  const cod = ((m.pantallas || []).find(p => p[0] === 'lec') || [])[1] || '?';
+  return '<svg viewBox="0 0 240 92" class="lcd" aria-hidden="true"><rect x="2" y="2" width="236" height="62" rx="8" fill="#C9D3B4" stroke="#55604A" stroke-width="3"/>' +
+    '<text x="22" y="40" font-size="20" font-family="Consolas,monospace" fill="#2A3122">' + esc(cod) + '</text><text x="90" y="46" font-size="34" font-weight="700" font-family="Consolas,monospace" fill="#2A3122">58529</text>' +
+    '<rect x="12" y="14" width="40" height="34" rx="6" fill="none" stroke="#C62828" stroke-width="3" class="halo"/><rect x="84" y="12" width="146" height="42" rx="6" fill="none" stroke="#1F6FD1" stroke-width="3"/>' +
+    '<text x="32" y="84" text-anchor="middle" font-size="11" font-weight="700" fill="#C62828">CÓDIGO</text><text x="157" y="84" text-anchor="middle" font-size="11" font-weight="700" fill="#1F6FD1">NÚMERO QUE SE ANOTA</text></svg>';
 }
 // foto reducida a ~60 KB (comprobante, no se guarda la original)
 function reducir(file) { return new Promise((ok, mal) => { const img = new Image(), u = URL.createObjectURL(file); img.onload = () => { const k = Math.min(1, 900 / Math.max(img.width, img.height)), c = document.createElement('canvas'); c.width = img.width * k; c.height = img.height * k; c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(u); ok(c.toDataURL('image/jpeg', 0.55)); }; img.onerror = mal; img.src = u; }); }
@@ -643,16 +690,16 @@ function vConfig() {
       '<form id="cHora" class="form"><label class="f">Hora fija<input name="h" type="time" value="' + D.ajustes.hora + '"></label><label class="f">Avisar antes (min)<input name="a" type="number" value="' + D.ajustes.avisoMin + '"></label><label class="f">Borrar fotos después de (días)<input name="f" type="number" value="' + D.ajustes.retencionFotos + '"></label><div class="row" style="align-items:flex-end"><button class="btn pri" type="submit">Guardar</button></div></form>' +
       '<h3>📥 Datos iniciales</h3><p class="small muted">Carga el archivo <b>cfe-datos-iniciales.json</b> (historial de recibos, servicios y lecturas). Se hace una vez.</p><label class="btn" style="cursor:pointer">📥 Importar<input type="file" id="cImp" accept=".json" hidden></label> <button class="btn" id="cXls" type="button">📗 Excel concentrado</button></div></div>' +
     '<div class="card" style="margin-top:16px"><h2>🔌 Medidores y transformadores</h2><div class="tw"><table><thead><tr><th>Medidor</th><th>Servicio</th><th>Tarifa</th><th>kVA</th><th>Mult.</th><th>Contratada kW</th><th>Día de corte</th><th>Vuelta del contador</th><th>2 % BT</th><th>NETMET</th><th>Códigos de pantalla</th></tr></thead><tbody>' +
-      D.medidores.map(m => '<tr data-m="' + m.id + '"><td><b style="color:' + m.color + '">' + m.id + '</b></td><td><input data-y="servicio" value="' + esc(m.servicio) + '" style="width:130px"></td><td>' + m.tarifa + '</td><td><input data-y="kva" type="number" step="any" value="' + m.kva + '" style="width:80px"></td><td><input data-y="mult" type="number" value="' + m.mult + '" style="width:70px"></td><td><input data-y="contratada" type="number" value="' + m.contratada + '" style="width:80px"></td><td><input data-y="corte" type="number" min="1" max="31" value="' + m.corte + '" style="width:70px"></td><td><input data-y="vuelta" type="number" value="' + m.vuelta + '" style="width:100px"></td><td><input type="checkbox" data-y="bt"' + (m.bt ? ' checked' : '') + '></td><td><input type="checkbox" data-y="netmet"' + (m.netmet ? ' checked' : '') + '></td><td><input data-y="codigos" value="' + esc(Object.entries(m.codigos || {}).map(([k, v]) => k + '=' + v).join(', ')) + '" placeholder="lec=4, kvarh=5, kwMax=81" style="width:210px"></td></tr>').join('') +
+      D.medidores.map(m => '<tr data-m="' + m.id + '"><td><b style="color:' + m.color + '">' + m.id + '</b></td><td><input data-y="servicio" value="' + esc(m.servicio) + '" style="width:130px"></td><td>' + m.tarifa + '</td><td><input data-y="kva" type="number" step="any" value="' + m.kva + '" style="width:80px"></td><td><input data-y="mult" type="number" value="' + m.mult + '" style="width:70px"></td><td><input data-y="contratada" type="number" value="' + m.contratada + '" style="width:80px"></td><td><input data-y="corte" type="number" min="1" max="31" value="' + m.corte + '" style="width:70px"></td><td><input data-y="vuelta" type="number" value="' + m.vuelta + '" style="width:100px"></td><td><input type="checkbox" data-y="bt"' + (m.bt ? ' checked' : '') + '></td><td><input type="checkbox" data-y="netmet"' + (m.netmet ? ' checked' : '') + '></td><td><input data-y="pantallas" value="' + esc((m.pantallas || []).map(([k, v]) => k + '=' + v).join(', ')) + '" placeholder="kvarh=5, lec=4, kwP=43" style="width:300px"></td></tr>').join('') +
     '</tbody></table></div><div class="row" style="margin-top:8px"><button class="btn pri" id="cGM" type="button">Guardar medidores</button></div>' +
-    '<p class="small muted"><b>Códigos de pantalla</b>: el número chico que sale a la izquierda en el medidor. Campos: lec (kWh total), kvarh, kwMax, kwPunta, kwhB, kwhI, kwhP, kwhExp. Los de GGH742 salen de las fotos (4 = kWh, 5 = kVArh, 81 = demanda); faltan confirmar los de V366EB y PT477E (Elster A3).<br>Los <b>paneles solares</b> (inversores Solis 30 kW y Growatt 30 kW, 220 V, en la subestación) están en <b>V366EB</b>: es el único recibo con la leyenda NETMET (desde ago-2024).</p></div>' +
+    '<p class="small muted"><b>Pantallas</b> (en el orden en que salen): campo=código. Campos: lec (kWh total), kwhB, kwhI, kwhP, kvarh, kwB, kwI, kwP (demanda máx. por horario), kwMax, expB, expI (paneles a CFE). Salen de las fotos del 30-oct-2026; comprobado que base + intermedia + punta = total.<br>Los <b>paneles solares</b> (inversores Solis 30 kW y Growatt 30 kW, 220 V, en la subestación) están en <b>V366EB</b>: es el único recibo con la leyenda NETMET (desde ago-2024).</p></div>' +
     '<div class="card" style="margin-top:16px"><div class="row" style="justify-content:space-between"><h2 style="margin:0">💲 Tarifas CFE · división Bajío</h2><button class="btn pri" id="cTN" type="button">➕ Agregar mes</button></div><p class="small muted">Vienen de app.cfe.mx (Tarifas · Industria · GDMTH/GDMTO · Aguascalientes · Bajío). Cada mes CFE publica las nuevas: agrégalas aquí o pídeselas al Inge Virtual.</p><div class="tw" style="max-height:320px;overflow:auto"><table><thead><tr><th>Tarifa · mes</th><th class="m">Fijo</th><th class="m">Base</th><th class="m">Intermedia</th><th class="m">Punta</th><th class="m">Energía (GDMTO)</th><th class="m">Distribución</th><th class="m">Capacidad</th><th>Origen</th></tr></thead><tbody>' +
       tk.map(k => { const t = D.tarifas[k] || TARIFAS_CFE[k]; return '<tr><td><b>' + k.replace('|', ' · ') + '</b></td><td class="m">' + num(t.fijo, 2) + '</td><td class="m">' + (t.B != null ? num(t.B, 4) : '') + '</td><td class="m">' + (t.I != null ? num(t.I, 4) : '') + '</td><td class="m">' + (t.P != null ? num(t.P, 4) : '') + '</td><td class="m">' + (t.E != null ? num(t.E, 4) : '') + '</td><td class="m">' + num(t.dist, 2) + '</td><td class="m">' + num(t.cap, 2) + '</td><td>' + (D.tarifas[k] ? 'manual' : 'CFE') + '</td></tr>'; }).join('') + '</tbody></table></div></div>' +
     '<div class="card" style="margin-top:16px"><h2>🚪 Historial de entradas</h2><div id="cAcc" class="small muted">Leyendo…</div></div>';
   $('#cGP').onclick = () => { $$('#v-config tr[data-k]').forEach(tr => { const u = D.usuarios[tr.dataset.k], r = $('[data-x=r]', tr); if (r) u.r = r.value; const a = $('[data-x=a]', tr); if (!a.disabled) u.a = a.checked; }); guardar(); toast('✔ Personal guardado'); };
   $('#cAlta').onsubmit = e => { e.preventDefault(); const F = e.target, k = F.n.value.trim(); if (!/^\d{1,8}$/.test(k)) return toast('Nómina no válida'); D.usuarios[k] = { n: F.m.value.trim().toUpperCase(), r: F.r.value, a: true }; guardar(); toast('✔ Alta de ' + D.usuarios[k].n); };
   $('#cHora').onsubmit = e => { e.preventDefault(); const F = e.target; D.ajustes.hora = F.h.value || '10:00'; D.ajustes.avisoMin = Number(F.a.value) || 30; D.ajustes.retencionFotos = Number(F.f.value) || 35; guardar(); toast('✔ Guardado'); };
-  $('#cGM').onclick = () => { $$('#v-config tr[data-m]').forEach(tr => { const m = medDe(tr.dataset.m); $$('[data-y]', tr).forEach(i => { m[i.dataset.y] = i.dataset.y === 'codigos' ? Object.fromEntries(i.value.split(',').map(x => x.split('=').map(y => y.trim())).filter(x => x[0] && x[1])) : i.type === 'checkbox' ? i.checked : i.type === 'number' ? Number(i.value) : i.value.trim(); }); }); guardar(); toast('✔ Medidores guardados'); };
+  $('#cGM').onclick = () => { $$('#v-config tr[data-m]').forEach(tr => { const m = medDe(tr.dataset.m); $$('[data-y]', tr).forEach(i => { m[i.dataset.y] = i.dataset.y === 'pantallas' ? i.value.split(',').map(x => x.split('=').map(y => y.trim())).filter(x => CAMPOS[x[0]] && x[1]) : i.type === 'checkbox' ? i.checked : i.type === 'number' ? Number(i.value) : i.value.trim(); }); }); guardar(); toast('✔ Medidores guardados'); };
   $('#cTN').onclick = () => { const mm = modal('💲 Tarifa de un mes', '<form class="form"><label class="f">Tarifa<select name="t"><option>GDMTH</option><option>GDMTO</option></select></label><label class="f">Mes<input name="m" type="month" required></label>' + [['fijo', 'Fijo $/mes'], ['B', 'Base $/kWh'], ['I', 'Intermedia $/kWh'], ['P', 'Punta $/kWh'], ['E', 'Energía $/kWh (GDMTO)'], ['dist', 'Distribución $/kW'], ['cap', 'Capacidad $/kW']].map(([k, t]) => '<label class="f">' + t + '<input name="' + k + '" type="number" step="any"></label>').join('') + '<div class="full row"><button class="btn pri" type="submit">Guardar</button><button class="btn" type="button" data-x>Cancelar</button></div></form>');
     $('form', mm).onsubmit = e => { e.preventDefault(); const F = e.target, o = {}; ['fijo', 'B', 'I', 'P', 'E', 'dist', 'cap'].forEach(k => { if (F[k].value !== '') o[k] = Number(F[k].value); }); D.tarifas[F.t.value + '|' + F.m.value] = o; mm.remove(); guardar(); }; };
   $('#cImp').onchange = async e => { const f = e.target.files[0]; if (!f) return; try { importar(JSON.parse(await f.text())); } catch (x) { toast('No se pudo leer: ' + x.message); } };
@@ -729,8 +776,8 @@ async function excel(avisar) {
       filas.forEach(f => ws.addRow(f)); Object.entries(fmt).forEach(([col, nf]) => ws.getColumn(Number(col)).numFmt = nf); ws.autoFilter = { from: 'A1', to: { row: 1, column: enc.length } }; return ws; };
     hoja('RESUMEN', [14, 22, 14, 14, 14, 14, 16, 16, 12], ['Medidor', 'Periodo', 'Días', 'kWh medidos', 'kWh/día', 'kW demanda', 'Llevamos $', 'Pronóstico $', 'FP %'],
       D.medidores.map(m => { const e = estimar(m); return e.sin ? [m.id, fF(e.per.ini) + ' – ' + fF(e.per.fin), '', '', '', '', '', '', ''] : [m.id, fF(e.per.ini) + ' – ' + fF(e.per.fin), e.diasCub + ' de ' + e.diasPer, Math.round(e.q), Math.round(e.kwhDia), e.dmax, r2(e.real.total), r2(e.proy.total), r2(e.fp)]; }), { 7: '"$"#,##0.00', 8: '"$"#,##0.00' });
-    hoja('LECTURAS', [12, 10, 8, 12, 12, 30, 12, 12, 12, 12, 12, 12, 14, 30], ['Fecha', 'Medidor', 'Hora', 'Lectura', 'kWh', 'Tomó', 'kWh base', 'kWh int.', 'kWh punta', 'kW máx', 'kW punta', 'kVArh', 'kWh a CFE', 'Nota'],
-      [...D.lecturas].sort((x, y) => x.fecha.localeCompare(y.fecha) || x.med.localeCompare(y.med)).map(l => { const m = medDe(l.med), L = lecturasDe(l.med), i = L.indexOf(l), d = i > 0 ? delta(m, L[i - 1].lec, l.lec) : null; return [aFecha(l.fecha), l.med, l.hora, l.lec, d != null ? d * m.mult : null, l.porN, l.kwhB, l.kwhI, l.kwhP, l.kwMax, l.kwPunta, l.kvarh, l.kwhExp, l.nota]; }), { 1: 'dd/mm/yyyy' });
+    hoja('LECTURAS', [12, 10, 8, 12, 12, 30, 12, 12, 12, 11, 11, 11, 11, 12, 13, 13, 30], ['Fecha', 'Medidor', 'Hora', 'Lectura', 'kWh', 'Tomó', 'kWh base', 'kWh int.', 'kWh punta', 'kW máx B', 'kW máx I', 'kW máx P', 'kW máx', 'kVArh', 'kWh a CFE B', 'kWh a CFE I', 'Nota'],
+      [...D.lecturas].sort((x, y) => x.fecha.localeCompare(y.fecha) || x.med.localeCompare(y.med)).map(l => { const m = medDe(l.med), L = lecturasDe(l.med), i = L.indexOf(l), d = i > 0 ? delta(m, L[i - 1].lec, l.lec) : null; return [aFecha(l.fecha), l.med, l.hora, l.lec, d != null ? d * m.mult : null, l.porN, l.kwhB, l.kwhI, l.kwhP, l.kwB, l.kwI, l.kwP, l.kwMax, l.kvarh, l.expB, l.expI, l.nota]; }), { 1: 'dd/mm/yyyy' });
     hoja('RECIBOS', [10, 12, 12, 10, 10, 10, 8, 8, 10, 10, 14, 14, 14, 14], ['Medidor', 'Inicio', 'Fin', 'kWh base', 'kWh int.', 'kWh punta', 'kWMax', 'kW punta', 'kVArh', 'FP %', 'Energía', 'Subtotal', 'Facturación', 'Réplica'],
       [...D.recibos].sort((x, y) => x.periodo_fin.localeCompare(y.periodo_fin)).map(r => { const rp = replicaDe(r); return [r.medidor, aFecha(r.periodo_inicio), aFecha(r.periodo_fin), r.kWh_base, r.kWh_intermedia, r.kWh_punta, r.kWMax, r.kW_punta, r.kVArh, r.factor_potencia_pct, r.energia, r.subtotal, r.facturacion_periodo, rp ? r2(rp.subtotal + rp.iva) : null]; }), { 2: 'dd/mm/yyyy', 3: 'dd/mm/yyyy' });
     const tk = Object.keys(Object.assign({}, TARIFAS_CFE, D.tarifas)).sort();
