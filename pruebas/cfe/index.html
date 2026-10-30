@@ -1,0 +1,755 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lecturas CFE · Energía</title>
+<link rel="manifest" href="manifest.json"><meta name="theme-color" content="#0E2A47"><link rel="icon" href="icono-192.png"><link rel="apple-touch-icon" href="icono-192.png">
+<style>
+:root{
+  --bg:#EEF2F6;--card:#fff;--ink:#14212E;--muted:#5B6B7B;--line:#D8E0E8;
+  --navy:#0E2A47;--azul:#1F6FD1;--azul-s:#E3EEFB;--ambar:#F5A623;--ambar-s:#FFF3DC;--verde:#1E8E5A;--verde-s:#E1F4EA;--rojo:#C62828;--rojo-s:#FDE5E5;
+  --base:#3BA55C;--inter:#F2B33D;--punta:#D64545;
+  --sombra:0 1px 2px rgba(14,42,71,.06),0 8px 22px rgba(14,42,71,.07);color-scheme:light}
+*{box-sizing:border-box}html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 "Segoe UI",system-ui,-apple-system,Arial,sans-serif;font-variant-numeric:tabular-nums}
+button,input,select,textarea{font:inherit;color:inherit}
+.wrap{max-width:1240px;margin:0 auto;padding:0 16px 40px}
+header.top{background:radial-gradient(1200px 300px at 80% -60%,#2a5a8f 0,transparent 60%),linear-gradient(120deg,#0B1F35,#0E2A47 55%,#173E66);color:#EAF2FB;padding:16px 0 18px;position:relative;overflow:hidden}
+header.top::after{content:"";position:absolute;inset:auto -10% 0 -10%;height:3px;background:linear-gradient(90deg,transparent,var(--ambar),transparent);animation:chispa 3.5s linear infinite}
+@keyframes chispa{from{transform:translateX(-60%)}to{transform:translateX(60%)}}
+.top .wrap{display:flex;gap:14px;align-items:center;flex-wrap:wrap;padding-bottom:0}
+.top h1{margin:0;font-size:24px}.top p{margin:2px 0 0;opacity:.8;font-size:13.5px}.esp{flex:1}
+.chip{display:inline-flex;align-items:center;gap:6px;border-radius:99px;padding:5px 12px;font-size:13px;font-weight:600;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);color:#fff;cursor:pointer}
+.chip.periodo{cursor:default;font-weight:800}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--sombra);padding:18px}
+h2{margin:0 0 12px;font-size:19px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}h3{margin:14px 0 8px;font-size:16px}
+.muted{color:var(--muted)}.small{font-size:13px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.btn{border:1px solid #C7D2DE;background:#fff;border-radius:10px;padding:9px 14px;font-weight:700;cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+.btn:hover{background:#F3F6FA}.btn:disabled{opacity:.5;cursor:default}
+.btn.pri{background:var(--azul);border-color:var(--azul);color:#fff}.btn.pri:hover{background:#185BB0}
+.btn.ok{background:var(--verde);border-color:var(--verde);color:#fff}.btn.sm{padding:5px 10px;font-size:13px}.btn.big{font-size:18px;padding:14px 20px}
+.btn.rojo{color:var(--rojo);border-color:#F2B8B3}
+nav.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:18px 0 14px;border-bottom:2px solid var(--line)}
+nav.tabs button{border:0;background:none;padding:10px 14px;border-radius:10px 10px 0 0;font-weight:700;color:var(--muted);cursor:pointer;margin-bottom:-2px;border-bottom:3px solid transparent;font-size:15px}
+nav.tabs button.on{color:var(--azul);border-bottom-color:var(--azul);background:var(--card)}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+@media (max-width:980px){.grid3{grid-template-columns:1fr}}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+@media (max-width:860px){.grid2{grid-template-columns:1fr}}
+.form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.form .full{grid-column:1/-1}
+@media (max-width:520px){.form{grid-template-columns:1fr}}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600;color:var(--muted)}
+input,select,textarea{border:1px solid #C7D2DE;border-radius:10px;padding:9px 11px;background:#fff;font-size:15px;min-width:0}
+input:focus,select:focus{outline:2px solid var(--azul);border-color:transparent}
+.tw{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:14px}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);text-align:left;padding:8px;border-bottom:2px solid var(--line);white-space:nowrap}
+td{padding:7px 8px;border-bottom:1px solid #EDF1F5}td.m,th.m{text-align:right;white-space:nowrap}
+tr.tot td{font-weight:800;border-top:2px solid var(--ink)}
+.tag{display:inline-block;border-radius:99px;padding:2px 9px;font-size:12px;font-weight:700;white-space:nowrap}
+.tag.v{background:var(--verde-s);color:var(--verde)}.tag.a{background:var(--ambar-s);color:#8A5A00}.tag.r{background:var(--rojo-s);color:var(--rojo)}.tag.i{background:var(--azul-s);color:var(--azul)}
+.aviso{display:flex;gap:12px;align-items:flex-start;border-radius:12px;padding:11px 14px;border:1px solid;font-size:14.5px;margin-bottom:10px}
+.aviso .e{font-size:22px;line-height:1.2}.aviso b{display:block}
+.aviso.r{background:var(--rojo-s);border-color:#F2B8B3}.aviso.a{background:var(--ambar-s);border-color:#F3D38E}.aviso.i{background:var(--azul-s);border-color:#B9D2F2}.aviso.v{background:var(--verde-s);border-color:#B6E3C9}
+.aviso.late{animation:late 1.4s ease-in-out infinite}
+@keyframes late{50%{box-shadow:0 0 0 6px rgba(198,40,40,.18)}}
+/* transformadores */
+.trafo{display:flex;flex-direction:column;gap:10px;position:relative;overflow:hidden}
+.trafo .cab{display:flex;gap:12px;align-items:center}
+.trafo svg.tr{width:118px;height:118px;flex:none}
+.trafo .t1{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.trafo .t2{font-size:22px;font-weight:800}
+.flujo{stroke-dasharray:6 8;animation:flujo 1.1s linear infinite}
+@keyframes flujo{to{stroke-dashoffset:-28}}
+.halo{animation:halo 2.2s ease-in-out infinite;transform-origin:center}
+@keyframes halo{50%{opacity:.25}}
+.estado-lec{font-weight:700;border-radius:10px;padding:8px 10px;font-size:14px}
+.barra{height:12px;border-radius:99px;background:#E6ECF2;overflow:hidden}.barra i{display:block;height:100%;border-radius:99px;transition:width 1s cubic-bezier(.2,.8,.2,1)}
+.kp{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kp div{background:#F6F8FB;border-radius:10px;padding:8px 10px}.kp b{display:block;font-size:18px}.kp span{font-size:12px;color:var(--muted)}
+/* captura */
+.lecbox{display:grid;gap:10px}
+.lecbox input.grande{font-size:34px;text-align:center;letter-spacing:.06em;font-weight:800;padding:14px}
+.calc{background:#F6F8FB;border-radius:12px;padding:10px 12px;font-size:15px}
+.calc b{font-size:20px}
+/* horario */
+.franja{display:grid;grid-template-columns:repeat(24,1fr);height:34px;border-radius:8px;overflow:hidden;border:1px solid var(--line)}
+.franja i{display:block}.franja .B{background:var(--base)}.franja .I{background:var(--inter)}.franja .P{background:var(--punta)}
+.horas{display:grid;grid-template-columns:repeat(24,1fr);font-size:10px;color:var(--muted);margin-top:2px}
+.ley{display:flex;gap:14px;flex-wrap:wrap;font-size:13px}.ley span{display:inline-flex;gap:6px;align-items:center}.ley i{width:12px;height:12px;border-radius:3px;display:inline-block}
+.reloj{width:220px;height:220px}
+/* modal y entrada */
+.modal{position:fixed;inset:0;background:rgba(8,20,35,.6);display:grid;place-items:center;padding:16px;z-index:50}
+.modal>.card{width:min(640px,100%);max-height:94vh;overflow:auto}
+#nomina{position:fixed;inset:0;z-index:100;background:radial-gradient(900px 400px at 70% 0,#2a5a8f,transparent 60%),linear-gradient(140deg,#0B1F35,#0E2A47 60%,#173E66);display:grid;place-items:center;padding:16px}
+#nomina .card{width:min(420px,100%);text-align:center;padding:26px}
+#nomina input{font-size:28px;text-align:center;letter-spacing:.12em;width:100%}
+#li-cuenta{display:none!important}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#14212E;color:#fff;padding:10px 16px;border-radius:10px;z-index:200;font-size:14px;max-width:90vw}
+.gauge{width:170px;height:110px}
+.vacio{text-align:center;padding:22px;color:var(--muted)}.vacio .e{font-size:40px;display:block}
+footer{margin-top:28px;text-align:center;color:var(--muted);font-size:12.5px}
+@media (prefers-reduced-motion:reduce){.flujo,.halo,.aviso.late,header.top::after{animation:none}}
+</style>
+<script>
+// Datos en Firebase bajo apps/cfe/ (misma capa li-firebase.js que Control de Paros). Entrada solo con nómina (la sesión del equipo se abre una vez).
+window.LI_APP = 'cfe'; window.LI_AREA = 'Mantenimiento'; window.LI_PEDIR_ACCESO = true;
+window.LI_PERSONAL_INICIAL = {
+  '4781': { n: 'AMÍLCAR OMAR ANDRACA HERRERA', r: 'general', a: true },
+  '1162': { n: 'CARLOS ALBERTO MARTÍNEZ JASSO', r: 'admin', a: true },
+  '4237': { n: 'JOSÉ ANTONIO TORRES LÓPEZ', r: 'tecnico', a: true },
+  '4573': { n: 'JAIME PACHECO LOBATOS', r: 'tecnico', a: true },
+  '4643': { n: 'OSCAR DAVID CORTEZ LARA', r: 'tecnico', a: true },
+  '4647': { n: 'GIOVANNI LOERA MARTÍNEZ', r: 'tecnico', a: true },
+  '4695': { n: 'ALEJANDRO CHÁVEZ GALICIA', r: 'tecnico', a: true },
+  '4698': { n: 'JORGE LUIS ARRIAGA ENCARNACIÓN', r: 'tecnico', a: true },
+  '4767': { n: 'JACOBO DANIEL ESPARZA DE LUNA', r: 'tecnico', a: true },
+  '4768': { n: 'PABLO EMMANUEL CASTAÑEDA ESPARZA', r: 'tecnico', a: true }
+};
+// Modo demostración (?demo o ?demo=<nómina>): base en memoria; no toca Firebase.
+window.DEMO = /[?&]demo\b/.test(location.search);
+if (window.DEMO) {
+  const store = { 'config/personal': { p: JSON.parse(JSON.stringify(window.LI_PERSONAL_INICIAL)) } }, subs = [];
+  const copia = o => JSON.parse(JSON.stringify(o)), avisar = () => setTimeout(() => subs.forEach(f => f()), 0);
+  const docRef = p => ({ get: async () => ({ exists: p in store, data: () => store[p] ? copia(store[p]) : undefined }), set: async d => { store[p] = copia(d); avisar(); }, delete: async () => { delete store[p]; avisar(); },
+    onSnapshot: cb => { const f = () => cb({ exists: p in store, data: () => store[p] ? copia(store[p]) : undefined }); subs.push(f); f(); } });
+  const docsDe = c => Object.keys(store).filter(k => k.startsWith(c + '/') && k.split('/').length === 2).map(k => ({ id: k.split('/')[1], data: () => copia(store[k]) }));
+  const colRef = c => { const q = { orderBy: () => q, limit: () => q, where: () => q, get: async () => ({ docs: docsDe(c).sort((a, b) => String(b.data().t).localeCompare(String(a.data().t))) }),
+    onSnapshot: cb => { const f = () => cb({ docs: docsDe(c) }); subs.push(f); f(); }, add: async d => { store[c + '/' + Math.random().toString(36).slice(2)] = copia(d); avisar(); } }; return q; };
+  window.claude = { use: async n => n === 'db' ? { doc: docRef, collection: colRef } : null };
+  window.LI = { nomina: () => '4781', salir: async () => location.reload(), crearCuenta: async () => 'creada', dialogoRestablecer: (n, nom) => alert('Demostración: aquí se pone la contraseña nueva de ' + (nom || n) + '.') };
+} else {
+  document.write('<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"><\/script>' +
+    '<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"><\/script>' +
+    '<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"><\/script>' +
+    '<script src="../../firebase-config.js"><\/script><script src="li-firebase.js"><\/script>');
+}
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="lib/jspdf.umd.min.js"></script><script src="lib/jspdf.plugin.autotable.min.js"></script>
+</head><body>
+
+<header class="top"><div class="wrap">
+  <svg width="52" height="52" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#F5A623" opacity=".18" class="halo"/><path d="M36 4 14 36h14l-4 24 26-36H36z" fill="#F5A623"/></svg>
+  <div><h1>Lecturas CFE · Energía</h1><p>Línea Italia · medidores V366EB, GGH742 y PT477E · tarifa GDMTH / GDMTO · Aguascalientes (Bajío)</p></div>
+  <span class="esp"></span>
+  <span class="chip periodo" id="chPeriodo"></span>
+  <span class="chip" id="chHoy" style="cursor:default"></span>
+  <button class="chip" id="quien" type="button"></button>
+</div></header>
+
+<main class="wrap">
+  <div id="avisos" style="margin-top:16px"></div>
+  <nav class="tabs" id="tabs"></nav>
+  <section id="v-lecturas"></section>
+  <section id="v-tablero" hidden></section>
+  <section id="v-recibos" hidden></section>
+  <section id="v-punta" hidden></section>
+  <section id="v-ahorro" hidden></section>
+  <section id="v-config" hidden></section>
+  <footer>Cálculo según tarifas GDMTH / GDMTO de CFE, división Bajío (Acuerdo A/158/2024, Anexo Único 3.1.2 y 3.1.5). Es una estimación interna de Línea Italia; el recibo oficial lo emite CFE.</footer>
+</main>
+
+<script>
+// ===================== tarifas oficiales CFE · división Bajío (Aguascalientes) =====================
+// Cargos integrados (incluyen transmisión, CENACE, generación y SCnMEM). Fuente: app.cfe.mx · Tarifas Industria.
+const TARIFAS_CFE = /*TARIFAS*/{"GDMTH|2025-01":{fijo:368.95,B:1.1190,I:1.9995,P:2.2803,dist:102.05,cap:421.46},"GDMTH|2025-12":{fijo:368.95,B:1.0787,I:1.9169,P:2.1842,dist:102.05,cap:401.23},"GDMTH|2025-02":{fijo:368.95,B:1.1205,I:2.0024,P:2.2836,dist:102.05,cap:422.13},"GDMTH|2025-03":{fijo:368.95,B:1.1209,I:2.0032,P:2.2845,dist:102.05,cap:422.31},"GDMTH|2025-04":{fijo:368.95,B:1.1209,I:2.0032,P:2.2845,dist:102.05,cap:422.31},"GDMTH|2025-05":{fijo:368.95,B:1.1209,I:2.0032,P:2.2845,dist:102.05,cap:422.31},"GDMTH|2025-07":{fijo:368.95,B:1.1572,I:2.0739,P:2.3663,dist:102.05,cap:438.82},"GDMTH|2025-08":{fijo:368.95,B:1.1585,I:2.0765,P:2.3693,dist:102.05,cap:439.43},"GDMTH|2025-09":{fijo:368.95,B:1.1538,I:2.0634,P:2.3535,dist:102.05,cap:435.41},"GDMTH|2026-01":{fijo:427.19,B:1.0558,I:1.8752,P:2.1364,dist:97.88,cap:392.20},"GDMTH|2026-10":{fijo:427.19,B:1.0228,I:1.8108,P:2.0620,dist:97.88,cap:377.17},"GDMTH|2026-11":{fijo:427.19,B:1.0228,I:1.8107,P:2.0620,dist:97.88,cap:377.16},"GDMTH|2026-02":{fijo:427.19,B:1.0563,I:1.8761,P:2.1375,dist:97.88,cap:392.43},"GDMTH|2026-03":{fijo:427.19,B:1.0568,I:1.8771,P:2.1387,dist:97.88,cap:392.66},"GDMTH|2026-04":{fijo:427.19,B:1.0568,I:1.8771,P:2.1386,dist:97.88,cap:392.65},"GDMTH|2026-05":{fijo:427.19,B:1.0482,I:1.8603,P:2.1192,dist:97.88,cap:388.73},"GDMTH|2026-06":{fijo:427.19,B:1.0397,I:1.8437,P:2.1001,dist:97.88,cap:384.86},"GDMTH|2026-07":{fijo:427.19,B:1.0228,I:1.8107,P:2.0620,dist:97.88,cap:377.16},"GDMTH|2026-08":{fijo:427.19,B:1.0228,I:1.8107,P:2.0620,dist:97.88,cap:377.17},"GDMTH|2026-09":{fijo:427.19,B:1.0228,I:1.8107,P:2.0620,dist:97.88,cap:377.17},"GDMTO|2025-01":{fijo:368.95,E:1.638,dist:102.05,cap:362.82},"GDMTO|2025-10":{fijo:368.95,E:1.690,dist:102.05,cap:374.84},"GDMTO|2025-11":{fijo:368.95,E:1.645,dist:102.05,cap:363.58},"GDMTO|2025-12":{fijo:368.95,E:1.573,dist:102.05,cap:345.41},"GDMTO|2025-03":{fijo:368.95,E:1.641,dist:102.05,cap:363.55},"GDMTO|2025-04":{fijo:368.95,E:1.641,dist:102.05,cap:363.55},"GDMTO|2025-05":{fijo:368.95,E:1.641,dist:102.05,cap:363.55},"GDMTO|2025-06":{fijo:368.95,E:1.676,dist:102.05,cap:372.19},"GDMTO|2025-07":{fijo:368.95,E:1.698,dist:102.05,cap:377.77},"GDMTO|2025-08":{fijo:368.95,E:1.700,dist:102.05,cap:378.29},"GDMTO|2025-09":{fijo:368.95,E:1.690,dist:102.05,cap:374.83},"GDMTO|2026-01":{fijo:427.19,E:1.539,dist:97.88,cap:337.63}};
+const FC = { GDMTH: 0.57, GDMTO: 0.55 };   // factor de carga (Tabla 2, apartado 3.1.2 del Anexo Único)
+
+// ===================== utilidades =====================
+const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const r2 = n => Math.round((Number(n) || 0) * 100) / 100;
+const din = n => '$' + r2(n).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const din0 = n => '$' + Math.round(Number(n) || 0).toLocaleString('es-MX');
+const num = (n, d = 0) => (Number(n) || 0).toLocaleString('es-MX', { minimumFractionDigits: d, maximumFractionDigits: d });
+const iso = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+const hoyISO = () => iso(new Date());
+const aFecha = s => { const [a, m, d] = s.split('-').map(Number); return new Date(a, m - 1, d); };
+const dias = (a, b) => Math.round((aFecha(b) - aFecha(a)) / 864e5);
+const sumaD = (s, n) => { const x = aFecha(s); x.setDate(x.getDate() + n); return iso(x); };
+const MES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const MESL = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+const DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+const fF = s => { if (!s) return '—'; const d = aFecha(s); return d.getDate() + ' ' + MES[d.getMonth()] + ' ' + d.getFullYear(); };
+const fC = s => { if (!s) return '—'; const d = aFecha(s); return d.getDate() + ' ' + MES[d.getMonth()]; };
+const fN = s => { const d = aFecha(s); return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear(); };
+const nuevoId = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+function toast(t) { const d = document.createElement('div'); d.className = 'toast'; d.textContent = t; d.style.bottom = (18 + 52 * $$('.toast').length) + 'px'; document.body.appendChild(d); setTimeout(() => d.remove(), 4500); }
+function modal(titulo, html) {
+  const m = document.createElement('div'); m.className = 'modal';
+  m.innerHTML = '<div class="card"><h2>' + titulo + '</h2>' + html + '</div>';
+  document.body.appendChild(m); m.addEventListener('click', e => { if (e.target === m) m.remove(); });
+  $$('[data-x]', m).forEach(b => b.onclick = () => m.remove()); return m;
+}
+
+// ===================== calendario tarifario (Región Central · Acuerdo A/158/2024, 3.1.5) =====================
+// Verano: del primer domingo de abril al sábado anterior al último domingo de octubre. Invierno: el resto del año.
+function primerDomingo(a, mes) { const d = new Date(a, mes, 1); d.setDate(1 + (7 - d.getDay()) % 7); return d; }
+function ultimoDomingo(a, mes) { const d = new Date(a, mes + 1, 0); d.setDate(d.getDate() - d.getDay()); return d; }
+function temporada(s) { const d = aFecha(s), a = d.getFullYear(); return d >= primerDomingo(a, 3) && d < ultimoDomingo(a, 9) ? 'verano' : 'invierno'; }
+// días festivos (art. 74 LFT, sin la fracción IX)
+function festivos(a) {
+  const n = (mes, k) => { const d = primerDomingo(a, mes); d.setDate(d.getDate() + 1 + (k - 1) * 7); return iso(d); }; // k-ésimo lunes
+  const L = [a + '-01-01', n(1, 1), n(2, 3), a + '-05-01', a + '-09-16', n(10, 3), a + '-12-25'];
+  if ((a - 2024) % 6 === 0) L.push(a + '-10-01');
+  return L;
+}
+const tipoDia = s => { const d = aFecha(s); return festivos(d.getFullYear()).includes(s) || d.getDay() === 0 ? 'dom' : d.getDay() === 6 ? 'sab' : 'lv'; };
+// [inicio, fin, periodo] en horas
+const HORARIOS = {
+  verano: { lv: [[0, 6, 'B'], [6, 20, 'I'], [20, 22, 'P'], [22, 24, 'I']], sab: [[0, 7, 'B'], [7, 24, 'I']], dom: [[0, 19, 'B'], [19, 24, 'I']] },
+  invierno: { lv: [[0, 6, 'B'], [6, 18, 'I'], [18, 22, 'P'], [22, 24, 'I']], sab: [[0, 8, 'B'], [8, 19, 'I'], [19, 21, 'P'], [21, 24, 'I']], dom: [[0, 18, 'B'], [18, 24, 'I']] }
+};
+const NOMP = { B: 'Base', I: 'Intermedio', P: 'Punta' };
+function periodoEn(s, h) { return HORARIOS[temporada(s)][tipoDia(s)].find(x => h >= x[0] && h < x[1])[2]; }
+function horasPeriodo(s) { const o = { B: 0, I: 0, P: 0 }; HORARIOS[temporada(s)][tipoDia(s)].forEach(x => o[x[2]] += x[1] - x[0]); return o; }
+function cambioTemporada(desde) { const d = aFecha(desde), a = d.getFullYear(); const c = [primerDomingo(a, 3), ultimoDomingo(a, 9), primerDomingo(a + 1, 3)].find(x => x > d); return iso(c); }
+
+// ===================== estado y datos (Firebase: apps/cfe/) =====================
+const COLS = ['lecturas', 'recibos', 'acciones', 'cargas'];
+const MED_DEF = [
+  { id: 'V366EB', nombre: 'Fuerza 220 V', kva: 300, volt: 220, tarifa: 'GDMTH', mult: 80, contratada: 180, conectada: 180, vuelta: 100000, corte: 31, bt: true, netmet: true, color: '#F5A623', servicio: '', multDem: 80, codigos: {} },
+  { id: 'GGH742', nombre: 'Fuerza 440 V', kva: 225, volt: 440, tarifa: 'GDMTH', mult: 80, contratada: 135, conectada: 135, vuelta: 100000, corte: 31, bt: true, netmet: false, color: '#1F6FD1', servicio: '', multDem: 80, codigos: { lec: '4', kvarh: '5', kwMax: '81' } },
+  { id: 'PT477E', nombre: 'Servicio 220 V', kva: 112.5, volt: 220, tarifa: 'GDMTO', mult: 1, contratada: 68, conectada: 68, vuelta: 100000, corte: 15, bt: true, netmet: false, color: '#1E8E5A', servicio: '', multDem: 1, codigos: {} }
+];
+const AJ_DEF = { hora: '10:00', avisoMin: 30, retencionFotos: 35 };
+let D = { usuarios: {}, ajustes: Object.assign({}, AJ_DEF), medidores: JSON.parse(JSON.stringify(MED_DEF)), tarifas: {}, lecturas: [], recibos: [], acciones: [], cargas: [] };
+let DB = null, YO = null, tab = 'lecturas', carpeta = null;
+const listo = {}, ULT = {}; COLS.forEach(c => ULT[c] = {}); let ULT_CFG = {};
+const canon = v => JSON.stringify(v, (k, x) => x && typeof x === 'object' && !Array.isArray(x) ? Object.keys(x).sort().reduce((o, y) => (o[y] = x[y], o), {}) : x);
+const limpio = o => JSON.parse(JSON.stringify(o));
+const CFG = { 'config/ajustes': 'ajustes', 'config/medidores': 'medidores', 'config/tarifas': 'tarifas' };
+
+async function conectar() {
+  DB = await window.claude.use('db'); if (!DB) return;
+  DB.doc('config/personal').onSnapshot(s => { D.usuarios = (s.data() || {}).p || {}; ULT_CFG.personal = canon(D.usuarios); identificar(); listo.per = true; refrescar(); });
+  Object.entries(CFG).forEach(([ruta, k]) => DB.doc(ruta).onSnapshot(s => {
+    const x = s.data();
+    if (k === 'ajustes') D.ajustes = Object.assign({}, AJ_DEF, x || {});
+    if (k === 'medidores') D.medidores = x && x.lista ? MED_DEF.map(m => Object.assign({}, m, (x.lista.find(y => y.id === m.id) || {}))) : JSON.parse(JSON.stringify(MED_DEF));
+    if (k === 'tarifas') D.tarifas = (x && x.m) || {};
+    ULT_CFG[k] = canon(cfgValor(k)); listo[k] = true; refrescar();
+  }, () => { listo[k] = true; refrescar(); }));
+  COLS.forEach(c => DB.collection(c).onSnapshot(q => {
+    D[c] = q.docs.map(d => Object.assign({}, d.data(), { id: d.id })); ULT[c] = {}; D[c].forEach(x => ULT[c][x.id] = canon(x)); listo[c] = true; refrescar();
+  }, () => { listo[c] = true; refrescar(); }));
+}
+const cfgValor = k => k === 'medidores' ? { lista: D.medidores } : k === 'tarifas' ? { m: D.tarifas } : D.ajustes;
+let tR;
+function refrescar() { clearTimeout(tR); tR = setTimeout(() => { if (!(listo.per && COLS.every(c => listo[c]))) return; if (!YO) return pantallaNomina(); pintar(); tareasAdmin(); }, 60); }
+let enviando = Promise.resolve();
+function guardar() { pintar(); enviando = enviando.then(sincronizar).catch(e => toast('No se pudo guardar: ' + (e.message || e.code || e))); }
+async function sincronizar() {
+  if (!DB) return; const ops = [];
+  for (const c of COLS) {
+    const vivos = {};
+    for (const x of D[c]) { if (!x.id) x.id = nuevoId(c.slice(0, 2)); vivos[x.id] = 1; const j = canon(x); if (ULT[c][x.id] !== j) { ULT[c][x.id] = j; const d = limpio(x); delete d.id; ops.push(DB.doc(c + '/' + x.id).set(d)); } }
+    Object.keys(ULT[c]).forEach(id => { if (!vivos[id]) { delete ULT[c][id]; ops.push(DB.doc(c + '/' + id).delete()); } });
+  }
+  if (esAdmin()) {
+    Object.entries(CFG).forEach(([ruta, k]) => { const v = cfgValor(k), j = canon(v); if (ULT_CFG[k] !== j) { ULT_CFG[k] = j; ops.push(DB.doc(ruta).set(limpio(v))); } });
+    const p = canon(D.usuarios); if (ULT_CFG.personal !== p) { ULT_CFG.personal = p; ops.push(DB.doc('config/personal').set({ p: limpio(D.usuarios) })); }
+  }
+  await Promise.all(ops);
+}
+const esAdmin = () => !!(YO && YO.admin);
+
+// ===================== entrada solo con nómina =====================
+function identificar() {
+  let nom = ''; try { nom = sessionStorage.getItem('cfe_nom') || ''; } catch (e) {}
+  const u = nom && D.usuarios[nom];
+  YO = u && u.a !== false ? { nom, n: u.n, r: u.r, admin: u.r === 'admin' || u.r === 'general' } : null;
+}
+function pantallaNomina() {
+  let d = $('#nomina'); if (d) return;
+  d = document.createElement('div'); d.id = 'nomina';
+  d.innerHTML = '<div class="card">' + svgTrafo('#F5A623', 0.6, 'LI') + '<h2 style="justify-content:center;margin:6px 0 2px">Lecturas CFE · Energía</h2><p class="muted small" style="margin:0 0 16px">Línea Italia. Entra con tu número de nómina.</p>' +
+    '<form autocomplete="off" style="display:grid;gap:10px"><input name="n" inputmode="numeric" placeholder="Nómina" required><p class="small" style="margin:0;color:var(--rojo)" id="nMsg"></p><button class="btn pri big" type="submit" style="justify-content:center">Entrar</button></form></div>';
+  document.body.appendChild(d);
+  $('form', d).onsubmit = e => { e.preventDefault(); const n = e.target.n.value.trim(), u = D.usuarios[n];
+    if (!u || u.a === false) { $('#nMsg').textContent = 'La nómina ' + n + ' no tiene acceso. Pide tu alta al administrador.'; return; }
+    try { sessionStorage.setItem('cfe_nom', n); } catch (x) {}
+    identificar(); if (DB) DB.collection('accesos').add({ t: new Date().toISOString(), nom: n, n: u.n }).catch(() => {});
+    d.remove(); tab = esAdmin() ? 'tablero' : 'lecturas'; pintar(); tareasAdmin(); };
+  setTimeout(() => $('input', d).focus(), 50);
+}
+
+// ===================== lecturas y cálculos =====================
+const medDe = id => D.medidores.find(m => m.id === id);
+const lecturasDe = id => D.lecturas.filter(l => l.med === id).sort((a, b) => a.fecha.localeCompare(b.fecha));
+// diferencia de lecturas considerando la vuelta del contador (p. ej. 99,816 → 19)
+function delta(m, a, b) { if (a == null || b == null) return null; let d = Number(b) - Number(a); if (d < 0 && Number(a) > m.vuelta * 0.8) d += m.vuelta; return d; }
+const recibosDe = id => D.recibos.filter(r => r.medidor === id || (id === 'GGH742' && r.medidor === 'D660RH')).sort((a, b) => a.periodo_fin.localeCompare(b.periodo_fin));
+function tarifaMes(tar, s) { const k = tar + '|' + s.slice(0, 7); if (D.tarifas[k]) return Object.assign({ origen: 'manual' }, D.tarifas[k]); if (TARIFAS_CFE[k]) return Object.assign({ origen: 'CFE' }, TARIFAS_CFE[k]);
+  const ks = Object.keys(Object.assign({}, TARIFAS_CFE, D.tarifas)).filter(x => x.startsWith(tar + '|') && x.slice(-7) <= s.slice(0, 7)).sort(); const u = ks[ks.length - 1];
+  return u ? Object.assign({ origen: 'aprox. ' + u.slice(-7) }, D.tarifas[u] || TARIFAS_CFE[u]) : null; }
+// tarifa efectiva de un periodo que puede cruzar dos meses (así lo prorratea CFE; verificado con PT477E jun-2025):
+// energía = promedio por días de la tarifa de cada mes; distribución y capacidad = Σ (días en el mes / días del mes) × tarifa del mes;
+// cargo fijo GDMTO = fijo × días / 30.4 (GDMTH sin prorrateo)
+function tarifaPeriodo(tar, ini, fin) {
+  const d = dias(ini, fin); if (d <= 0) return null;
+  const acc = { B: 0, I: 0, P: 0, E: 0, dist: 0, cap: 0 }; let tf = null;
+  for (let x = sumaD(ini, 1); x <= fin; x = sumaD(x, 1)) {
+    const t = tarifaMes(tar, x); if (!t) return null; tf = t; const dm = new Date(aFecha(x).getFullYear(), aFecha(x).getMonth() + 1, 0).getDate();
+    ['B', 'I', 'P', 'E'].forEach(k => acc[k] += (t[k] || 0) / d); acc.dist += t.dist / dm; acc.cap += t.cap / dm;
+  }
+  return Object.assign(acc, { fijo: tar === 'GDMTO' ? tf.fijo * d / 30.4 : tf.fijo, origen: tf.origen });
+}
+// periodo de facturación vigente para un medidor y una fecha
+function periodoDe(m, s) {
+  const rs = recibosDe(m.id), u = rs[rs.length - 1];
+  if (u && dias(u.periodo_fin, s) >= 0 && dias(u.periodo_fin, s) < 40) return { ini: u.periodo_fin, fin: sumaD(u.periodo_fin, dias(u.periodo_inicio, u.periodo_fin)), origen: 'recibo' };
+  // corte del mes (año, mes) respetando meses cortos: el 31 en noviembre es el 30
+  const corteEn = (a, mes) => { const x = new Date(a, mes, 1), ult = new Date(x.getFullYear(), x.getMonth() + 1, 0).getDate(); return iso(new Date(x.getFullYear(), x.getMonth(), Math.min(m.corte, ult))); };
+  const d = aFecha(s); let k = 0, fin = corteEn(d.getFullYear(), d.getMonth()); if (fin <= s) { k = 1; fin = corteEn(d.getFullYear(), d.getMonth() + 1); }
+  const ini = corteEn(d.getFullYear(), d.getMonth() + k - 1);
+  return { ini, fin, origen: 'día de corte ' + m.corte };
+}
+// reparto base/intermedia/punta y datos del último recibo como referencia
+function referencia(m) {
+  const rs = recibosDe(m.id), u = rs[rs.length - 1];
+  if (!u) return { pB: 0.08, pI: 0.85, pP: 0.07, dmax: m.contratada * 0.7, dpunta: m.contratada * 0.4, fp: 90, dapPct: 0, origen: 'supuesto' };
+  const q = (u.kWh_base || 0) + (u.kWh_intermedia || 0) + (u.kWh_punta || 0) || 1;
+  const ult6 = rs.slice(-6), dapPct = ult6.reduce((s, r) => s + (r.dap || 0), 0) / Math.max(1, ult6.reduce((s, r) => s + (r.subtotal || 0), 0));
+  return { pB: (u.kWh_base || 0) / q, pI: (u.kWh_intermedia || 0) / q, pP: (u.kWh_punta || 0) / q, dmax: u.kWMax || u.kW_intermedia || 0, dpunta: m.tarifa === 'GDMTO' ? (u.kWMax || 0) : (u.kW_punta || 0), fp: u.factor_potencia_pct || 90, dapPct, origen: 'recibo ' + fC(u.periodo_fin) };
+}
+// ---- factura con las reglas de CFE (verificada contra los recibos de V366EB, GGH742 y PT477E) ----
+function factura(m, t, x) {
+  const Q = x.B + x.I + x.P, fc = FC[m.tarifa], lim = Q / (24 * x.dias * fc);
+  const r = { Q, B: x.B, I: x.I, P: x.P, dias: x.dias, fp: x.fp, dmax: x.dmax, dpunta: x.dpunta };
+  r.fijo = t.fijo;
+  r.eB = m.tarifa === 'GDMTO' ? 0 : x.B * t.B; r.eI = m.tarifa === 'GDMTO' ? Q * t.E : x.I * t.I; r.eP = m.tarifa === 'GDMTO' ? 0 : x.P * t.P;
+  r.kwDist = Math.ceil(Math.min(x.dmax || lim, lim) - 1e-9); r.kwCap = Math.ceil(Math.min((m.tarifa === 'GDMTO' ? x.dmax : x.dpunta) || lim, lim) - 1e-9);
+  r.dist = r.kwDist * t.dist; r.cap = r.kwCap * t.cap;
+  r.energia = r.eB + r.eI + r.eP + r.dist + r.cap;
+  r.base1 = r.fijo + r.energia; r.bt = m.bt ? r.base1 * 0.02 : 0;
+  r.fpPct = x.fp < 90 ? Math.min(120, Math.round(0.6 * (90 / x.fp - 1) * 1000) / 10) : -Math.min(2.5, Math.round(0.25 * (1 - 90 / x.fp) * 1000) / 10);
+  r.fpImp = (r.base1 + r.bt) * r.fpPct / 100;
+  r.subtotal = r.base1 + r.bt + r.fpImp; r.iva = r.subtotal * 0.16; r.dap = x.dap != null ? x.dap : r.subtotal * (x.dapPct || 0);
+  r.total = r.subtotal + r.iva + r.dap;
+  return r;
+}
+// estimación del periodo vigente a partir de las lecturas (con pronóstico al cierre)
+function estimar(m, alDia) {
+  const hoy = alDia || hoyISO(), per = periodoDe(m, hoy), ref = referencia(m), L = lecturasDe(m.id).filter(l => l.fecha <= hoy);
+  const ini = [...L].reverse().find(l => l.fecha <= per.ini) || L.find(l => l.fecha >= per.ini), fin = L[L.length - 1];
+  const t = tarifaPeriodo(m.tarifa, per.ini, per.fin), diasPer = dias(per.ini, per.fin);
+  if (!ini || !fin || ini === fin || !t) return { per, ref, t, diasPer, sin: true };
+  const diasCub = Math.max(1, dias(ini.fecha, fin.fecha)), q = delta(m, ini.lec, fin.lec) * m.mult;
+  const regs = ['kwhB', 'kwhI', 'kwhP'].every(k => ini[k] != null && fin[k] != null);
+  let B, I, P; if (regs) { B = delta(m, ini.kwhB, fin.kwhB) * m.mult; I = delta(m, ini.kwhI, fin.kwhI) * m.mult; P = delta(m, ini.kwhP, fin.kwhP) * m.mult; } else { B = q * ref.pB; I = q * ref.pI; P = q * ref.pP; }
+  const exp = m.netmet && ini.kwhExp != null && fin.kwhExp != null ? delta(m, ini.kwhExp, fin.kwhExp) * m.mult : null;
+  const kvarh = ini.kvarh != null && fin.kvarh != null ? delta(m, ini.kvarh, fin.kvarh) * m.mult : null;
+  const fp = kvarh != null && q > 0 ? 100 * q / Math.sqrt(q * q + kvarh * kvarh) : ref.fp;
+  const dmax = fin.kwMax != null ? fin.kwMax * (m.multDem || 1) : ref.dmax, dpunta = fin.kwPunta != null ? fin.kwPunta * (m.multDem || 1) : ref.dpunta;
+  const f = diasPer / diasCub;
+  const proy = factura(m, t, { B: B * f, I: I * f, P: P * f, dias: diasPer, fp, dmax, dpunta, dapPct: ref.dapPct });
+  const real = factura(m, tarifaPeriodo(m.tarifa, per.ini, fin.fecha > per.ini ? fin.fecha : sumaD(per.ini, 1)) || t, { B, I, P, dias: diasCub, fp, dmax, dpunta, dapPct: ref.dapPct });
+  return { per, ref, t, diasPer, diasCub, q, B, I, P, exp, fp, fpMedido: kvarh != null, regs, dmax, dpunta, demMedida: fin.kwMax != null, proy, real, kwhDia: q / diasCub, ultima: fin, primera: ini };
+}
+// serie del pronóstico día a día del periodo (cómo va cambiando lo que vamos a pagar)
+function serieProno(m) {
+  const hoy = hoyISO(), per = periodoDe(m, hoy), L = lecturasDe(m.id).filter(l => l.fecha > per.ini && l.fecha <= hoy);
+  return L.map(l => { const e = estimar(m, l.fecha); return e.sin ? null : { fecha: l.fecha, total: e.proy.total, acum: e.real.total }; }).filter(Boolean);
+}
+// consumo diario (kWh) por fecha a partir de lecturas consecutivas
+function consumoDiario(m) {
+  const L = lecturasDe(m.id), o = [];
+  for (let i = 1; i < L.length; i++) { const d = delta(m, L[i - 1].lec, L[i].lec), n = Math.max(1, dias(L[i - 1].fecha, L[i].fecha)); if (d != null) o.push({ fecha: L[i].fecha, kwh: d * m.mult / n, dias: n, por: L[i].porN }); }
+  return o;
+}
+
+// ===================== pintar =====================
+let graficas = [];
+function pintar() {
+  if (!YO) return;
+  graficas.forEach(g => { try { g.destroy(); } catch (e) {} }); graficas = [];
+  const ahora = new Date(), s = hoyISO(), p = periodoEn(s, ahora.getHours() + ahora.getMinutes() / 60);
+  $('#chPeriodo').textContent = (p === 'P' ? '🔴 ' : p === 'I' ? '🟡 ' : '🟢 ') + 'Ahora: horario ' + NOMP[p] + ' · ' + temporada(s);
+  $('#chPeriodo').style.background = p === 'P' ? 'rgba(214,69,69,.85)' : p === 'I' ? 'rgba(242,179,61,.35)' : 'rgba(59,165,92,.4)';
+  $('#chHoy').textContent = '📅 ' + ahora.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
+  $('#quien').textContent = (esAdmin() ? '🔑 ' : '🔧 ') + YO.n.split(' ')[0] + ' · ' + YO.nom + ' · Salir';
+  $('#quien').onclick = () => { try { sessionStorage.removeItem('cfe_nom'); } catch (e) {} YO = null; pantallaNomina(); };
+  $('#avisos').innerHTML = avisosLectura().map(a => '<div class="aviso ' + a[0] + (a[3] ? ' late' : '') + '"><span class="e">' + a[1] + '</span><div>' + a[2] + '</div></div>').join('');
+  const T = [['lecturas', '⚡ Tomar lecturas']];
+  if (esAdmin()) T.push(['tablero', '📊 Tablero'], ['recibos', '🧾 Recibos y réplica'], ['punta', '⏰ Horario punta'], ['ahorro', '💡 Ahorro y pronóstico'], ['config', '⚙ Configuración']);
+  if (!T.some(t => t[0] === tab)) tab = 'lecturas';
+  $('#tabs').innerHTML = T.map(t => '<button type="button" data-t="' + t[0] + '" class="' + (t[0] === tab ? 'on' : '') + '">' + t[1] + '</button>').join('');
+  $$('#tabs button').forEach(b => b.onclick = () => { tab = b.dataset.t; pintar(); });
+  ['lecturas', 'tablero', 'recibos', 'punta', 'ahorro', 'config'].forEach(t => $('#v-' + t).hidden = t !== tab);
+  ({ lecturas: vLecturas, tablero: vTablero, recibos: vRecibos, punta: vPunta, ahorro: vAhorro, config: vConfig })[tab]();
+}
+setInterval(() => { if (YO && !$('.modal')) { $('#avisos').innerHTML = avisosLectura().map(a => '<div class="aviso ' + a[0] + (a[3] ? ' late' : '') + '"><span class="e">' + a[1] + '</span><div>' + a[2] + '</div></div>').join(''); } }, 60000);
+
+// ---- avisos de la lectura diaria (se quitan solos al capturar los tres medidores) ----
+const esDiaLectura = s => aFecha(s).getDay() !== 0;
+function pendientesHoy() { const s = hoyISO(); return D.medidores.filter(m => !D.lecturas.some(l => l.med === m.id && l.fecha === s)); }
+function avisosLectura() {
+  const s = hoyISO(), A = []; if (!esDiaLectura(s)) return [['i', '😴', '<b>Domingo: no se toman lecturas.</b>La del lunes a las ' + D.ajustes.hora + ' incluye el consumo del fin de semana.']];
+  const [hh, mm] = D.ajustes.hora.split(':').map(Number), ahora = new Date(), objetivo = new Date(); objetivo.setHours(hh, mm, 0, 0);
+  const min = Math.round((objetivo - ahora) / 60000), pend = pendientesHoy();
+  if (!pend.length) { const L = D.lecturas.filter(l => l.fecha === s); return [['v', '✅', '<b>Lecturas de hoy completas.</b>' + L.map(l => l.med + ' por ' + esc((l.porN || '').split(' ')[0]) + ' a las ' + esc(l.hora)).join(' · ')]]; }
+  const lista = pend.map(m => m.id).join(', ');
+  if (min > D.ajustes.avisoMin) A.push(['i', '🕙', '<b>Hoy toca lectura a las ' + D.ajustes.hora + '.</b>Medidores: ' + lista + '.']);
+  else if (min > 0) A.push(['a', '⏰', '<b>En ' + min + ' minutos toca la lectura de las ' + D.ajustes.hora + '.</b>Prepara la tablet y ve a la subestación: ' + lista + '.']);
+  else A.push(['r', '🚨', '<b>Lectura de las ' + D.ajustes.hora + ' pendiente (' + (-min) + ' min de retraso).</b>Faltan: ' + lista + '. Tómala ahora para no perder el dato del día.', true]);
+  return A;
+}
+
+// ---- dibujo animado del transformador ----
+function svgTrafo(color, carga, etiqueta) {
+  const c = Math.max(0.05, Math.min(1, carga || 0)), vel = (1.6 - c * 1.2).toFixed(2);
+  return '<svg class="tr" viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="62" r="54" fill="' + color + '" opacity=".14" class="halo"/>' +
+    '<rect x="30" y="38" width="60" height="56" rx="6" fill="#2B3E52"/>' + [0, 1, 2, 3, 4].map(i => '<rect x="' + (24) + '" y="' + (44 + i * 10) + '" width="6" height="6" rx="1" fill="#3E5670"/><rect x="90" y="' + (44 + i * 10) + '" width="6" height="6" rx="1" fill="#3E5670"/>').join('') +
+    [42, 60, 78].map(x => '<rect x="' + (x - 4) + '" y="20" width="8" height="18" rx="3" fill="#C9D6E3"/><circle cx="' + x + '" cy="18" r="4" fill="' + color + '"/>').join('') +
+    '<path d="M42 18 V6 M60 18 V2 M78 18 V6" stroke="' + color + '" stroke-width="3" fill="none" class="flujo" style="animation-duration:' + vel + 's"/>' +
+    '<path d="M50 52 l10 -6 -4 12 h10 l-14 20 4 -14 h-8z" fill="' + color + '"/>' +
+    '<rect x="36" y="98" width="48" height="6" rx="3" fill="#E6ECF2"/><rect x="36" y="98" width="' + (48 * c).toFixed(1) + '" height="6" rx="3" fill="' + color + '"/>' +
+    (etiqueta ? '<text x="60" y="88" text-anchor="middle" font-size="11" font-weight="800" fill="#fff" font-family="Segoe UI,Arial">' + esc(etiqueta) + '</text>' : '') + '</svg>';
+}
+
+// ===================== ⚡ TOMAR LECTURAS =====================
+function vLecturas() {
+  const s = hoyISO();
+  $('#v-lecturas').innerHTML = '<div class="grid3">' + D.medidores.map(m => {
+    const L = lecturasDe(m.id), hoyL = L.find(l => l.fecha === s), prev = [...L].reverse().find(l => l.fecha < s), cd = consumoDiario(m), ult = cd[cd.length - 1];
+    const carga = ult ? ult.kwh / 24 / (m.kva * 0.9) : 0.3;
+    return '<div class="card trafo"><div class="cab">' + svgTrafo(m.color, carga, m.kva + ' kVA') + '<div style="min-width:0"><div class="t1">' + esc(m.nombre) + ' · ' + m.volt + ' V</div><div class="t2">' + m.id + '</div>' +
+      '<div class="small muted">Transformador ' + m.kva + ' kVA · ' + m.tarifa + ' · multiplicador ×' + m.mult + '</div></div></div>' +
+      (hoyL ? '<div class="estado-lec" style="background:var(--verde-s);color:var(--verde)">✅ Tomada hoy a las ' + esc(hoyL.hora) + ' por ' + esc((hoyL.porN || '').split(' ').slice(0, 2).join(' ')) + ' · <b>' + num(hoyL.lec, 1) + '</b></div>'
+        : '<div class="estado-lec" style="background:var(--ambar-s);color:#8A5A00">⏳ Pendiente de hoy' + (prev ? ' · la anterior fue <b>' + num(prev.lec, 1) + '</b> (' + fC(prev.fecha) + ')' : '') + '</div>') +
+      '<div class="kp"><div><b>' + (ult ? num(ult.kwh) : '—') + '</b><span>kWh del último día</span></div><div><b>' + (ult ? num(ult.kwh / 24, 1) : '—') + '</b><span>kW promedio</span></div></div>' +
+      '<button class="btn ' + (hoyL ? '' : 'pri') + ' big" data-cap="' + m.id + '" type="button" style="justify-content:center">' + (hoyL ? '✏️ Corregir lectura de hoy' : '📷 Tomar lectura') + '</button></div>';
+  }).join('') + '</div>' +
+  '<div class="card" style="margin-top:16px"><h2>🗓️ Últimas lecturas</h2><div class="tw"><table><thead><tr><th>Fecha</th><th>Medidor</th><th class="m">Lectura</th><th class="m">kWh</th><th>Tomó</th><th>Hora</th></tr></thead><tbody>' +
+    [...D.lecturas].sort((a, b) => b.fecha.localeCompare(a.fecha) || a.med.localeCompare(b.med)).slice(0, 24).map(l => { const m = medDe(l.med), L = lecturasDe(l.med), i = L.indexOf(l), d = i > 0 ? delta(m, L[i - 1].lec, l.lec) : null;
+      return '<tr><td>' + DIAS[aFecha(l.fecha).getDay()].slice(0, 3) + ' ' + fN(l.fecha) + '</td><td><b style="color:' + m.color + '">' + l.med + '</b></td><td class="m">' + num(l.lec, 1) + '</td><td class="m">' + (d != null ? num(d * m.mult) : '—') + '</td><td>' + esc(l.porN || '') + '</td><td>' + esc(l.hora || '') + (l.foto ? (esAdmin() ? ' <button class="btn sm" data-foto="' + l.foto + '" type="button">📷</button>' : ' 📷') : '') + '</td></tr>'; }).join('') +
+  '</tbody></table></div></div>';
+  $$('[data-cap]').forEach(b => b.onclick = () => dlgLectura(medDe(b.dataset.cap)));
+  $$('[data-foto]').forEach(b => b.onclick = async () => { const s = await DB.doc('fotos/' + b.dataset.foto).get(), d = s.exists && s.data(); modal('📷 Foto del medidor', d ? '<img src="' + d.d + '" alt="Foto del medidor" style="width:100%;border-radius:10px"><div class="row" style="margin-top:8px"><button class="btn" type="button" data-x>Cerrar</button></div>' : '<p>La foto ya se borró (se guardan ' + D.ajustes.retencionFotos + ' días).</p><button class="btn" type="button" data-x>Cerrar</button>'); });
+}
+function dlgLectura(m) {
+  const s = hoyISO(), L = lecturasDe(m.id), hoyL = L.find(l => l.fecha === s), prev = [...L].reverse().find(l => l.fecha < s);
+  const cd = consumoDiario(m).slice(-6), prom = cd.length ? cd.reduce((a, x) => a + x.kwh, 0) / cd.length : null;
+  const extra = [['kwhB', 'kWh base'], ['kwhI', 'kWh intermedia'], ['kwhP', 'kWh punta'], ['kwMax', 'kW demanda máxima'], ['kwPunta', 'kW demanda en punta'], ['kvarh', 'kVArh (reactivos)']].concat(m.netmet ? [['kwhExp', 'kWh entregados a CFE (paneles)']] : []);
+  const mm = modal('📷 Lectura ' + m.id + ' · ' + m.kva + ' kVA', '<div class="lecbox">' +
+    '<div class="row" style="justify-content:space-between"><span class="tag i">' + esc(m.nombre) + ' · ×' + m.mult + '</span><span class="small muted">' + DIAS[aFecha(s).getDay()] + ' ' + fN(s) + ' · ' + new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) + '</span></div>' +
+    (prev ? '<div class="small">Lectura anterior: <b>' + num(prev.lec, 1) + '</b> del ' + DIAS[aFecha(prev.fecha).getDay()] + ' ' + fN(prev.fecha) + ' (' + esc((prev.porN || '').split(' ')[0]) + ')</div>' : '<div class="small muted">Primera lectura de este medidor.</div>') +
+    '<label class="f"><span>Lectura del medidor: pantalla de kWh total' + ((m.codigos || {}).lec ? ' · <b style="color:var(--azul)">código ' + esc(m.codigos.lec) + '</b>' : '') + '</span><input class="grande" id="lLec" inputmode="decimal" placeholder="00000" value="' + (hoyL ? hoyL.lec : '') + '"></label>' +
+    '<div class="calc" id="lCalc">Escribe la lectura y te calculo el consumo.</div>' +
+    '<details' + (hoyL && extra.some(([k]) => hoyL[k] != null) ? ' open' : '') + '><summary style="cursor:pointer;font-weight:700">➕ Otras pantallas del medidor (para que el cálculo salga igual al recibo)</summary><div class="form" style="margin-top:8px">' +
+      extra.map(([k, t]) => '<label class="f"><span>' + t + ((m.codigos || {})[k] ? ' · <b style="color:var(--azul)">código ' + esc(m.codigos[k]) + '</b>' : '') + '</span><input data-k="' + k + '" inputmode="decimal" value="' + (hoyL && hoyL[k] != null ? hoyL[k] : '') + '"></label>').join('') + '</div>' +
+      '<p class="small muted">El medidor va cambiando de pantalla sola: anota cada valor con su código. Con base, intermedia, punta, demanda y kVArh, el recibo estimado sale exacto.</p></details>' +
+    '<div class="row"><label class="btn" style="cursor:pointer">📷 Foto del medidor (opcional)<input type="file" id="lFoto" accept="image/*" capture="environment" hidden></label><span class="small muted" id="lFotoMsg">' + (hoyL && hoyL.foto ? '📷 Ya tiene foto' : 'La foto es solo comprobante: se borra sola a los ' + D.ajustes.retencionFotos + ' días.') + '</span></div>' +
+    '<label class="f">Nota (opcional)<input id="lNota" value="' + esc(hoyL ? hoyL.nota || '' : '') + '" placeholder="Ej. el medidor marca alarma"></label>' +
+    '<p class="small" id="lMsg" style="margin:0;color:var(--rojo)"></p>' +
+    '<div class="row"><button class="btn ok big" id="lOk" type="button">✅ Guardar lectura</button><button class="btn" type="button" data-x>Cancelar</button></div></div>');
+  let foto = null;
+  const calc = () => { const v = $('#lLec', mm).value.replace(',', '.'), c = $('#lCalc', mm);
+    if (!v || isNaN(Number(v))) { c.innerHTML = 'Escribe la lectura y te calculo el consumo.'; return null; }
+    if (!prev) { c.innerHTML = 'Primera lectura: el consumo se calcula a partir de mañana.'; return { ok: true }; }
+    const d = delta(m, prev.lec, Number(v)), n = Math.max(1, dias(prev.fecha, s));
+    if (d == null || d < 0) { c.innerHTML = '⚠️ <b>La lectura es menor que la anterior (' + num(prev.lec, 1) + ').</b> Revisa el número.'; return { ok: false, motivo: 'menor' }; }
+    const kwh = d * m.mult, dia = kwh / n, raro = prom && (dia > prom * 2 || dia < prom * 0.5);
+    c.innerHTML = 'Consumo: ' + num(d, 1) + ' × ' + m.mult + ' = <b>' + num(kwh) + ' kWh</b>' + (n > 1 ? ' en ' + n + ' días (' + num(dia) + ' por día)' : '') +
+      (Number(v) < Number(prev.lec) ? ' <span class="tag i">dio la vuelta el contador</span>' : '') + (prom ? '<br><span class="small muted">Promedio de los últimos días: ' + num(prom) + ' kWh/día</span>' : '') +
+      (raro ? '<br>⚠️ <b>Es muy diferente al promedio.</b> Revísala antes de guardar.' : '');
+    return { ok: true, raro };
+  };
+  $('#lLec', mm).oninput = calc; calc();
+  $('#lFoto', mm).onchange = async e => { const f = e.target.files[0]; if (!f) return; $('#lFotoMsg', mm).textContent = 'Reduciendo foto…'; foto = await reducir(f); $('#lFotoMsg', mm).textContent = '📷 Foto lista (' + Math.round(foto.length * 0.75 / 1024) + ' KB)'; };
+  let confirmado = false;
+  $('#lOk', mm).onclick = async () => {
+    const v = $('#lLec', mm).value.replace(',', '.'), r = calc();
+    if (!r) { $('#lMsg', mm).textContent = 'Escribe la lectura.'; return; }
+    if (r.ok === false) { $('#lMsg', mm).textContent = 'La lectura no puede ser menor que la anterior. Revísala.'; return; }
+    if (r.raro && !confirmado) { confirmado = true; $('#lMsg', mm).textContent = 'El consumo es muy distinto al de los otros días. Si estás seguro, vuelve a dar Guardar.'; return; }
+    const o = hoyL || { id: s + '_' + m.id, med: m.id, fecha: s };
+    Object.assign(o, { lec: Number(v), hora: new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false }), por: YO.nom, porN: YO.n, t: new Date().toISOString(), nota: $('#lNota', mm).value.trim() });
+    $$('[data-k]', mm).forEach(i => { const x = i.value.replace(',', '.'); if (x !== '' && !isNaN(Number(x))) o[i.dataset.k] = Number(x); else delete o[i.dataset.k]; });
+    if (foto) { const fid = 'f' + s.replace(/-/g, '') + m.id; o.foto = fid; DB.doc('fotos/' + fid).set({ d: foto, fecha: s, med: m.id }).catch(() => {}); }
+    if (!hoyL) D.lecturas.push(o);
+    mm.remove(); guardar(); toast('✅ Lectura de ' + m.id + ' guardada' + (pendientesHoy().length ? '. Faltan: ' + pendientesHoy().map(x => x.id).join(', ') : '. ¡Listas las tres!'));
+  };
+  setTimeout(() => $('#lLec', mm).focus(), 60);
+}
+// foto reducida a ~60 KB (comprobante, no se guarda la original)
+function reducir(file) { return new Promise((ok, mal) => { const img = new Image(), u = URL.createObjectURL(file); img.onload = () => { const k = Math.min(1, 900 / Math.max(img.width, img.height)), c = document.createElement('canvas'); c.width = img.width * k; c.height = img.height * k; c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(u); ok(c.toDataURL('image/jpeg', 0.55)); }; img.onerror = mal; img.src = u; }); }
+
+// ===================== 📊 TABLERO =====================
+function gaugeFP(fp) {
+  const v = Math.max(70, Math.min(100, fp || 0)), a = Math.PI * (1 - (v - 70) / 30), x = 85 + 70 * Math.cos(a), y = 95 - 70 * Math.sin(a);
+  const arco = (d0, d1, col) => { const a0 = Math.PI * (1 - (d0 - 70) / 30), a1 = Math.PI * (1 - (d1 - 70) / 30); return '<path d="M' + (85 + 70 * Math.cos(a0)) + ' ' + (95 - 70 * Math.sin(a0)) + ' A70 70 0 0 1 ' + (85 + 70 * Math.cos(a1)) + ' ' + (95 - 70 * Math.sin(a1)) + '" stroke="' + col + '" stroke-width="14" fill="none"/>'; };
+  return '<svg class="gauge" viewBox="0 0 170 110">' + arco(70, 90, '#F3B4B4') + arco(90, 100, '#9ED9B7') +
+    '<line x1="85" y1="95" x2="' + x.toFixed(1) + '" y2="' + y.toFixed(1) + '" stroke="#14212E" stroke-width="4" stroke-linecap="round"><animateTransform attributeName="transform" type="rotate" from="-60 85 95" to="0 85 95" dur="1.2s" fill="freeze"/></line><circle cx="85" cy="95" r="6" fill="#14212E"/>' +
+    '<text x="85" y="72" text-anchor="middle" font-size="18" font-weight="800" fill="' + (fp < 90 ? '#C62828' : '#1E8E5A') + '" font-family="Segoe UI,Arial">' + num(fp, 2) + '%</text><text x="12" y="108" font-size="10" fill="#5B6B7B">70</text><text x="150" y="108" font-size="10" fill="#5B6B7B">100</text><text x="74" y="22" font-size="10" fill="#5B6B7B">90 %</text></svg>';
+}
+function vTablero() {
+  const E = D.medidores.map(m => ({ m, e: estimar(m) }));
+  const tot = E.reduce((s, x) => s + (x.e.sin ? 0 : x.e.proy.total), 0), totKwh = E.reduce((s, x) => s + (x.e.sin ? 0 : x.e.q), 0);
+  $('#v-tablero').innerHTML = '<div class="card" style="margin-bottom:16px;background:linear-gradient(120deg,#fff,#F3F8FF)"><div class="row" style="justify-content:space-between"><div><div class="small muted" style="font-weight:700;letter-spacing:.06em">PRONÓSTICO DE LOS TRES RECIBOS (con IVA)</div><div style="font-size:38px;font-weight:800;color:var(--navy)" id="tTot">$0</div><div class="small muted">' + num(totKwh) + ' kWh medidos en lo que va de los periodos</div></div>' +
+    '<div class="row"><button class="btn" id="tXls" type="button">📗 Excel concentrado</button></div></div></div>' +
+    '<div class="grid3">' + E.map(({ m, e }) => {
+      if (e.sin) return '<div class="card trafo"><div class="cab">' + svgTrafo(m.color, 0.2, m.kva + ' kVA') + '<div><div class="t2">' + m.id + '</div><div class="small muted">' + esc(m.nombre) + '</div></div></div><div class="vacio"><span class="e">📭</span>Faltan lecturas en el periodo ' + fC(e.per.ini) + ' – ' + fC(e.per.fin) + ' para calcular.</div></div>';
+      const carga = e.kwhDia / 24 / (m.kva * 0.9), pct = Math.min(100, e.dmax / m.contratada * 100), pen = e.proy.fpPct > 0;
+      return '<div class="card trafo"><div class="cab">' + svgTrafo(m.color, carga, m.kva + ' kVA') + '<div style="min-width:0"><div class="t1">' + esc(m.nombre) + ' · ' + m.tarifa + '</div><div class="t2">' + m.id + '</div><div class="small muted">Periodo ' + fC(e.per.ini) + ' – ' + fC(e.per.fin) + ' · día ' + e.diasCub + ' de ' + e.diasPer + '</div></div></div>' +
+        '<div style="font-size:28px;font-weight:800;color:' + m.color + '">' + din(e.proy.total) + '</div><div class="small muted" style="margin-top:-8px">pronóstico del recibo · llevamos ' + din(e.real.total) + '</div>' +
+        '<div class="kp"><div><b>' + num(e.q) + '</b><span>kWh en el periodo</span></div><div><b>' + num(e.kwhDia) + '</b><span>kWh por día</span></div>' +
+        '<div><b>' + num(e.dmax) + ' / ' + m.contratada + '</b><span>kW demanda / contratada' + (e.demMedida ? '' : ' (del recibo)') + '</span></div><div><b>' + (e.exp != null ? num(e.exp) : num(e.B / Math.max(1, e.q) * 100, 0) + ' / ' + num(e.P / Math.max(1, e.q) * 100, 0) + ' %') + '</b><span>' + (e.exp != null ? 'kWh de paneles a CFE' : '% base / % punta' + (e.regs ? '' : ' (estimado)')) + '</span></div></div>' +
+        '<div class="small" style="font-weight:700">Demanda contra contratada</div><div class="barra"><i style="width:' + pct + '%;background:' + (pct > 95 ? 'var(--rojo)' : pct > 80 ? 'var(--ambar)' : 'var(--verde)') + '"></i></div>' +
+        '<div class="row" style="justify-content:space-between;align-items:center">' + gaugeFP(e.fp) + '<div class="small" style="flex:1;min-width:120px"><b>Factor de potencia' + (e.fpMedido ? '' : ' (del último recibo)') + '</b><br>' +
+          (pen ? '<span class="tag r">Recargo ' + num(e.proy.fpPct, 1) + ' % ≈ ' + din(e.proy.fpImp) + '</span><br>Estamos por debajo de 90 %: CFE nos penaliza.' : '<span class="tag v">Bonificación ' + num(-e.proy.fpPct, 1) + ' % ≈ ' + din(-e.proy.fpImp) + '</span><br>Arriba de 90 %: CFE nos bonifica.') + '</div></div>' +
+        '<div style="height:150px"><canvas id="g' + m.id + '"></canvas></div>' +
+        '<div class="row"><button class="btn sm" data-pdf="' + m.id + '" type="button">🖨 Recibo estimado (PDF)</button><span class="tag ' + (e.regs ? 'v' : 'a') + '">' + (e.regs ? 'Con pantallas B/I/P' : 'Reparto B/I/P del ' + e.ref.origen) + '</span><span class="tag i">Tarifa ' + esc(e.t.origen) + '</span></div></div>';
+    }).join('') + '</div>' +
+    '<div class="grid2" style="margin-top:16px"><div class="card"><h2>📈 Consumo diario (kWh)</h2><div style="height:260px"><canvas id="gDiario"></canvas></div></div><div class="card"><h2>💵 Pronóstico día a día del recibo</h2><div style="height:260px"><canvas id="gProno"></canvas></div><p class="small muted" style="margin:6px 0 0">Cada punto es lo que estimamos pagar con las lecturas que había ese día. Entre más lecturas, más fino.</p></div></div>';
+  // número animado
+  const el = $('#tTot'), t0 = performance.now(); const paso = t => { const k = Math.min(1, (t - t0) / 900); el.textContent = din(tot * (1 - Math.pow(1 - k, 3))); if (k < 1) requestAnimationFrame(paso); }; requestAnimationFrame(paso);
+  if (window.Chart) {
+    E.forEach(({ m, e }) => { const c = $('#g' + m.id); if (!c || e.sin) return; graficas.push(new Chart(c, { type: 'doughnut', data: { labels: ['Base', 'Intermedia', 'Punta'], datasets: [{ data: [e.proy.eB || 0, e.proy.eI, e.proy.eP || 0], backgroundColor: ['#3BA55C', '#F2B33D', '#D64545'] }] }, options: { maintainAspectRatio: false, plugins: { legend: { position: 'right' }, title: { display: true, text: 'Costo de energía por horario' } }, animation: { animateRotate: true, duration: 1200 } } })); });
+    const fechas = [...new Set(D.medidores.flatMap(m => consumoDiario(m).map(x => x.fecha)))].sort().slice(-30);
+    graficas.push(new Chart($('#gDiario'), { type: 'bar', data: { labels: fechas.map(fC), datasets: D.medidores.map(m => { const cd = consumoDiario(m); return { label: m.id, data: fechas.map(f => { const x = cd.find(y => y.fecha === f); return x ? Math.round(x.kwh) : null; }), backgroundColor: m.color }; }) }, options: { maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true } }, animation: { duration: 1000 } } }));
+    graficas.push(new Chart($('#gProno'), { type: 'line', data: { datasets: D.medidores.map(m => ({ label: m.id, data: serieProno(m).map(x => ({ x: fC(x.fecha), y: Math.round(x.total) })), borderColor: m.color, backgroundColor: m.color, tension: .3 })) }, options: { maintainAspectRatio: false, parsing: true, scales: { x: { type: 'category', labels: fechas.map(fC) } }, animation: { duration: 1200 } } }));
+  }
+  $$('[data-pdf]').forEach(b => b.onclick = () => pdfRecibo(medDe(b.dataset.pdf)));
+  $('#tXls').onclick = () => excel(true);
+}
+
+// ===================== 🧾 RECIBOS, RÉPLICA Y CONCILIACIÓN =====================
+const CAMPOS_REC = [['periodo_inicio', 'Inicio del periodo', 'date'], ['periodo_fin', 'Fin del periodo', 'date'], ['kWh_base', 'kWh base'], ['kWh_intermedia', 'kWh intermedia (GDMTO: total)'], ['kWh_punta', 'kWh punta'], ['kW_base', 'kW base'], ['kW_intermedia', 'kW intermedia'], ['kW_punta', 'kW punta'], ['kWMax', 'kWMax'], ['kVArh', 'kVArh'], ['factor_potencia_pct', 'Factor de potencia %'], ['cargo_fijo', 'Cargo fijo (suministro)'], ['energia', 'Energía'], ['baja_tension_2pct', '2 % baja tensión'], ['cargo_o_bonif_factor_potencia', 'Cargo (+) o bonificación (−) FP'], ['dap', 'DAP / alumbrado'], ['subtotal', 'Subtotal'], ['iva', 'IVA'], ['facturacion_periodo', 'Facturación del periodo']];
+// recalcula un recibo con sus propios datos medidos (prueba de que nuestra fórmula y tarifas son las de CFE)
+function replicaDe(r) {
+  const m = medDe(r.medidor === 'D660RH' ? 'GGH742' : r.medidor), t = tarifaPeriodo(m.tarifa, r.periodo_inicio, r.periodo_fin); if (!t) return null;
+  return factura(m, t, { B: r.kWh_base || 0, I: r.kWh_intermedia || 0, P: r.kWh_punta || 0, dias: dias(r.periodo_inicio, r.periodo_fin), fp: r.factor_potencia_pct || 90, dmax: r.kWMax || r.kW_intermedia, dpunta: r.kW_punta, dap: r.dap || 0 });
+}
+function vRecibos() {
+  const filas = [...D.recibos].sort((a, b) => b.periodo_fin.localeCompare(a.periodo_fin));
+  $('#v-recibos').innerHTML = '<div class="card" style="margin-bottom:16px"><div class="row" style="justify-content:space-between"><h2 style="margin:0">🧾 Recibos de CFE</h2><div class="row"><button class="btn pri" id="rNuevo" type="button">➕ Capturar recibo</button></div></div>' +
+    '<p class="small muted">Cada recibo se vuelve a calcular con las tarifas de CFE (columna <b>Réplica</b>). Si la diferencia es de centavos, nuestras fórmulas están bien. Si capturas el recibo, el siguiente periodo arranca en su fecha de corte.</p>' +
+    (filas.length ? '<div class="tw"><table><thead><tr><th>Medidor</th><th>Periodo</th><th class="m">kWh</th><th class="m">kWMax</th><th class="m">FP %</th><th class="m">Recibo</th><th class="m">Réplica</th><th class="m">Dif.</th><th></th></tr></thead><tbody>' +
+      filas.map(r => { const q = (r.kWh_base || 0) + (r.kWh_intermedia || 0) + (r.kWh_punta || 0), rp = replicaDe(r), rec = r.facturacion_periodo || (r.subtotal || 0) + (r.iva || 0), dif = rp ? rp.subtotal + rp.iva - rec : null;
+        return '<tr><td><b>' + esc(r.medidor) + '</b></td><td>' + fC(r.periodo_inicio) + ' – ' + fF(r.periodo_fin) + '</td><td class="m">' + num(q) + '</td><td class="m">' + num(r.kWMax) + '</td><td class="m" style="color:' + ((r.factor_potencia_pct || 0) < 90 ? 'var(--rojo)' : 'var(--verde)') + '">' + num(r.factor_potencia_pct, 2) + '</td><td class="m">' + din(rec) + '</td><td class="m">' + (rp ? din(rp.subtotal + rp.iva) : '<span class="small muted">sin tarifa</span>') + '</td>' +
+          '<td class="m">' + (dif == null ? '' : '<span class="tag ' + (Math.abs(dif) < 5 ? 'v' : Math.abs(dif) < 200 ? 'a' : 'r') + '">' + (dif >= 0 ? '+' : '') + din(dif) + '</span>') + '</td><td style="white-space:nowrap"><button class="btn sm" data-ver="' + r.id + '" type="button">🔍</button> <button class="btn sm rojo" data-bor="' + r.id + '" type="button">🗑</button></td></tr>'; }).join('') + '</tbody></table></div>'
+      : '<div class="vacio"><span class="e">🧾</span>Aún no hay recibos. Importa el historial en Configuración o captura el último recibo.</div>') + '</div>' +
+    '<div class="grid2"><div class="card"><h2>📊 Consumo mensual por recibo (kWh)</h2><div style="height:260px"><canvas id="gRec"></canvas></div></div><div class="card"><h2>⚡ Factor de potencia por recibo</h2><div style="height:260px"><canvas id="gFP"></canvas></div></div></div>';
+  $('#rNuevo').onclick = () => dlgRecibo();
+  $$('[data-ver]').forEach(b => b.onclick = () => dlgConciliar(D.recibos.find(r => r.id === b.dataset.ver)));
+  $$('[data-bor]').forEach(b => b.onclick = () => { const r = D.recibos.find(x => x.id === b.dataset.bor); if (confirm('¿Borrar el recibo de ' + r.medidor + ' (' + fF(r.periodo_fin) + ')?')) { D.recibos = D.recibos.filter(x => x !== r); guardar(); } });
+  if (window.Chart && filas.length) {
+    const per = [...new Set(D.recibos.map(r => r.periodo_fin.slice(0, 7)))].sort();
+    const ser = (fn, tipo) => ['V366EB', 'GGH742', 'PT477E'].map(id => { const m = medDe(id); return { label: id, data: per.map(p => { const r = D.recibos.find(x => (x.medidor === id || (id === 'GGH742' && x.medidor === 'D660RH')) && x.periodo_fin.slice(0, 7) === p); return r ? fn(r) : null; }), backgroundColor: m.color, borderColor: m.color, tension: .3, spanGaps: true }; });
+    graficas.push(new Chart($('#gRec'), { type: 'bar', data: { labels: per, datasets: ser(r => (r.kWh_base || 0) + (r.kWh_intermedia || 0) + (r.kWh_punta || 0)) }, options: { maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true } } } }));
+    graficas.push(new Chart($('#gFP'), { type: 'line', data: { labels: per, datasets: ser(r => r.factor_potencia_pct).concat([{ label: 'Límite 90 %', data: per.map(() => 90), borderColor: '#C62828', borderDash: [6, 4], pointRadius: 0 }]) }, options: { maintainAspectRatio: false, scales: { y: { min: 75, max: 101 } } } }));
+  }
+}
+function dlgRecibo(r) {
+  const mm = modal(r ? '✏️ Recibo ' + r.medidor : '➕ Capturar recibo de CFE', '<form class="form"><label class="f full">Medidor<select name="medidor">' + D.medidores.map(m => '<option' + (r && r.medidor === m.id ? ' selected' : '') + '>' + m.id + '</option>').join('') + '</select></label>' +
+    CAMPOS_REC.map(([k, t, ty]) => '<label class="f">' + t + '<input name="' + k + '" type="' + (ty || 'number') + '" step="any" value="' + (r && r[k] != null ? r[k] : '') + '"></label>').join('') +
+    '<div class="full row"><button class="btn pri" type="submit">Guardar recibo</button><button class="btn" type="button" data-x>Cancelar</button></div></form>');
+  $('form', mm).onsubmit = e => { e.preventDefault(); const F = e.target, o = r || { id: '' }; o.medidor = F.medidor.value; CAMPOS_REC.forEach(([k, , ty]) => { const v = F[k].value; o[k] = ty === 'date' ? v : v === '' ? null : Number(v); });
+    if (!o.periodo_fin) return toast('Falta la fecha de fin del periodo.'); o.tarifa = medDe(o.medidor).tarifa; o.id = o.medidor + '_' + o.periodo_fin; if (!r) D.recibos.push(o); mm.remove(); guardar(); };
+}
+function dlgConciliar(r) {
+  const rp = replicaDe(r), m = medDe(r.medidor === 'D660RH' ? 'GGH742' : r.medidor);
+  const L = lecturasDe(m.id), a = [...L].reverse().find(l => l.fecha <= r.periodo_inicio), b = [...L].reverse().find(l => l.fecha <= r.periodo_fin);
+  const qLec = a && b && a !== b ? delta(m, a.lec, b.lec) * m.mult : null, qRec = (r.kWh_base || 0) + (r.kWh_intermedia || 0) + (r.kWh_punta || 0);
+  const lin = [['Cargo fijo', r.cargo_fijo, rp && rp.fijo], ['Energía (incluye distribución y capacidad)', r.energia, rp && rp.energia], ['2 % baja tensión', r.baja_tension_2pct, rp && rp.bt], ['Factor de potencia', r.cargo_o_bonif_factor_potencia, rp && rp.fpImp], ['Subtotal', r.subtotal, rp && rp.subtotal], ['IVA', r.iva, rp && rp.iva]];
+  modal('🔍 Conciliación ' + esc(r.medidor) + ' · ' + fC(r.periodo_inicio) + ' – ' + fF(r.periodo_fin),
+    '<div class="tw"><table><thead><tr><th>Concepto</th><th class="m">Recibo CFE</th><th class="m">Nuestro cálculo</th><th class="m">Diferencia</th></tr></thead><tbody>' +
+    lin.map(([t, x, y]) => '<tr><td>' + t + '</td><td class="m">' + din(x) + '</td><td class="m">' + (y == null ? '—' : din(y)) + '</td><td class="m">' + (y == null ? '' : din(y - (x || 0))) + '</td></tr>').join('') + '</tbody></table></div>' +
+    (rp ? '<p class="small">Demanda para distribución: <b>' + rp.kwDist + ' kW</b> · para capacidad: <b>' + rp.kwCap + ' kW</b> · FP ' + num(r.factor_potencia_pct, 2) + ' % → ' + (rp.fpPct > 0 ? 'recargo' : 'bonificación') + ' ' + num(Math.abs(rp.fpPct), 1) + ' %.</p>' : '<p class="aviso a"><span class="e">⚠️</span><span>No hay tarifa cargada para ese mes. Agrégala en Configuración → Tarifas.</span></p>') +
+    '<h3>Nuestras lecturas contra el recibo</h3>' + (qLec == null ? '<p class="small muted">No hay lecturas al inicio y al fin de este periodo para comparar.</p>' :
+      '<p>kWh por nuestras lecturas: <b>' + num(qLec) + '</b> · kWh del recibo: <b>' + num(qRec) + '</b> · diferencia <span class="tag ' + (Math.abs(qLec / qRec - 1) < 0.03 ? 'v' : 'r') + '">' + num((qLec / qRec - 1) * 100, 1) + ' %</span></p>' +
+      (Math.abs(qLec / qRec - 1) >= 0.03 ? '<div class="aviso r"><span class="e">🔎</span><div><b>Algo se está leyendo mal.</b>Revisa: el multiplicador (×' + m.mult + '), que se lea la pantalla de kWh total (no la de kW ni la de kVArh), que las fechas de lectura coincidan con el corte de CFE (' + fF(r.periodo_inicio) + ' y ' + fF(r.periodo_fin) + ')' + (m.netmet ? ' y, como este servicio tiene paneles (NETMET), que se esté anotando la energía entregada y la recibida por separado' : '') + '.</div></div>' : '<div class="aviso v"><span class="e">✅</span><div><b>Nuestras lecturas coinciden con CFE.</b>La diferencia es menor al 3 %.</div></div>')) +
+    '<div class="row"><button class="btn" type="button" data-x>Cerrar</button></div>');
+}
+
+// ===================== ⏰ HORARIO PUNTA =====================
+function franja(temp, td) { const h = Array.from({ length: 24 }, (_, i) => HORARIOS[temp][td].find(x => i >= x[0] && i < x[1])[2]); return '<div class="franja">' + h.map(p => '<i class="' + p + '" title="' + NOMP[p] + '"></i>').join('') + '</div><div class="horas">' + h.map((_, i) => '<span>' + (i % 3 ? '' : i) + '</span>').join('') + '</div>'; }
+function relojSVG(s) {
+  const segs = HORARIOS[temporada(s)][tipoDia(s)], ahora = new Date(), h = ahora.getHours() + ahora.getMinutes() / 60, col = { B: '#3BA55C', I: '#F2B33D', P: '#D64545' };
+  const pt = (hh, r) => { const a = (hh / 24) * 2 * Math.PI - Math.PI / 2; return [110 + r * Math.cos(a), 110 + r * Math.sin(a)]; };
+  const arc = (h0, h1, c) => { const [x0, y0] = pt(h0, 90), [x1, y1] = pt(h1, 90); return '<path d="M' + x0 + ' ' + y0 + ' A90 90 0 ' + (h1 - h0 > 12 ? 1 : 0) + ' 1 ' + x1 + ' ' + y1 + '" stroke="' + c + '" stroke-width="26" fill="none"/>'; };
+  const [ax, ay] = pt(h, 70);
+  return '<svg class="reloj" viewBox="-16 -16 252 252">' + segs.map(x => arc(x[0], x[1], col[x[2]])).join('') + [0, 6, 12, 18].map(k => { const [x, y] = pt(k, 116); return '<text x="' + x + '" y="' + (y + 4) + '" text-anchor="middle" font-size="11" fill="#5B6B7B">' + k + 'h</text>'; }).join('') +
+    '<line x1="110" y1="110" x2="' + ax + '" y2="' + ay + '" stroke="#14212E" stroke-width="5" stroke-linecap="round"/><circle cx="110" cy="110" r="8" fill="#14212E"/><circle cx="' + ax + '" cy="' + ay + '" r="7" fill="#fff" stroke="#14212E" stroke-width="3" class="halo"/>' +
+    '<text x="110" y="148" text-anchor="middle" font-size="13" font-weight="800" fill="#14212E" font-family="Segoe UI,Arial">' + ahora.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) + '</text></svg>';
+}
+function vPunta() {
+  const s = hoyISO(), temp = temporada(s), otra = temp === 'verano' ? 'invierno' : 'verano', cambio = cambioTemporada(s), t = tarifaMes('GDMTH', s), ahora = new Date(), h = ahora.getHours() + ahora.getMinutes() / 60, p = periodoEn(s, h);
+  const proxP = HORARIOS[temp][tipoDia(s)].find(x => x[2] === 'P' && x[0] > h), hp = horasPeriodo(s);
+  const kwPunta = D.cargas.reduce((a, c) => a + (Number(c.kw) || 0), 0), diasLV = 22, hP = temp === 'verano' ? 2 : 4;
+  const ahorroE = t ? kwPunta * hP * diasLV * (t.P - t.I) : 0, ahorroC = t ? kwPunta * t.cap * 1.16 : 0;
+  $('#v-punta').innerHTML = '<div class="grid2"><div class="card" style="text-align:center"><h2 style="justify-content:center">⏰ Ahora: horario ' + NOMP[p] + '</h2>' + relojSVG(s) +
+    '<p style="margin:6px 0 0">' + (p === 'P' ? '<span class="tag r">🔴 Estamos en PUNTA: la energía y la demanda cuestan más. No arrancar equipos grandes.</span>' : proxP ? '<span class="tag a">La punta de hoy empieza a las ' + proxP[0] + ':00 y termina a las ' + proxP[1] + ':00</span>' : '<span class="tag v">Hoy ya no hay horario punta</span>') + '</p>' +
+    '<p class="small muted">Temporada de <b>' + temp + '</b> · cambia a ' + otra + ' el <b>' + DIAS[aFecha(cambio).getDay()] + ' ' + fF(cambio) + '</b> (faltan ' + dias(s, cambio) + ' días).</p></div>' +
+    '<div class="card"><h2>💲 Precio de la energía este mes (' + (t ? esc(t.origen) : '—') + ')</h2>' + (t ? '<div class="kp" style="grid-template-columns:repeat(3,1fr)"><div style="border-left:5px solid var(--base)"><b>$' + num(t.B, 4) + '</b><span>Base $/kWh</span></div><div style="border-left:5px solid var(--inter)"><b>$' + num(t.I, 4) + '</b><span>Intermedia $/kWh</span></div><div style="border-left:5px solid var(--punta)"><b>$' + num(t.P, 4) + '</b><span>Punta $/kWh</span></div></div>' +
+      '<p>En punta la energía cuesta <b>' + num((t.P / t.B - 1) * 100, 0) + ' % más que en base</b> y ' + num((t.P / t.I - 1) * 100, 0) + ' % más que en intermedia. Pero lo más caro de la punta es la <b>capacidad: $' + num(t.cap, 2) + ' por cada kW</b> que se demande en punta, cada mes.</p>' : '<p class="muted">Sin tarifa cargada.</p>') +
+    '<div class="small muted">Hoy (' + DIAS[aFecha(s).getDay()] + '): ' + hp.B + ' h base · ' + hp.I + ' h intermedia · ' + hp.P + ' h punta.</div></div></div>' +
+    '<div class="card" style="margin-top:16px"><h2>🗓️ Horarios del año (Región Central · Aguascalientes)</h2><div class="ley"><span><i style="background:var(--base)"></i>Base (más barato)</span><span><i style="background:var(--inter)"></i>Intermedio</span><span><i style="background:var(--punta)"></i>Punta (más caro)</span></div>' +
+    ['verano', 'invierno'].map(tp => '<h3>' + (tp === 'verano' ? '☀️ Verano: del primer domingo de abril al sábado anterior al último domingo de octubre' : '❄️ Invierno: del último domingo de octubre al sábado anterior al primer domingo de abril') + (tp === temp ? ' <span class="tag i">vigente</span>' : '') + '</h3>' +
+      [['lv', 'Lunes a viernes'], ['sab', 'Sábado'], ['dom', 'Domingo y festivo']].map(([k, n]) => '<div style="margin-bottom:8px"><div class="small" style="font-weight:700">' + n + '</div>' + franja(tp, k) + '</div>').join('')).join('') +
+    '<p class="small muted">Fuente: CFE, tarifa GDMTH, Acuerdo A/158/2024, apartado 3.1.5. Los festivos son los del art. 74 de la Ley Federal del Trabajo. Las fechas de cambio se calculan solas cada año.</p></div>' +
+    '<div class="card" style="margin-top:16px"><div class="row" style="justify-content:space-between"><h2 style="margin:0">🛑 Equipos a parar en horario punta</h2><div class="row"><button class="btn pri" id="pNueva" type="button">➕ Agregar equipo</button><button class="btn" id="pPdf" type="button">🖨 PDF del plan de paro</button></div></div>' +
+    (D.cargas.length ? '<div class="tw" style="margin-top:10px"><table><thead><tr><th>Equipo</th><th>Medidor</th><th class="m">kW</th><th>Qué hacer</th><th></th></tr></thead><tbody>' + D.cargas.map(c => '<tr><td><b>' + esc(c.equipo) + '</b></td><td>' + esc(c.med) + '</td><td class="m">' + num(c.kw, 1) + '</td><td>' + esc(c.accion) + '</td><td><button class="btn sm rojo" data-qc="' + c.id + '" type="button">🗑</button></td></tr>').join('') + '<tr class="tot"><td colspan="2">Total que dejaría de demandarse en punta</td><td class="m">' + num(kwPunta, 1) + ' kW</td><td colspan="2"></td></tr></tbody></table></div>' +
+      (t ? '<div class="aviso v" style="margin-top:10px"><span class="e">💰</span><div><b>Ahorro estimado al mes: ' + din(ahorroE * 1.16 + ahorroC) + ' con IVA</b>Energía movida de punta a intermedia: ' + din(ahorroE * 1.16) + ' · capacidad en punta: ' + din(ahorroC) + ' (' + num(kwPunta, 1) + ' kW × $' + num(t.cap, 2) + '). Solo aplica a los medidores GDMTH (V366EB y GGH742).</div></div>' : '')
+      : '<div class="vacio"><span class="e">🛑</span>Agrega los equipos que se pueden apagar o mover fuera de la punta (compresores en carga, túnel de lavado, hornos, láseres en espera, alumbrado no necesario).</div>') + '</div>';
+  $('#pNueva').onclick = () => { const mm = modal('➕ Equipo a parar en punta', '<form class="form"><label class="f full">Equipo<input name="e" required placeholder="Ej. Compresor 100 HP"></label><label class="f">Medidor<select name="m">' + D.medidores.filter(m => m.tarifa === 'GDMTH').map(m => '<option>' + m.id + '</option>').join('') + '</select></label><label class="f">kW que deja de usar<input name="k" type="number" step="any" required></label><label class="f full">Qué hacer<input name="a" placeholder="Ej. Apagar de 18:00 a 22:00 y dejar solo el de 50 HP"></label><div class="full row"><button class="btn pri" type="submit">Agregar</button><button class="btn" type="button" data-x>Cancelar</button></div></form>');
+    $('form', mm).onsubmit = e => { e.preventDefault(); const F = e.target; D.cargas.push({ id: nuevoId('c'), equipo: F.e.value.trim(), med: F.m.value, kw: Number(F.k.value), accion: F.a.value.trim() }); mm.remove(); guardar(); }; };
+  $$('[data-qc]').forEach(b => b.onclick = () => { D.cargas = D.cargas.filter(c => c.id !== b.dataset.qc); guardar(); });
+  $('#pPdf').onclick = pdfPunta;
+}
+
+// ===================== 💡 AHORRO Y PRONÓSTICO =====================
+function vAhorro() {
+  const E = D.medidores.map(m => ({ m, e: estimar(m) })).filter(x => !x.e.sin), s = hoyISO();
+  const ahorroAcc = a => { const t = tarifaMes('GDMTH', s); if (!t) return 0; const pr = a.periodo === 'P' ? t.P : a.periodo === 'B' ? t.B : t.I; return (Number(a.kw) || 0) * (Number(a.horas) || 0) * (Number(a.dias) || 0) * pr * 1.16; };
+  const totAh = D.acciones.filter(a => a.activo !== false).reduce((x, a) => x + ahorroAcc(a), 0), totProy = E.reduce((x, y) => x + y.e.proy.total, 0);
+  // consumo promedio por día de la semana
+  const porDia = Array.from({ length: 7 }, () => []); D.medidores.forEach(m => consumoDiario(m).filter(x => x.dias === 1).forEach(x => porDia[aFecha(x.fecha).getDay()].push(x.kwh)));
+  const consejos = [];
+  E.forEach(({ m, e }) => {
+    if (e.fp < 90) consejos.push(['r', '⚡', m.id + ': factor de potencia ' + num(e.fp, 2) + ' %', 'Recargo de ' + din(e.proy.fpImp) + ' en este recibo. Revisar o instalar banco de capacitores automático (con reactor antiarmónicos). Con FP ≥ 90 % en lugar de pagar recargo nos bonifican. Trabajo con LOTO y EPP para arco eléctrico.']);
+    if (e.dmax > m.contratada) consejos.push(['r', '📈', m.id + ': demanda ' + num(e.dmax) + ' kW arriba de la contratada (' + m.contratada + ' kW)', 'Escalonar arranques de compresores y máquinas grandes y revisar con CFE el ajuste de la demanda contratada.']);
+    if (e.P / Math.max(1, e.q) > 0.06 && m.tarifa === 'GDMTH') consejos.push(['a', '⏰', m.id + ': ' + num(e.P / e.q * 100, 1) + ' % del consumo cae en punta', 'Mover a horario intermedio o base lo que se pueda: cada kW menos en punta ahorra la capacidad completa del mes.']);
+  });
+  const dom = porDia[0].length ? porDia[0].reduce((a, b) => a + b, 0) / porDia[0].length : null, lv = porDia.slice(1, 6).flat(), plv = lv.length ? lv.reduce((a, b) => a + b, 0) / lv.length : null;
+  if (dom && plv && dom > plv * 0.35) consejos.push(['a', '🌙', 'Consumo alto en días sin producción', 'Los lunes registran ' + num(dom) + ' kWh/día del fin de semana (' + num(dom / plv * 100, 0) + ' % de un día normal). Revisar equipos que se quedan encendidos: compresores, aires, alumbrado.']);
+  if (!consejos.length) consejos.push(['v', '✅', 'Sin focos rojos', 'Factor de potencia, demanda y consumo en punta dentro de rango.']);
+  $('#v-ahorro').innerHTML = '<div class="grid2"><div class="card"><h2>🔮 Pronóstico del recibo con ahorros</h2><div class="kp" style="grid-template-columns:repeat(3,1fr)"><div><b>' + din0(totProy) + '</b><span>Pronóstico actual (3 recibos)</span></div><div><b style="color:var(--verde)">−' + din0(totAh) + '</b><span>Ahorro de las acciones</span></div><div><b>' + din0(totProy - totAh) + '</b><span>Pronóstico con ahorros</span></div></div>' +
+    '<div style="height:220px;margin-top:10px"><canvas id="gAh"></canvas></div></div>' +
+    '<div class="card"><h2>🧠 Consejos según nuestros datos</h2>' + consejos.map(c => '<div class="aviso ' + c[0] + '"><span class="e">' + c[1] + '</span><div><b>' + esc(c[2]) + '</b>' + esc(c[3]) + '</div></div>').join('') + '</div></div>' +
+    '<div class="grid2" style="margin-top:16px"><div class="card"><h2>📅 ¿Qué día consumimos más? (kWh promedio)</h2><div style="height:240px"><canvas id="gDia"></canvas></div><p class="small muted">La lectura del lunes incluye domingo. Para saber la hora exacta en que más se consume se necesita el perfil de 15 minutos del medidor (CFE lo da en "Monitoreo de consumos y demandas").</p></div>' +
+    '<div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">💡 Acciones de ahorro</h2><button class="btn pri" id="aNueva" type="button">➕ Registrar acción</button></div>' +
+      (D.acciones.length ? '<div class="tw" style="margin-top:8px"><table><thead><tr><th>Acción</th><th>Horario</th><th class="m">kW</th><th class="m">$ al mes</th><th></th></tr></thead><tbody>' + D.acciones.map(a => '<tr><td><b>' + esc(a.titulo) + '</b><div class="small muted">' + esc(a.detalle || '') + ' · desde ' + fF(a.desde) + '</div></td><td>' + esc(a.de || '') + '–' + esc(a.a || '') + ' <span class="tag ' + (a.periodo === 'P' ? 'r' : a.periodo === 'B' ? 'v' : 'a') + '">' + NOMP[a.periodo] + '</span></td><td class="m">' + num(a.kw, 1) + '</td><td class="m">' + din0(ahorroAcc(a)) + '</td><td><button class="btn sm rojo" data-qa="' + a.id + '" type="button">🗑</button></td></tr>').join('') + '</tbody></table></div>'
+        : '<div class="vacio"><span class="e">💡</span>Registra lo que se está haciendo (ej. apagado de luces de 14:00 a 15:00) y lo descuento del pronóstico.</div>') + '</div></div>';
+  $('#aNueva').onclick = () => { const mm = modal('💡 Acción de ahorro', '<form class="form"><label class="f full">¿Qué se hace?<input name="t" required placeholder="Ej. Apagado de luces de nave"></label><label class="f">De (hora)<input name="de" type="time" required></label><label class="f">A (hora)<input name="a" type="time" required></label><label class="f">kW que se apagan<input name="k" type="number" step="any" required></label><label class="f">Días al mes<input name="d" type="number" value="26"></label><label class="f full">Detalle<input name="x"></label><div class="full row"><button class="btn pri" type="submit">Guardar</button><button class="btn" type="button" data-x>Cancelar</button></div></form>');
+    $('form', mm).onsubmit = e => { e.preventDefault(); const F = e.target, h0 = Number(F.de.value.split(':')[0]) + Number(F.de.value.split(':')[1]) / 60, h1 = Number(F.a.value.split(':')[0]) + Number(F.a.value.split(':')[1]) / 60;
+      D.acciones.push({ id: nuevoId('a'), titulo: F.t.value.trim(), de: F.de.value, a: F.a.value, horas: r2(h1 > h0 ? h1 - h0 : 24 - h0 + h1), periodo: periodoEn(hoyISO(), h0), kw: Number(F.k.value), dias: Number(F.d.value) || 26, detalle: F.x.value.trim(), desde: hoyISO(), activo: true }); mm.remove(); guardar(); }; };
+  $$('[data-qa]').forEach(b => b.onclick = () => { D.acciones = D.acciones.filter(a => a.id !== b.dataset.qa); guardar(); });
+  if (window.Chart) {
+    graficas.push(new Chart($('#gDia'), { type: 'bar', data: { labels: ['Dom (lunes)', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'], datasets: [{ label: 'kWh promedio (3 medidores)', data: porDia.map(a => a.length ? Math.round(a.reduce((x, y) => x + y, 0) / a.length) : 0), backgroundColor: '#1F6FD1' }] }, options: { maintainAspectRatio: false, plugins: { legend: { display: false } } } }));
+    graficas.push(new Chart($('#gAh'), { type: 'bar', data: { labels: E.map(x => x.m.id), datasets: [{ label: 'Pronóstico', data: E.map(x => Math.round(x.e.proy.total)), backgroundColor: E.map(x => x.m.color) }] }, options: { maintainAspectRatio: false, plugins: { legend: { display: false } } } }));
+  }
+}
+
+// ===================== ⚙ CONFIGURACIÓN =====================
+function vConfig() {
+  const P = D.usuarios, filas = Object.entries(P).sort((a, b) => (a[1].n || '').localeCompare(b[1].n || ''));
+  const tk = Object.keys(Object.assign({}, TARIFAS_CFE, D.tarifas)).sort().reverse();
+  $('#v-config').innerHTML = '<div class="grid2"><div class="card"><h2>👥 Personal</h2><p class="small muted" style="margin-top:0">Todos entran solo con su nómina. <b>Técnico</b>: toma lecturas. <b>Administrador</b>: ve todo.</p><div class="tw"><table><thead><tr><th>Nómina</th><th>Nombre</th><th>Perfil</th><th>Activo</th></tr></thead><tbody>' +
+    filas.map(([k, u]) => '<tr data-k="' + k + '"><td>' + k + '</td><td>' + esc(u.n) + '</td><td>' + (u.r === 'general' ? '<span class="tag v">Administrador general</span>' : '<select data-x="r"><option value="tecnico"' + (u.r === 'tecnico' ? ' selected' : '') + '>🔧 Técnico</option><option value="admin"' + (u.r === 'admin' ? ' selected' : '') + '>🔑 Administrador</option></select>') + '</td><td><input type="checkbox" data-x="a"' + (u.a !== false ? ' checked' : '') + (u.r === 'general' ? ' disabled' : '') + ' style="width:20px;height:20px"></td></tr>').join('') +
+    '</tbody></table></div><div class="row" style="margin-top:8px"><button class="btn pri" id="cGP" type="button">Guardar</button></div>' +
+    '<form id="cAlta" class="form" style="margin-top:10px"><label class="f">Nómina<input name="n" inputmode="numeric" required></label><label class="f">Nombre<input name="m" required></label><label class="f">Perfil<select name="r"><option value="tecnico">🔧 Técnico</option><option value="admin">🔑 Administrador</option></select></label><div class="row" style="align-items:flex-end"><button class="btn" type="submit">➕ Dar de alta</button></div></form></div>' +
+    '<div class="card"><h2>🕙 Hora de lectura</h2><p class="small">Se toma <b>todos los días de lunes a sábado a las ' + D.ajustes.hora + '</b>, siempre a la misma hora para que cada lectura cubra 24 h exactas. A las ' + D.ajustes.hora + ' siempre es horario intermedio en las dos temporadas, lejos de los cambios de base y punta.</p>' +
+      '<form id="cHora" class="form"><label class="f">Hora fija<input name="h" type="time" value="' + D.ajustes.hora + '"></label><label class="f">Avisar antes (min)<input name="a" type="number" value="' + D.ajustes.avisoMin + '"></label><label class="f">Borrar fotos después de (días)<input name="f" type="number" value="' + D.ajustes.retencionFotos + '"></label><div class="row" style="align-items:flex-end"><button class="btn pri" type="submit">Guardar</button></div></form>' +
+      '<h3>📥 Datos iniciales</h3><p class="small muted">Carga el archivo <b>cfe-datos-iniciales.json</b> (historial de recibos, servicios y lecturas). Se hace una vez.</p><label class="btn" style="cursor:pointer">📥 Importar<input type="file" id="cImp" accept=".json" hidden></label> <button class="btn" id="cXls" type="button">📗 Excel concentrado</button></div></div>' +
+    '<div class="card" style="margin-top:16px"><h2>🔌 Medidores y transformadores</h2><div class="tw"><table><thead><tr><th>Medidor</th><th>Servicio</th><th>Tarifa</th><th>kVA</th><th>Mult.</th><th>Contratada kW</th><th>Día de corte</th><th>Vuelta del contador</th><th>2 % BT</th><th>NETMET</th><th>Códigos de pantalla</th></tr></thead><tbody>' +
+      D.medidores.map(m => '<tr data-m="' + m.id + '"><td><b style="color:' + m.color + '">' + m.id + '</b></td><td><input data-y="servicio" value="' + esc(m.servicio) + '" style="width:130px"></td><td>' + m.tarifa + '</td><td><input data-y="kva" type="number" step="any" value="' + m.kva + '" style="width:80px"></td><td><input data-y="mult" type="number" value="' + m.mult + '" style="width:70px"></td><td><input data-y="contratada" type="number" value="' + m.contratada + '" style="width:80px"></td><td><input data-y="corte" type="number" min="1" max="31" value="' + m.corte + '" style="width:70px"></td><td><input data-y="vuelta" type="number" value="' + m.vuelta + '" style="width:100px"></td><td><input type="checkbox" data-y="bt"' + (m.bt ? ' checked' : '') + '></td><td><input type="checkbox" data-y="netmet"' + (m.netmet ? ' checked' : '') + '></td><td><input data-y="codigos" value="' + esc(Object.entries(m.codigos || {}).map(([k, v]) => k + '=' + v).join(', ')) + '" placeholder="lec=4, kvarh=5, kwMax=81" style="width:210px"></td></tr>').join('') +
+    '</tbody></table></div><div class="row" style="margin-top:8px"><button class="btn pri" id="cGM" type="button">Guardar medidores</button></div>' +
+    '<p class="small muted"><b>Códigos de pantalla</b>: el número chico que sale a la izquierda en el medidor. Campos: lec (kWh total), kvarh, kwMax, kwPunta, kwhB, kwhI, kwhP, kwhExp. Los de GGH742 salen de las fotos (4 = kWh, 5 = kVArh, 81 = demanda); faltan confirmar los de V366EB y PT477E (Elster A3).<br>Los <b>paneles solares</b> (inversores Solis 30 kW y Growatt 30 kW, 220 V, en la subestación) están en <b>V366EB</b>: es el único recibo con la leyenda NETMET (desde ago-2024).</p></div>' +
+    '<div class="card" style="margin-top:16px"><div class="row" style="justify-content:space-between"><h2 style="margin:0">💲 Tarifas CFE · división Bajío</h2><button class="btn pri" id="cTN" type="button">➕ Agregar mes</button></div><p class="small muted">Vienen de app.cfe.mx (Tarifas · Industria · GDMTH/GDMTO · Aguascalientes · Bajío). Cada mes CFE publica las nuevas: agrégalas aquí o pídeselas al Inge Virtual.</p><div class="tw" style="max-height:320px;overflow:auto"><table><thead><tr><th>Tarifa · mes</th><th class="m">Fijo</th><th class="m">Base</th><th class="m">Intermedia</th><th class="m">Punta</th><th class="m">Energía (GDMTO)</th><th class="m">Distribución</th><th class="m">Capacidad</th><th>Origen</th></tr></thead><tbody>' +
+      tk.map(k => { const t = D.tarifas[k] || TARIFAS_CFE[k]; return '<tr><td><b>' + k.replace('|', ' · ') + '</b></td><td class="m">' + num(t.fijo, 2) + '</td><td class="m">' + (t.B != null ? num(t.B, 4) : '') + '</td><td class="m">' + (t.I != null ? num(t.I, 4) : '') + '</td><td class="m">' + (t.P != null ? num(t.P, 4) : '') + '</td><td class="m">' + (t.E != null ? num(t.E, 4) : '') + '</td><td class="m">' + num(t.dist, 2) + '</td><td class="m">' + num(t.cap, 2) + '</td><td>' + (D.tarifas[k] ? 'manual' : 'CFE') + '</td></tr>'; }).join('') + '</tbody></table></div></div>' +
+    '<div class="card" style="margin-top:16px"><h2>🚪 Historial de entradas</h2><div id="cAcc" class="small muted">Leyendo…</div></div>';
+  $('#cGP').onclick = () => { $$('#v-config tr[data-k]').forEach(tr => { const u = D.usuarios[tr.dataset.k], r = $('[data-x=r]', tr); if (r) u.r = r.value; const a = $('[data-x=a]', tr); if (!a.disabled) u.a = a.checked; }); guardar(); toast('✔ Personal guardado'); };
+  $('#cAlta').onsubmit = e => { e.preventDefault(); const F = e.target, k = F.n.value.trim(); if (!/^\d{1,8}$/.test(k)) return toast('Nómina no válida'); D.usuarios[k] = { n: F.m.value.trim().toUpperCase(), r: F.r.value, a: true }; guardar(); toast('✔ Alta de ' + D.usuarios[k].n); };
+  $('#cHora').onsubmit = e => { e.preventDefault(); const F = e.target; D.ajustes.hora = F.h.value || '10:00'; D.ajustes.avisoMin = Number(F.a.value) || 30; D.ajustes.retencionFotos = Number(F.f.value) || 35; guardar(); toast('✔ Guardado'); };
+  $('#cGM').onclick = () => { $$('#v-config tr[data-m]').forEach(tr => { const m = medDe(tr.dataset.m); $$('[data-y]', tr).forEach(i => { m[i.dataset.y] = i.dataset.y === 'codigos' ? Object.fromEntries(i.value.split(',').map(x => x.split('=').map(y => y.trim())).filter(x => x[0] && x[1])) : i.type === 'checkbox' ? i.checked : i.type === 'number' ? Number(i.value) : i.value.trim(); }); }); guardar(); toast('✔ Medidores guardados'); };
+  $('#cTN').onclick = () => { const mm = modal('💲 Tarifa de un mes', '<form class="form"><label class="f">Tarifa<select name="t"><option>GDMTH</option><option>GDMTO</option></select></label><label class="f">Mes<input name="m" type="month" required></label>' + [['fijo', 'Fijo $/mes'], ['B', 'Base $/kWh'], ['I', 'Intermedia $/kWh'], ['P', 'Punta $/kWh'], ['E', 'Energía $/kWh (GDMTO)'], ['dist', 'Distribución $/kW'], ['cap', 'Capacidad $/kW']].map(([k, t]) => '<label class="f">' + t + '<input name="' + k + '" type="number" step="any"></label>').join('') + '<div class="full row"><button class="btn pri" type="submit">Guardar</button><button class="btn" type="button" data-x>Cancelar</button></div></form>');
+    $('form', mm).onsubmit = e => { e.preventDefault(); const F = e.target, o = {}; ['fijo', 'B', 'I', 'P', 'E', 'dist', 'cap'].forEach(k => { if (F[k].value !== '') o[k] = Number(F[k].value); }); D.tarifas[F.t.value + '|' + F.m.value] = o; mm.remove(); guardar(); }; };
+  $('#cImp').onchange = async e => { const f = e.target.files[0]; if (!f) return; try { importar(JSON.parse(await f.text())); } catch (x) { toast('No se pudo leer: ' + x.message); } };
+  $('#cXls').onclick = () => excel(true);
+  (async () => { const box = $('#cAcc'); try { const q = await DB.collection('accesos').orderBy('t', 'desc').limit(200).get(); const A = q.docs.map(d => d.data());
+    box.innerHTML = A.length ? '<div class="tw" style="max-height:300px;overflow:auto"><table><tbody>' + A.map(a => '<tr><td>' + new Date(a.t).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' }) + '</td><td>' + esc(a.nom) + '</td><td>' + esc(a.n) + '</td></tr>').join('') + '</tbody></table></div>' : 'Sin entradas aún.'; } catch (x) { box.textContent = 'No se pudo leer.'; } })();
+}
+function importar(x) {
+  let n = 0; const lista = v => Array.isArray(v) ? v : v && Array.isArray(v.value) ? v.value : [];
+  x = { recibos: lista(x.recibos), lecturas: lista(x.lecturas), medidores: lista(x.medidores) };
+  x.recibos.forEach(r => { r.id = (r.medidor === 'D660RH' ? 'GGH742' : r.medidor) + '_' + r.periodo_fin + (r.medidor === 'D660RH' ? '_D660RH' : ''); if (!D.recibos.some(y => y.id === r.id)) { D.recibos.push(r); n++; } });
+  x.lecturas.forEach(l => { l.id = l.fecha + '_' + l.med; if (!D.lecturas.some(y => y.id === l.id)) { D.lecturas.push(l); n++; } });
+  x.medidores.forEach(o => { const m = medDe(o.id); if (m) Object.assign(m, o); });
+  guardar(); toast('✔ Importados ' + n + ' registros');
+}
+
+// ===================== 🖨 PDF: recibo estimado por transformador =====================
+function pdfRecibo(m) {
+  const e = estimar(m); if (e.sin) return toast('Faltan lecturas para calcular.');
+  const { jsPDF } = window.jspdf, doc = new jsPDF({ unit: 'mm', format: 'letter' }), W = 215.9, f = e.proy, verde = [14, 42, 71];
+  doc.setFillColor(...verde); doc.rect(0, 0, W, 30, 'F'); doc.setFillColor(245, 166, 35); doc.rect(0, 30, W, 2, 'F');
+  doc.setTextColor(255); doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.text('ESTIMACIÓN DE RECIBO DE ENERGÍA', 14, 13);
+  doc.setFontSize(10); doc.setFont('helvetica', 'normal'); doc.text('Creaciones Industriales, S.A. de C.V. · Línea Italia · Aguascalientes', 14, 21);
+  doc.setFontSize(9); doc.text('Cálculo interno de Mantenimiento · no es un documento de CFE', W - 14, 21, { align: 'right' });
+  doc.setFontSize(20); doc.setFont('helvetica', 'bold'); doc.text(din(f.total), W - 14, 13, { align: 'right' });
+  const datos = [['Medidor', m.id], ['No. de servicio', m.servicio || '—'], ['Tarifa', m.tarifa], ['Multiplicador', String(m.mult)], ['Transformador', m.kva + ' kVA · ' + m.volt + ' V'], ['Periodo', fN(e.per.ini) + ' al ' + fN(e.per.fin)], ['Carga conectada kW', String(m.conectada)], ['Demanda contratada kW', String(m.contratada)]];
+  doc.autoTable({ startY: 37, body: [[datos.slice(0, 4).map(x => x[0] + ': ' + x[1]).join('    '), ''], [datos.slice(4).map(x => x[0] + ': ' + x[1]).join('    '), '']], theme: 'plain', styles: { fontSize: 8.6, cellPadding: 1 }, columnStyles: { 1: { cellWidth: 0 } }, margin: { left: 14, right: 14 } });
+  const cons = [['kWh base', num(f.B)], ['kWh intermedia', num(f.I)], ['kWh punta', num(f.P)], ['kW máx. (distribución)', num(e.dmax)], ['kW punta (capacidad)', num(e.dpunta)], ['Factor de potencia %', num(e.fp, 2)]];
+  const yIni = doc.lastAutoTable.finalY + 3;
+  doc.autoTable({ startY: yIni, head: [['Consumo pronosticado al cierre', 'Valor']], body: cons, theme: 'grid', headStyles: { fillColor: verde }, styles: { fontSize: 9 }, margin: { left: 14, right: W / 2 + 2 }, columnStyles: { 1: { halign: 'right' } } });
+  const y0 = doc.lastAutoTable.finalY;
+  const t = e.t, mem = m.tarifa === 'GDMTO' ? [['Suministro (fijo)', din(f.fijo)], ['Energía ' + num(f.Q) + ' kWh × $' + num(t.E, 4), din(f.eI)], ['Distribución ' + f.kwDist + ' kW × $' + num(t.dist, 2), din(f.dist)], ['Capacidad ' + f.kwCap + ' kW × $' + num(t.cap, 2), din(f.cap)]]
+    : [['Suministro (fijo)', din(f.fijo)], ['Energía base ' + num(f.B) + ' × $' + num(t.B, 4), din(f.eB)], ['Energía intermedia ' + num(f.I) + ' × $' + num(t.I, 4), din(f.eI)], ['Energía punta ' + num(f.P) + ' × $' + num(t.P, 4), din(f.eP)], ['Distribución ' + f.kwDist + ' kW × $' + num(t.dist, 2), din(f.dist)], ['Capacidad ' + f.kwCap + ' kW × $' + num(t.cap, 2), din(f.cap)]];
+  doc.autoTable({ startY: yIni, head: [['Costos (tarifa ' + t.origen + ')', 'Importe']], body: mem, theme: 'grid', headStyles: { fillColor: verde }, styles: { fontSize: 8.6 }, margin: { left: W / 2 + 2, right: 14 }, columnStyles: { 1: { halign: 'right' } } });
+  const des = [['Cargo fijo', din(f.fijo)], ['Energía', din(f.energia)], ['2 % baja tensión', din(f.bt)], [(f.fpPct > 0 ? 'Cargo' : 'Bonificación') + ' factor de potencia (' + num(Math.abs(f.fpPct), 1) + ' %)', din(f.fpImp)], ['Subtotal', din(f.subtotal)], ['IVA 16 %', din(f.iva)], ['Alumbrado público (DAP) estimado', din(f.dap)], ['TOTAL ESTIMADO', din(f.total)]];
+  doc.autoTable({ startY: Math.max(y0, doc.lastAutoTable.finalY) + 4, head: [['Desglose del importe', 'Importe']], body: des, theme: 'grid', headStyles: { fillColor: [245, 166, 35], textColor: 20 }, styles: { fontSize: 10 }, margin: { left: 14, right: 14 }, columnStyles: { 1: { halign: 'right', fontStyle: 'bold' } }, didParseCell: d => { if (d.row.index === des.length - 1) { d.cell.styles.fontSize = 12; d.cell.styles.fillColor = [255, 243, 220]; } } });
+  let y = doc.lastAutoTable.finalY + 6; doc.setFontSize(8.5); doc.setTextColor(60); doc.setFont('helvetica', 'normal');
+  const notas = ['Base del cálculo: lecturas del ' + fN(e.primera.fecha) + ' al ' + fN(e.ultima.fecha) + ' (' + e.diasCub + ' días, ' + num(e.q) + ' kWh) proyectadas a ' + e.diasPer + ' días del periodo.',
+    e.regs ? 'Base/intermedia/punta medidas en las pantallas del medidor.' : 'Base/intermedia/punta repartidas con los porcentajes del ' + e.ref.origen + '. Para un cálculo exacto anotar las pantallas de kWh base, intermedia y punta.',
+    e.demMedida ? 'Demanda máxima medida en el medidor.' : 'Demanda tomada del ' + e.ref.origen + '.', e.fpMedido ? 'Factor de potencia calculado con kWh y kVArh medidos.' : 'Factor de potencia del ' + e.ref.origen + '.',
+    'Reglas CFE: distribución = mín(Dmax, kWh/(24·días·' + FC[m.tarifa] + ')); capacidad = mín(D' + (m.tarifa === 'GDMTO' ? 'max' : 'punta') + ', kWh/(24·días·' + FC[m.tarifa] + ')); FP menor a 90 %: recargo 3/5·(90/FP - 1); FP de 90 % o más: bonificación 1/4·(1 - 90/FP), máx. 2.5 %.'];
+  notas.forEach(n => { const l = doc.splitTextToSize('• ' + n, W - 28); doc.text(l, 14, y); y += l.length * 4.2; });
+  doc.setFontSize(7.5); doc.text('Generado el ' + new Date().toLocaleString('es-MX') + ' · Lecturas CFE · Línea Italia', W / 2, 272, { align: 'center' });
+  window.open(URL.createObjectURL(doc.output('blob')), '_blank') || doc.save('Recibo estimado ' + m.id + '.pdf');
+}
+// ===================== 🖨 PDF: plan de paro en horario punta =====================
+function pdfPunta() {
+  const { jsPDF } = window.jspdf, doc = new jsPDF({ unit: 'mm', format: 'letter' }), W = 215.9, s = hoyISO(), t = tarifaMes('GDMTH', s);
+  doc.setFillColor(214, 69, 69); doc.rect(0, 0, W, 28, 'F'); doc.setTextColor(255); doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.text('PLAN DE PARO EN HORARIO PUNTA', 14, 13);
+  doc.setFontSize(10); doc.setFont('helvetica', 'normal'); doc.text('Línea Italia · Mantenimiento · tarifa GDMTH · Región Central (Aguascalientes)', 14, 21);
+  const fila = (temp, td) => { const L = HORARIOS[temp][td]; const g = k => L.filter(x => x[2] === k).map(x => x[0] + ':00–' + x[1] + ':00').join(', ') || '—'; return [g('B'), g('I'), g('P')]; };
+  const tablaT = (temp, tit) => { doc.autoTable({ startY: (doc.lastAutoTable ? doc.lastAutoTable.finalY : 30) + 6, head: [[tit, 'Base', 'Intermedio', 'PUNTA']], body: [['Lunes a viernes', ...fila(temp, 'lv')], ['Sábado', ...fila(temp, 'sab')], ['Domingo y festivo', ...fila(temp, 'dom')]], theme: 'grid', headStyles: { fillColor: [14, 42, 71] }, columnStyles: { 3: { textColor: [198, 40, 40], fontStyle: 'bold' } }, styles: { fontSize: 9.5 }, margin: { left: 14, right: 14 } }); };
+  tablaT('invierno', 'Invierno (último dom. de octubre a primer dom. de abril)'); tablaT('verano', 'Verano (primer dom. de abril a último dom. de octubre)');
+  let y = doc.lastAutoTable.finalY + 8; doc.setTextColor(20); doc.setFontSize(10.5); doc.setFont('helvetica', 'bold'); doc.text('¿Por qué parar en punta?', 14, y); y += 6; doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5);
+  const por = t ? ['En punta la energía cuesta $' + num(t.P, 4) + '/kWh contra $' + num(t.I, 4) + ' en intermedio y $' + num(t.B, 4) + ' en base (' + num((t.P / t.B - 1) * 100, 0) + ' % más que base).', 'El cargo por capacidad ($' + num(t.cap, 2) + ' por kW al mes) se cobra con la demanda máxima en punta: con un solo arranque en punta se paga todo el mes.', 'Mover cargas a intermedio o base no reduce la producción, solo la acomoda en el horario más barato.'] : [];
+  por.forEach(p => { const l = doc.splitTextToSize('• ' + p, W - 28); doc.text(l, 14, y); y += l.length * 4.8; });
+  doc.autoTable({ startY: y + 4, head: [['Equipo a parar o mover', 'Medidor', 'kW', 'Qué hacer']], body: D.cargas.map(c => [c.equipo, c.med, num(c.kw, 1), c.accion || 'Apagar durante la punta']), theme: 'grid', headStyles: { fillColor: [214, 69, 69] }, styles: { fontSize: 9.5 }, margin: { left: 14, right: 14 } });
+  y = doc.lastAutoTable.finalY + 8; const kw = D.cargas.reduce((a, c) => a + (Number(c.kw) || 0), 0);
+  if (t) { doc.setFont('helvetica', 'bold'); doc.text('Ahorro estimado al mes con IVA: ' + din((kw * 4 * 22 * (t.P - t.I) + kw * t.cap) * 1.16) + ' (' + num(kw, 1) + ' kW fuera de punta).', 14, y); }
+  y += 8; doc.setFont('helvetica', 'normal'); doc.text('Próximo cambio de horario: ' + DIAS[aFecha(cambioTemporada(s)).getDay()] + ' ' + fF(cambioTemporada(s)) + '. Las fechas cambian cada año; esta hoja se genera con las del año en curso.', 14, y);
+  doc.setFontSize(7.5); doc.setTextColor(90); doc.text('Fuente: CFE, tarifa GDMTH, Acuerdo A/158/2024 (3.1.5). Seguridad: todo paro o arranque de equipo con LOTO y EPP.', W / 2, 272, { align: 'center' });
+  window.open(URL.createObjectURL(doc.output('blob')), '_blank') || doc.save('Plan de paro horario punta.pdf');
+}
+
+// ===================== 📗 Excel concentrado (uno por año; se actualiza los viernes) =====================
+function cargarJS(src) { return new Promise((ok, mal) => { if (window.ExcelJS) return ok(); const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = () => mal(new Error('Sin internet para el Excel')); document.head.appendChild(s); }); }
+async function excel(avisar) {
+  if (!esAdmin()) return;
+  try {
+    await cargarJS('https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js');
+    const wb = new ExcelJS.Workbook(), a = new Date().getFullYear(), AZ = 'FF0E2A47';
+    const hoja = (n, cols, enc, filas, fmt = {}) => { const ws = wb.addWorksheet(n, { views: [{ state: 'frozen', ySplit: 1 }] }); ws.columns = cols.map(w => ({ width: w })); const h = ws.addRow(enc); h.eachCell(c => { c.font = { bold: true, color: { argb: 'FFFFFFFF' } }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: AZ } }; });
+      filas.forEach(f => ws.addRow(f)); Object.entries(fmt).forEach(([col, nf]) => ws.getColumn(Number(col)).numFmt = nf); ws.autoFilter = { from: 'A1', to: { row: 1, column: enc.length } }; return ws; };
+    hoja('RESUMEN', [14, 22, 14, 14, 14, 14, 16, 16, 12], ['Medidor', 'Periodo', 'Días', 'kWh medidos', 'kWh/día', 'kW demanda', 'Llevamos $', 'Pronóstico $', 'FP %'],
+      D.medidores.map(m => { const e = estimar(m); return e.sin ? [m.id, fF(e.per.ini) + ' – ' + fF(e.per.fin), '', '', '', '', '', '', ''] : [m.id, fF(e.per.ini) + ' – ' + fF(e.per.fin), e.diasCub + ' de ' + e.diasPer, Math.round(e.q), Math.round(e.kwhDia), e.dmax, r2(e.real.total), r2(e.proy.total), r2(e.fp)]; }), { 7: '"$"#,##0.00', 8: '"$"#,##0.00' });
+    hoja('LECTURAS', [12, 10, 8, 12, 12, 30, 12, 12, 12, 12, 12, 12, 14, 30], ['Fecha', 'Medidor', 'Hora', 'Lectura', 'kWh', 'Tomó', 'kWh base', 'kWh int.', 'kWh punta', 'kW máx', 'kW punta', 'kVArh', 'kWh a CFE', 'Nota'],
+      [...D.lecturas].sort((x, y) => x.fecha.localeCompare(y.fecha) || x.med.localeCompare(y.med)).map(l => { const m = medDe(l.med), L = lecturasDe(l.med), i = L.indexOf(l), d = i > 0 ? delta(m, L[i - 1].lec, l.lec) : null; return [aFecha(l.fecha), l.med, l.hora, l.lec, d != null ? d * m.mult : null, l.porN, l.kwhB, l.kwhI, l.kwhP, l.kwMax, l.kwPunta, l.kvarh, l.kwhExp, l.nota]; }), { 1: 'dd/mm/yyyy' });
+    hoja('RECIBOS', [10, 12, 12, 10, 10, 10, 8, 8, 10, 10, 14, 14, 14, 14], ['Medidor', 'Inicio', 'Fin', 'kWh base', 'kWh int.', 'kWh punta', 'kWMax', 'kW punta', 'kVArh', 'FP %', 'Energía', 'Subtotal', 'Facturación', 'Réplica'],
+      [...D.recibos].sort((x, y) => x.periodo_fin.localeCompare(y.periodo_fin)).map(r => { const rp = replicaDe(r); return [r.medidor, aFecha(r.periodo_inicio), aFecha(r.periodo_fin), r.kWh_base, r.kWh_intermedia, r.kWh_punta, r.kWMax, r.kW_punta, r.kVArh, r.factor_potencia_pct, r.energia, r.subtotal, r.facturacion_periodo, rp ? r2(rp.subtotal + rp.iva) : null]; }), { 2: 'dd/mm/yyyy', 3: 'dd/mm/yyyy' });
+    const tk = Object.keys(Object.assign({}, TARIFAS_CFE, D.tarifas)).sort();
+    hoja('TARIFAS', [18, 10, 10, 10, 10, 10, 12, 12], ['Tarifa · mes', 'Fijo', 'Base', 'Intermedia', 'Punta', 'Energía', 'Distribución', 'Capacidad'], tk.map(k => { const t = D.tarifas[k] || TARIFAS_CFE[k]; return [k, t.fijo, t.B, t.I, t.P, t.E, t.dist, t.cap]; }));
+    const buf = await wb.xlsx.writeBuffer(), blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), nombre = 'Concentrado lecturas CFE ' + a + '.xlsx';
+    if (carpeta) { const fh = await carpeta.getFileHandle(nombre, { create: true }), w = await fh.createWritable(); await w.write(blob); await w.close(); toast('Excel actualizado en la carpeta'); }
+    else { const l = document.createElement('a'); l.href = URL.createObjectURL(blob); l.download = nombre; l.click(); }
+    try { localStorage.setItem('cfe_xls', hoyISO()); } catch (e) {}
+  } catch (e) { toast('Excel: ' + (/lock|modif|InvalidState/i.test(e.name + e.message) ? 'cierra el archivo en Excel' : e.message)); }
+}
+// tareas del administrador al abrir: Excel de los viernes y limpieza de fotos viejas
+async function tareasAdmin() {
+  if (!esAdmin() || tareasAdmin.hecho) return; tareasAdmin.hecho = true;
+  try { if (new Date().getDay() === 5 && localStorage.getItem('cfe_xls') !== hoyISO()) toast('📗 Hoy es viernes: actualiza el Excel concentrado desde el Tablero.'); } catch (e) {}
+  const lim = sumaD(hoyISO(), -D.ajustes.retencionFotos);
+  D.lecturas.filter(l => l.foto && l.fecha < lim).forEach(l => { DB.doc('fotos/' + l.foto).delete().catch(() => {}); delete l.foto; });
+}
+
+// ===================== arranque =====================
+if (window.claude && window.LI) conectar(); else document.querySelector('main').innerHTML = '<div class="card vacio"><span class="e">🌐</span>Abre la app desde su liga en internet.</div>';
+if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body></html>
