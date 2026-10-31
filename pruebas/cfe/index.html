@@ -51,6 +51,19 @@ tr.tot td{font-weight:800;border-top:2px solid var(--ink)}
 .aviso.r{background:var(--rojo-s);border-color:#F2B8B3}.aviso.a{background:var(--ambar-s);border-color:#F3D38E}.aviso.i{background:var(--azul-s);border-color:#B9D2F2}.aviso.v{background:var(--verde-s);border-color:#B6E3C9}
 .aviso.late{animation:late 1.4s ease-in-out infinite}
 @keyframes late{50%{box-shadow:0 0 0 6px rgba(198,40,40,.18)}}
+/* alerta grande de lectura (se ve de lejos aunque nadie esté frente a la tablet) */
+#alertaLec{position:fixed;inset:0;z-index:40;display:grid;place-items:center;padding:16px;color:#fff;text-align:center}
+#alertaLec.pre{background:radial-gradient(circle at 50% 40%,#F5A623,#B86A00)}
+#alertaLec.tarde{background:radial-gradient(circle at 50% 40%,#E04848,#8E1515);animation:alLat 1.2s ease-in-out infinite}
+@keyframes alLat{50%{filter:brightness(1.25)}}
+#alertaLec .ic{font-size:clamp(70px,16vw,150px);line-height:1;animation:alIc 1s ease-in-out infinite}
+@keyframes alIc{50%{transform:scale(1.12) rotate(-6deg)}}
+#alertaLec h2{font-size:clamp(28px,6vw,58px);margin:10px 0 4px;color:#fff;justify-content:center}
+#alertaLec .rel{font:800 clamp(40px,10vw,96px)/1 Consolas,monospace;margin:6px 0}
+#alertaLec p{font-size:clamp(16px,2.6vw,22px);margin:6px auto;max-width:760px}
+#alertaLec .row{justify-content:center;margin-top:18px}
+#alertaLec .btn{font-size:20px;padding:14px 22px}
+@media (prefers-reduced-motion:reduce){#alertaLec.tarde,#alertaLec .ic{animation:none}}
 /* transformadores */
 .trafo{display:flex;flex-direction:column;gap:10px;position:relative;overflow:hidden}
 .trafo .cab{display:flex;gap:12px;align-items:center}
@@ -147,8 +160,11 @@ if (window.DEMO) {
   <span class="esp"></span>
   <span class="chip periodo" id="chPeriodo"></span>
   <span class="chip" id="chHoy" style="cursor:default"></span>
+  <button class="chip" id="btnInstalar" type="button" hidden>📲 Instalar en este equipo</button>
+  <button class="chip" id="btnAvisos" type="button">🔕 Activar avisos</button>
   <button class="chip" id="quien" type="button"></button>
 </div></header>
+<div id="alertaLec" hidden></div>
 
 <main class="wrap">
   <div id="avisos" style="margin-top:16px"></div>
@@ -230,13 +246,13 @@ const CAMPOS = {
 };
 const MED_DEF = [
   { id: 'V366EB', nombre: 'Fuerza 220 V', kva: 300, volt: 220, tarifa: 'GDMTH', mult: 80, contratada: 180, conectada: 180, vuelta: 100000, corte: 31, bt: true, netmet: true, color: '#F5A623', servicio: '097930220489', rmu: '20230 93-02-01 CIN9-11231 001 CFE', cuenta: '82DP52B018001055', multDem: 80, marca: 'Elster A3RL',
-    pantallas: [['expI', '102'], ['expB', '101'], ['kvarh', '5'], ['lec', '1'], ['kwP', '43'], ['kwhP', '13'], ['kwI', '42'], ['kwhI', '12'], ['kwB', '41'], ['kwhB', '11'], ['invS', 'INV1'], ['invG', 'INV2']] },
+    pantallas: [['expI', '102'], ['expB', '101'], ['kvarh', '5'], ['lec', '1'], ['kwP', '43'], ['kwhP', '13'], ['kwI', '42'], ['kwhI', '12'], ['kwB', '41'], ['kwhB', '11']] },
   { id: 'GGH742', nombre: 'Fuerza 440 V', kva: 225, volt: 440, tarifa: 'GDMTH', mult: 80, contratada: 135, conectada: 135, vuelta: 100000, corte: 31, bt: true, netmet: false, color: '#1F6FD1', servicio: '', multDem: 80, marca: 'Wasion Libra3',
     pantallas: [['kvarh', '5'], ['lec', '4'], ['kwP', '43'], ['kwhP', '13'], ['kwI', '42'], ['kwhI', '12'], ['kwB', '41'], ['kwhB', '11']] },
   { id: 'PT477E', nombre: 'Servicio 220 V', kva: 112.5, volt: 220, tarifa: 'GDMTO', mult: 1, contratada: 68, conectada: 68, vuelta: 100000, corte: 15, bt: true, netmet: false, color: '#1E8E5A', servicio: '', multDem: 1, marca: 'Elster A3RAL',
     pantallas: [['kvarh', '35'], ['kwMax', '6'], ['lec', '5']] }
 ];
-const AJ_DEF = { hora: '10:00', avisoMin: 30, retencionFotos: 35, diasPago: 13, kwp: 76, pr: 0.78, perdidaSucio: 0.12, limpiezas: [{ fecha: '2026-10-31', estado: 'sucio', nota: 'Reportado por Ing. Omar: paneles con polvo' }] };
+const AJ_DEF = { hora: '10:00', avisoMin: 30, retencionFotos: 35, diasPago: 13, kwp: 72, pr: 0.78, inclinacion: 22, azimut: 180, orientacion: 'Sur (azimut 180°), inclinación 22°', strings: '8 strings (4 por inversor, 1 por MPPT) de ≈ 740 V y 7 A', perdidaSucio: 0.12, limpiezas: [{ fecha: '2026-10-31', estado: 'sucio', nota: 'Reportado por Ing. Omar: paneles con polvo' }] };
 let D = { usuarios: {}, ajustes: Object.assign({}, AJ_DEF), medidores: JSON.parse(JSON.stringify(MED_DEF)), tarifas: {}, lecturas: [], recibos: [], acciones: [], cargas: [] };
 let DB = null, YO = null, tab = 'lecturas', carpeta = null;
 const listo = {}, ULT = {}; COLS.forEach(c => ULT[c] = {}); let ULT_CFG = {};
@@ -425,19 +441,64 @@ setInterval(() => { if (YO && !$('.modal')) { $('#avisos').innerHTML = avisosLec
 
 // ---- avisos de la lectura diaria (se quitan solos al capturar los tres medidores) ----
 const esDiaLectura = s => aFecha(s).getDay() !== 0;
-function pendientesHoy() { const s = hoyISO(); return D.medidores.filter(m => !D.lecturas.some(l => l.med === m.id && l.fecha === s)); }
+function pendientesHoy() { const s = hoyISO(), p = D.medidores.filter(m => !D.lecturas.some(l => l.med === m.id && l.fecha === s)); if (!D.lecturas.some(l => l.med === 'SOLAR' && l.fecha === s)) p.push({ id: 'Inversores ☀️' }); return p; }
 function avisosLectura() {
   // domingo: la planta está sola, no se toma lectura ni se muestra ningún aviso (la del lunes cubre el fin de semana)
   const s = hoyISO(), A = []; if (!esDiaLectura(s)) return A;
   const [hh, mm] = D.ajustes.hora.split(':').map(Number), ahora = new Date(), objetivo = new Date(); objetivo.setHours(hh, mm, 0, 0);
   const min = Math.round((objetivo - ahora) / 60000), pend = pendientesHoy();
-  if (!pend.length) { const L = D.lecturas.filter(l => l.fecha === s); return [['v', '✅', '<b>Lecturas de hoy completas.</b>' + L.map(l => l.med + ' por ' + esc((l.porN || '').split(' ')[0]) + ' a las ' + esc(l.hora)).join(' · ')]]; }
+  if (!pend.length) { const L = D.lecturas.filter(l => l.fecha === s && l.med !== 'SOLAR'); return [['v', '✅', '<b>Lecturas de hoy completas.</b>' + L.map(l => l.med + ' por ' + esc((l.porN || '').split(' ')[0]) + ' a las ' + esc(l.hora)).join(' · ')]]; }
   const lista = pend.map(m => m.id).join(', ');
   if (min > D.ajustes.avisoMin) A.push(['i', '🕙', '<b>Hoy toca lectura a las ' + D.ajustes.hora + '.</b>Medidores: ' + lista + '.']);
   else if (min > 0) A.push(['a', '⏰', '<b>En ' + min + ' minutos toca la lectura de las ' + D.ajustes.hora + '.</b>Prepara la tablet y ve a la subestación: ' + lista + '.']);
   else A.push(['r', '🚨', '<b>Lectura de las ' + D.ajustes.hora + ' pendiente (' + (-min) + ' min de retraso).</b>Faltan: ' + lista + '. Tómala ahora para no perder el dato del día.', true]);
   return A;
 }
+// ---- alerta grande en pantalla + aviso de Windows/Android (sin sonido, solo visual) + pantalla siempre encendida ----
+let swReg = null, wakeLock = null, alOculta = 0, alNivel = '', ultNotif = 0;
+function avisoSistema(titulo, cuerpo) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  const op = { body: cuerpo, tag: 'lectura-cfe', renotify: true, requireInteraction: true, silent: true, icon: 'icono-192.png', badge: 'icono-192.png' };
+  try { if (swReg && swReg.showNotification) swReg.showNotification(titulo, op); else new Notification(titulo, op); } catch (e) {}
+}
+async function pantallaEncendida() { if (!navigator.wakeLock || document.hidden) return; try { wakeLock = await navigator.wakeLock.request('screen'); } catch (e) {} }
+function revisarAlerta() {
+  const el = $('#alertaLec'); if (!el) return;
+  const s = hoyISO(), listoDatos = listo.per && COLS.every(c => listo[c]);
+  if (!listoDatos || !esDiaLectura(s)) { el.hidden = true; return; }
+  const [hh, mi] = D.ajustes.hora.split(':').map(Number), obj = new Date(); obj.setHours(hh, mi, 0, 0);
+  const min = (obj - new Date()) / 60000, pend = pendientesHoy(), ahora = Date.now();
+  // aviso de 30 min antes hasta la hora; después, en rojo hasta que se capture (se apaga a las 18:00)
+  const nivel = !pend.length ? '' : min > 0 && min <= D.ajustes.avisoMin ? 'pre' : min <= 0 && new Date().getHours() < 18 ? 'tarde' : '';
+  if (nivel !== alNivel) { alNivel = nivel; ultNotif = 0; if (nivel) alOculta = 0; }
+  const lista = pend.map(m => m.id).join(' · ');
+  if (nivel && ahora - ultNotif > (nivel === 'pre' ? 3600e3 : 30 * 60e3)) { ultNotif = ahora;
+    avisoSistema(nivel === 'pre' ? '⏰ Lectura CFE a las ' + D.ajustes.hora : '🚨 LECTURA CFE PENDIENTE', (nivel === 'pre' ? 'En ' + Math.ceil(min) + ' min toca tomar la lectura. ' : 'Ya pasó la hora (' + Math.round(-min) + ' min de retraso). ') + 'Faltan: ' + lista); }
+  if (!nivel || ahora < alOculta || $('.modal')) { el.hidden = true; return; }
+  const mm = Math.abs(min), rel = Math.floor(mm / 60) ? Math.floor(mm / 60) + ':' + String(Math.floor(mm % 60)).padStart(2, '0') + ' h' : Math.ceil(mm) + ' min';
+  el.className = nivel; el.hidden = false;
+  el.innerHTML = '<div><div class="ic">' + (nivel === 'pre' ? '⏰' : '🚨') + '</div><h2>' + (nivel === 'pre' ? 'Ya casi toca la lectura de CFE' : '¡Toca tomar la lectura de CFE!') + '</h2>' +
+    '<div class="rel">' + (nivel === 'pre' ? 'faltan ' + rel : rel + ' tarde') + '</div><p>Lectura de las <b>' + D.ajustes.hora + '</b> · Pendientes: <b>' + esc(lista) + '</b></p>' +
+    '<p style="opacity:.85">' + (nivel === 'pre' ? 'Prepara la tablet y ve a la subestación.' : 'Tómala ahora para no perder el dato del día.') + '</p>' +
+    '<div class="row"><button class="btn big" id="alIr" type="button" style="background:#fff;color:#14212E">📷 Tomar lecturas ahora</button><button class="btn big" id="alOc" type="button" style="background:transparent;color:#fff;border-color:#fff">Ocultar 10 min</button></div></div>';
+  $('#alIr').onclick = () => { el.hidden = true; alOculta = Date.now() + 5 * 60e3; if (YO) { tab = 'lecturas'; pintar(); } else { const n = $('#nomina input'); if (n) n.focus(); } };
+  $('#alOc').onclick = () => { alOculta = Date.now() + 10 * 60e3; el.hidden = true; };
+}
+setInterval(revisarAlerta, 20000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { pantallaEncendida(); revisarAlerta(); } });
+function pintarBotonAvisos() { const b = $('#btnAvisos'); if (b) b.textContent = !('Notification' in window) || Notification.permission === 'granted' ? '🔔 Avisos activos' : '🔕 Activar avisos'; }
+$('#btnAvisos').onclick = async () => {
+  if ('Notification' in window && Notification.permission === 'default') { try { await Notification.requestPermission(); } catch (e) {} }
+  pantallaEncendida(); pintarBotonAvisos();
+  toast('Notification' in window && Notification.permission === 'denied' ? 'El navegador bloqueó los avisos: actívalos en la configuración del sitio. La alerta en pantalla sigue funcionando.' : '🔔 Avisos activos: alerta grande en pantalla y aviso del sistema (sin sonido)');
+};
+document.addEventListener('pointerdown', () => pantallaEncendida(), { once: true, capture: true });
+// instalar como aplicación en la tablet o la PC
+let pedirInstalar = null;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); pedirInstalar = e; $('#btnInstalar').hidden = false; });
+window.addEventListener('appinstalled', () => { pedirInstalar = null; $('#btnInstalar').hidden = true; toast('Listo: "Lecturas CFE" quedó instalada con su ícono.'); });
+$('#btnInstalar').onclick = async () => { if (!pedirInstalar) return; pedirInstalar.prompt(); try { await pedirInstalar.userChoice; } catch (e) {} pedirInstalar = null; $('#btnInstalar').hidden = true; };
+pintarBotonAvisos();
 
 // ---- dibujo animado del transformador ----
 // transformador de distribución en aceite: tanque, radiadores de aletas, boquillas de porcelana de alta (arriba) y baja tensión (frente),
@@ -496,17 +557,44 @@ function vLecturas() {
       '<div class="kp"><div><b>' + (ult ? num(ult.kwh) : '—') + '</b><span>kWh del último día</span></div><div><b>' + (ult ? num(ult.kwh / 24, 1) : '—') + '</b><span>kW promedio</span></div></div>' +
       '<button class="btn ' + (hoyL ? '' : 'pri') + ' big" data-cap="' + m.id + '" type="button" style="justify-content:center">' + (hoyL ? '✏️ Corregir lectura de hoy' : '📷 Tomar lectura') + '</button></div>';
   }).join('') + '</div>' +
+  (() => { const LS = lecturasSolar(), hoyS = LS.find(l => l.fecha === s), prevS = [...LS].reverse().find(l => l.fecha < s), G = generacionReal(), u = G[G.length - 1];
+    return '<div class="card trafo" style="margin-top:16px;border-top:5px solid #E07A2E"><div class="row" style="justify-content:space-between;align-items:center"><div class="row" style="align-items:center;gap:14px">' + svgInversor(52) +
+      '<div><div class="t1">Paneles solares · subestación · van a V366EB</div><div class="t2">☀️ Inversores 1 y 2</div><div class="small muted">Solis 30 kW cada uno · solo se anota "Total Energy"</div></div></div>' +
+      '<button class="btn ' + (hoyS ? '' : 'pri') + ' big" id="capSol" type="button">' + (hoyS ? '✏️ Corregir lectura de inversores' : '☀️ Tomar lectura de inversores') + '</button></div>' +
+      (hoyS ? '<div class="estado-lec" style="background:var(--verde-s);color:var(--verde)">✅ Tomada hoy a las ' + esc(hoyS.hora || '') + ' · Inv 1: <b>' + num(hoyS.invS) + '</b> · Inv 2: <b>' + num(hoyS.invG) + '</b> kWh</div>'
+        : !esDiaLectura(s) ? '<div class="estado-lec" style="background:#EEF2F6;color:var(--muted)">Domingo: no se toma lectura</div>'
+        : '<div class="estado-lec" style="background:var(--ambar-s);color:#8A5A00">⏳ Pendiente de hoy' + (prevS ? ' · la anterior: Inv 1 <b>' + num(prevS.invS) + '</b> · Inv 2 <b>' + num(prevS.invG) + '</b> (' + fC(prevS.fecha) + ')' : '') + '</div>') +
+      (u ? '<div class="kp"><div><b>' + num(u.s / u.dias) + ' kWh</b><span>Inversor 1 por día</span></div><div><b>' + num(u.g / u.dias) + ' kWh</b><span>Inversor 2 por día</span></div></div>' : '') + '</div>'; })() +
+  historialHTML() +
   '<div class="card" style="margin-top:16px"><h2>🗓️ Últimas lecturas</h2><div class="tw"><table><thead><tr><th>Fecha</th><th>Medidor</th><th class="m">Lectura</th><th class="m">kWh</th><th>Tomó</th><th>Hora</th></tr></thead><tbody>' +
-    [...D.lecturas].sort((a, b) => b.fecha.localeCompare(a.fecha) || a.med.localeCompare(b.med)).slice(0, 24).map(l => { const m = medDe(l.med), L = lecturasDe(l.med), i = L.indexOf(l), d = i > 0 ? delta(m, L[i - 1].lec, l.lec) : null;
+    D.lecturas.filter(l => l.med !== 'SOLAR').sort((a, b) => b.fecha.localeCompare(a.fecha) || a.med.localeCompare(b.med)).slice(0, 24).map(l => { const m = medDe(l.med), L = lecturasDe(l.med), i = L.indexOf(l), d = i > 0 ? delta(m, L[i - 1].lec, l.lec) : null;
       return '<tr><td>' + DIAS[aFecha(l.fecha).getDay()].slice(0, 3) + ' ' + fN(l.fecha) + '</td><td><b style="color:' + m.color + '">' + l.med + '</b></td><td class="m">' + num(l.lec, 1) + '</td><td class="m">' + (d != null ? num(d * m.mult) : '—') + '</td><td>' + esc(l.porN || '') + '</td><td>' + esc(l.hora || '') + (l.foto ? (esAdmin() ? ' <button class="btn sm" data-foto="' + l.foto + '" type="button">📷</button>' : ' 📷') : '') + '</td></tr>'; }).join('') +
   '</tbody></table></div></div>';
   $$('[data-cap]').forEach(b => b.onclick = () => dlgLectura(medDe(b.dataset.cap)));
+  $('#capSol').onclick = dlgInversores;
   $$('[data-foto]').forEach(b => b.onclick = async () => { const s = await DB.doc('fotos/' + b.dataset.foto).get(), d = s.exists && s.data(); modal('📷 Foto del medidor', d ? '<img src="' + d.d + '" alt="Foto del medidor" style="width:100%;border-radius:10px"><div class="row" style="margin-top:8px"><button class="btn" type="button" data-x>Cerrar</button></div>' : '<p>La foto ya se borró (se guardan ' + D.ajustes.retencionFotos + ' días).</p><button class="btn" type="button" data-x>Cerrar</button>'); });
+}
+// historial: quién tomó cada lectura, a qué hora y si fue a tiempo (hasta 15 min después de la hora fijada)
+function historialHTML() {
+  const [hh, mi] = D.ajustes.hora.split(':').map(Number), limite = hh * 60 + mi + 15, hoy = hoyISO();
+  const cols = D.medidores.map(m => m.id).concat(['SOLAR']), por = {};
+  D.lecturas.forEach(l => { (por[l.fecha] = por[l.fecha] || {})[l.med] = l; });
+  const fechas = []; for (let d = hoy, i = 0; i < 45 && fechas.length < 14; i++, d = sumaD(d, -1)) if (esDiaLectura(d)) fechas.push(d);
+  const aTiempo = l => { const [h, m] = String(l.hora || '99:99').split(':').map(Number); return h * 60 + m <= limite; };
+  const celda = (l, f) => !l ? (f === hoy ? '<span class="tag a">pendiente</span>' : '<span class="tag r">no se tomó</span>') : '<b>' + esc((l.porN || '').split(' ').slice(0, 2).join(' ') || '—') + '</b><div class="small"><span class="tag ' + (aTiempo(l) ? 'v' : 'a') + '">' + esc(l.hora || '') + '</span></div>';
+  // resumen del mes por técnico
+  const mes = hoy.slice(0, 7), R = {};
+  D.lecturas.filter(l => l.fecha.slice(0, 7) === mes && l.porN).forEach(l => { const r = R[l.porN] = R[l.porN] || { n: 0, ok: 0, dias: new Set() }; r.n++; if (aTiempo(l)) r.ok++; r.dias.add(l.fecha); });
+  const filasR = Object.entries(R).sort((a, b) => b[1].dias.size - a[1].dias.size).map(([n, r]) => '<tr><td>' + esc(n) + '</td><td class="m">' + r.dias.size + '</td><td class="m">' + r.n + '</td><td class="m"><span class="tag ' + (r.ok / r.n >= .9 ? 'v' : 'a') + '">' + num(r.ok / r.n * 100, 0) + ' %</span></td></tr>').join('');
+  return '<div class="card" style="margin-top:16px"><h2>📋 Historial: quién tomó las lecturas</h2><div class="tw"><table><thead><tr><th>Día</th>' + cols.map(c => '<th>' + (c === 'SOLAR' ? '☀️ Inversores' : c) + '</th>').join('') + '</tr></thead><tbody>' +
+    fechas.map(f => '<tr><td>' + DIAS[aFecha(f).getDay()].slice(0, 3) + ' ' + fN(f) + '</td>' + cols.map(c => '<td>' + celda((por[f] || {})[c], f) + '</td>').join('') + '</tr>').join('') + '</tbody></table></div>' +
+    '<p class="small muted" style="margin:6px 0 10px">Verde: a tiempo (hasta las ' + String(Math.floor(limite / 60)).padStart(2, '0') + ':' + String(limite % 60).padStart(2, '0') + '). Ámbar: tarde. Domingos no se toma lectura.</p>' +
+    (filasR ? '<h3 style="margin:4px 0">Este mes por técnico</h3><div class="tw"><table><thead><tr><th>Técnico</th><th class="m">Días que tomó</th><th class="m">Lecturas</th><th class="m">A tiempo</th></tr></thead><tbody>' + filasR + '</tbody></table></div>' : '') + '</div>';
 }
 function dlgLectura(m) {
   const s = hoyISO(), L = lecturasDe(m.id), hoyL = L.find(l => l.fecha === s), prev = [...L].reverse().find(l => l.fecha < s);
   const cd = consumoDiario(m).slice(-6), prom = cd.length ? cd.reduce((a, x) => a + x.kwh, 0) / cd.length : null;
-  const P = m.pantallas || [['lec', '']];
+  const P = (m.pantallas || [['lec', '']]).filter(p => !/^inv/.test(p[0]));   // los inversores se capturan aparte
   const tarjeta = ([k, cod], i) => { const c = CAMPOS[k] || [k, ''], v = hoyL && hoyL[k] != null ? hoyL[k] : '', ant = prev && prev[k] != null ? prev[k] : null;
     return '<div class="pant' + (k === 'lec' ? ' obl' : '') + (v !== '' ? ' ok' : '') + '" data-p="' + k + '"><div class="foto"><img src="pantallas/' + m.id + '_' + cod + '.jpg" alt="Pantalla con el código ' + esc(cod) + '" onerror="this.remove()"><span class="paso">' + (i + 1) + '</span></div>' +
       '<div class="dato"><div class="row" style="gap:10px;flex-wrap:nowrap"><span class="cod" title="Número chico de la izquierda">' + esc(cod) + '</span><div style="min-width:0"><b>' + c[0] + (k === 'lec' ? ' <span class="tag r">OBLIGATORIA</span>' : '') + '</b><div class="small muted">' + c[1] + '</div></div></div>' +
@@ -801,24 +889,93 @@ let CLIMA = null, climaT = 0;
 async function clima() {
   if (CLIMA && Date.now() - climaT < 30 * 60000) return CLIMA;
   try {
-    const u = 'https://api.open-meteo.com/v1/forecast?latitude=21.88&longitude=-102.29&current=temperature_2m,cloud_cover,shortwave_radiation,is_day&daily=shortwave_radiation_sum,cloud_cover_mean,sunshine_duration,weather_code&past_days=31&forecast_days=4&timezone=America%2FMexico_City';
+    const u = 'https://api.open-meteo.com/v1/forecast?latitude=21.84&longitude=-102.29&tilt=' + (Number(D.ajustes.inclinacion) || 22) + '&azimuth=' + ((Number(D.ajustes.azimut) || 180) - 180) + '&hourly=global_tilted_irradiance&current=temperature_2m,cloud_cover,shortwave_radiation,is_day&daily=shortwave_radiation_sum,cloud_cover_mean,sunshine_duration,weather_code&past_days=31&forecast_days=4&timezone=America%2FMexico_City';
     const j = await (await fetch(u)).json(); if (!j.daily) throw new Error('sin datos');
-    // radiación diaria en kWh/m² (Open-Meteo la da en MJ/m²)
-    CLIMA = { act: j.current, dias: j.daily.time.map((t, i) => ({ fecha: t, rad: j.daily.shortwave_radiation_sum[i] / 3.6, nubes: j.daily.cloud_cover_mean[i], sol: (j.daily.sunshine_duration[i] || 0) / 3600, cod: j.daily.weather_code[i] })) };
+    // radiación diaria en kWh/m²: sobre el plano de los paneles (22° al sur) sumando la hora a hora; si no viene, la horizontal (MJ/m²)
+    const inc = {}; if (j.hourly && j.hourly.global_tilted_irradiance) j.hourly.time.forEach((t, i) => { const v = j.hourly.global_tilted_irradiance[i]; if (v != null) inc[t.slice(0, 10)] = (inc[t.slice(0, 10)] || 0) + v / 1000; });
+    CLIMA = { act: j.current, dias: j.daily.time.map((t, i) => ({ fecha: t, rad: inc[t] != null ? inc[t] : j.daily.shortwave_radiation_sum[i] / 3.6, radH: j.daily.shortwave_radiation_sum[i] / 3.6, nubes: j.daily.cloud_cover_mean[i], sol: (j.daily.sunshine_duration[i] || 0) / 3600, cod: j.daily.weather_code[i] })) };
     climaT = Date.now(); try { localStorage.setItem('cfe_clima', JSON.stringify(CLIMA)); } catch (e) {}
   } catch (e) { try { CLIMA = CLIMA || JSON.parse(localStorage.getItem('cfe_clima') || 'null'); } catch (x) {} }
   return CLIMA;
 }
-const kwp = () => Number(D.ajustes.kwp) || 76, prSol = () => Number(D.ajustes.pr) || 0.78;
+const kwp = () => Number(D.ajustes.kwp) || 72, prSol = () => Number(D.ajustes.pr) || 0.78;
 const esperadoDia = rad => rad * kwp() * prSol();            // kWh que deberían generar los paneles ese día
 const iconoClima = (nubes, cod) => cod >= 61 ? '🌧️' : nubes > 80 ? '☁️' : nubes > 45 ? '⛅' : nubes > 15 ? '🌤️' : '☀️';
 // generación real por día con las lecturas de los inversores (E-Total), repartida entre los días que cubre cada lectura
+// lecturas de los inversores (registro SOLAR por día; las primeras pruebas venían dentro de V366EB)
+function lecturasSolar() {
+  const M = {};
+  lecturasDe('V366EB').forEach(l => { if (l.invS != null || l.invG != null) M[l.fecha] = { fecha: l.fecha, invS: l.invS, invG: l.invG, hora: l.hora }; });
+  lecturasDe('SOLAR').forEach(l => { M[l.fecha] = Object.assign(M[l.fecha] || {}, l); });
+  return Object.values(M).sort((a, b) => a.fecha.localeCompare(b.fecha));
+}
+// s = inversor 1, g = inversor 2 (kWh generados entre lecturas)
 function generacionReal() {
-  const L = lecturasDe('V366EB').filter(l => l.invS != null || l.invG != null), o = [];
+  const L = lecturasSolar(), o = [];
   for (let i = 1; i < L.length; i++) { const a = L[i - 1], b = L[i], n = Math.max(1, dias(a.fecha, b.fecha));
-    const g = (b.invS != null && a.invS != null ? b.invS - a.invS : 0) + (b.invG != null && a.invG != null ? b.invG - a.invG : 0);
-    if (g >= 0) o.push({ desde: a.fecha, hasta: b.fecha, dias: n, kwh: g }); }
+    const s = b.invS != null && a.invS != null ? b.invS - a.invS : null, g = b.invG != null && a.invG != null ? b.invG - a.invG : null;
+    if ((s == null || s >= 0) && (g == null || g >= 0) && (s != null || g != null)) o.push({ desde: a.fecha, hasta: b.fecha, dias: n, s: s || 0, g: g || 0, kwh: (s || 0) + (g || 0) }); }
   return o;
+}
+// ¿cómo van los dos inversores? compara uno contra otro (deben generar casi lo mismo)
+function estadoInversores() {
+  const G = generacionReal(), u = G[G.length - 1]; if (!u) return null;
+  const s = u.s / u.dias, g = u.g / u.dias, mx = Math.max(s, g), mn = Math.min(s, g), cual = s < g ? 'Inversor 1' : 'Inversor 2';
+  if (mx > 20 && mn < 2) return { s, g, u, c: 'r', t: '⛔ El ' + cual + ' no está generando (' + num(mn) + ' kWh/día). Revisar pantalla y alarmas, DC SWITCH en ON y pastilla de CA.' };
+  if (mx > 0 && mn / mx < 0.85) return { s, g, u, c: 'a', t: '⚠️ El ' + cual + ' genera ' + num((1 - mn / mx) * 100, 0) + ' % menos que el otro. Revisar en su pantalla V_DC / I_DC: algún string en 0 A, suciedad o sombra.' };
+  return { s, g, u, c: 'v', t: '✅ Los dos inversores generan parejo (' + num(s) + ' y ' + num(g) + ' kWh/día).' };
+}
+// dibujo del inversor Solis con sus 4 teclas (para la guía de captura)
+function svgInversor(w, guia) {
+  const tecla = (x, sim, n, on) => '<circle cx="' + x + '" cy="118" r="11" fill="' + (on ? '#FFE9A8' : '#1B2733') + '" stroke="' + (on ? '#E07A2E' : '#8A97A3') + '" stroke-width="' + (on ? 3 : 1.5) + '"/><text x="' + x + '" y="123" text-anchor="middle" font-size="13" font-weight="700" fill="' + (on ? '#8A3F00' : '#DDE5EC') + '" font-family="Segoe UI,Arial">' + sim + '</text>' + (guia ? '<text x="' + x + '" y="146" text-anchor="middle" font-size="8.5" font-weight="700" fill="#5B6B7B" font-family="Segoe UI,Arial">' + n + '</text>' : '');
+  return '<svg viewBox="0 0 200 ' + (guia ? 155 : 140) + '" width="' + (guia ? '100%' : w) + '" style="max-width:' + (guia ? 360 : w) + 'px;display:block" aria-hidden="true">' +
+    '<rect x="2" y="2" width="196" height="136" rx="14" fill="#F4F6F8" stroke="#C9D3DC"/><rect x="18" y="14" width="164" height="118" rx="10" fill="#1B2733"/>' +
+    '<circle cx="62" cy="28" r="4" fill="#E04848"/><circle cx="100" cy="28" r="4" fill="#3BD16F"><animate attributeName="opacity" values="1;.35;1" dur="1.4s" repeatCount="indefinite"/></circle><circle cx="138" cy="28" r="4" fill="#3A4652"/>' +
+    '<rect x="32" y="44" width="136" height="44" rx="3" fill="#D8EE3A"/><text x="100" y="62" text-anchor="middle" font-size="12" fill="#26310A" font-family="Consolas,monospace">Total Energy</text><text x="100" y="80" text-anchor="middle" font-size="12" font-weight="700" fill="#26310A" font-family="Consolas,monospace">0044725kWh</text>' +
+    tecla(46, '↶', 'ESC', guia) + tecla(84, '▲', 'SUBIR', false) + tecla(122, '▼', 'BAJAR', guia) + tecla(160, '↵', 'ENTER', guia) + '</svg>';
+}
+function dlgInversores() {
+  const s = hoyISO(), LS = lecturasSolar(), hoyS = lecturasDe('SOLAR').find(l => l.fecha === s), prev = [...LS].reverse().find(l => l.fecha < s);
+  const paso = (n, ic, t) => '<div class="row" style="gap:10px;flex-wrap:nowrap;align-items:flex-start;margin-bottom:6px"><span class="paso" style="position:static;flex:none">' + n + '</span><div><b>' + ic + '</b> ' + t + '</div></div>';
+  const tarjeta = (k, nom, img) => { const ant = prev && prev[k] != null ? prev[k] : null;
+    return '<div class="pant obl' + (hoyS && hoyS[k] != null ? ' ok' : '') + '" data-p="' + k + '"><div class="foto"><img src="pantallas/V366EB_' + img + '.jpg" alt="Pantalla Total Energy del ' + nom + '" onerror="this.remove()"></div>' +
+      '<div class="dato"><b>' + nom + '</b><div class="small muted">' + (k === 'invS' ? 'El que NO tiene etiqueta' : 'El que dice "INVERSOR 2"') + ' · número de "Total Energy" sin los ceros de la izquierda</div>' +
+      '<input class="grande" data-k="' + k + '" inputmode="numeric" placeholder="' + (ant != null ? 'antes ' + ant : 'Ej. 44725') + '" value="' + (hoyS && hoyS[k] != null ? hoyS[k] : '') + '"></div></div>'; };
+  const mm = modal('☀️ Lectura de los inversores', '<div class="lecbox">' +
+    '<div class="guia" style="align-items:center">' + svgInversor(0, true) + '<div>' +
+      paso(1, '🔓 Desbloquear:', 'si ves el candadito a la derecha de la pantalla, mantén apretados <b>↶ ESC</b> y <b>↵ ENTER</b> juntos <b>10 segundos</b>.') +
+      paso(2, '↵ ENTER:', 'entra al menú. Sale <b>"Information"</b>: pica <b>↵</b> otra vez.') +
+      paso(3, '▼ BAJAR:', 'pica ▼ hasta que diga <b>"Total Energy"</b>.') +
+      paso(4, '✍️ Anota:', 'solo ese número, sin los ceros de la izquierda: <b>0044725kWh → 44725</b>. No se multiplica.') +
+      '<div class="small muted">❌ No sirven "Power" (W), "Today" ni "This Month". ❌ No entrar a "Settings" ni "Advanced". Solo ver: no abrir el inversor ni tocar conectores.</div></div></div>' +
+    '<div class="pants">' + tarjeta('invS', 'Inversor 1', 'INV1') + tarjeta('invG', 'Inversor 2', 'INV2') + '</div>' +
+    '<div class="calc" id="sCalc"></div><p class="small" id="sMsg" style="margin:0;color:var(--rojo)"></p>' +
+    '<div class="row"><button class="btn ok big" id="sOk" type="button">✅ Guardar lectura</button><button class="btn" type="button" data-x>Cancelar</button></div></div>');
+  const val = k => { const x = $('[data-k="' + k + '"]', mm).value.replace(/[,\s]/g, '').trim(); return x !== '' && !isNaN(Number(x)) ? Number(x) : null; };
+  const calc = () => {
+    $$('.pant', mm).forEach(p => p.classList.toggle('ok', val(p.dataset.p) != null));
+    const a = val('invS'), b = val('invG'), c = $('#sCalc', mm);
+    if (!prev) { c.innerHTML = 'Primera lectura de los inversores: la generación se calcula a partir de la siguiente.'; return { ok: true }; }
+    const n = Math.max(1, dias(prev.fecha, s)), ga = a != null && prev.invS != null ? a - prev.invS : null, gb = b != null && prev.invG != null ? b - prev.invG : null, av = [];
+    if ((ga != null && ga < 0) || (gb != null && gb < 0)) { c.innerHTML = '⚠️ <b>Un número quedó menor que la lectura anterior.</b> Revisa que sea "Total Energy" y sin quitar dígitos.'; return { ok: false }; }
+    if (ga != null && gb != null) { const mx = Math.max(ga, gb), mn = Math.min(ga, gb); if (mx > 20 * n && mn < 2 * n) av.push('⛔ <b>Un inversor casi no generó.</b> Revisa su pantalla (Status, alarma) y avisa a Omar.'); else if (mx > 0 && mn / mx < 0.85) av.push('⚠️ <b>Un inversor generó bastante menos que el otro.</b> Avisa a Omar.'); }
+    c.innerHTML = 'Generado desde el ' + fC(prev.fecha) + (n > 1 ? ' (' + n + ' días)' : '') + ': Inversor 1 <b>' + (ga != null ? num(ga) : '—') + ' kWh</b> · Inversor 2 <b>' + (gb != null ? num(gb) : '—') + ' kWh</b>' + (ga != null && gb != null ? ' · total <b>' + num(ga + gb) + ' kWh</b>' : '') + (av.length ? '<br>' + av.join('<br>') : '');
+    return { ok: true, raro: av.length > 0 };
+  };
+  $$('[data-k]', mm).forEach(i => i.oninput = calc); calc();
+  let conf = false;
+  $('#sOk', mm).onclick = () => {
+    const a = val('invS'), b = val('invG'), r = calc();
+    if (a == null && b == null) { $('#sMsg', mm).textContent = 'Anota por lo menos un inversor.'; return; }
+    if (r.ok === false) { $('#sMsg', mm).textContent = 'La lectura no puede ser menor que la anterior.'; return; }
+    if ((r.raro || a == null || b == null) && !conf) { conf = true; $('#sMsg', mm).textContent = a == null || b == null ? 'Falta un inversor. Si de verdad no se pudo leer, vuelve a dar Guardar.' : 'Revisa el aviso de arriba. Si los números están bien, vuelve a dar Guardar.'; return; }
+    const o = hoyS || { id: s + '_SOLAR', med: 'SOLAR', fecha: s };
+    Object.assign(o, { hora: new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false }), por: YO.nom, porN: YO.n, t: new Date().toISOString() });
+    if (a != null) o.invS = a; else delete o.invS; if (b != null) o.invG = b; else delete o.invG;
+    if (!hoyS) D.lecturas.push(o);
+    mm.remove(); guardar(); toast('☀️ Lectura de inversores guardada');
+  };
+  setTimeout(() => $('[data-k="invS"]', mm).focus(), 60);
 }
 function svgSolar(c) {
   const nub = c ? c.act.cloud_cover : 30, dia = c ? c.act.is_day : 1, w = c ? c.act.shortwave_radiation : 500, k = Math.max(.08, Math.min(1, w / 900)), vel = (2.2 - k * 1.6).toFixed(2);
@@ -850,21 +1007,35 @@ async function vPaneles() {
   const ult = comp.slice(-7), pctProm = ult.length ? ult.reduce((s, x) => s + x.kwh, 0) / Math.max(1, ult.reduce((s, x) => s + x.esp, 0)) * 100 : null;
   const genMes = G.filter(g => g.hasta.slice(0, 7) === hoy.slice(0, 7)).reduce((s, g) => s + g.kwh, 0), precio = t ? t.I * 1.16 : 2.1;
   const esp30 = c ? c.dias.filter(x => x.fecha < hoy).slice(-30).reduce((s, x) => s + esperadoDia(x.rad), 0) : null;
-  const falt = [['Lectura diaria de los inversores (E-Total del inversor 1 y del inversor 2)', G.length > 0], ['Número de paneles y watts de cada uno (para la potencia real en kWp)', !!D.ajustes.numPaneles], ['Orientación e inclinación de los paneles', !!D.ajustes.orientacion], ['Acceso a la app de monitoreo (SolisCloud): exportar el reporte mensual en Excel y subirlo', false]];
-  box.innerHTML = '<div class="grid2"><div class="card">' + svgSolar(c) + '<div class="kp" style="grid-template-columns:repeat(3,1fr);margin-top:10px">' +
+  const falt = [['Inversores: 2 × Solis S5-GC30K-LV de 30 kW, 220 V (placa, 31-oct)', true], ['Strings: ' + (D.ajustes.strings || '8 strings'), true], ['Orientación e inclinación: ' + (D.ajustes.orientacion || '—') + ' (comprobado con la curva de producción del 31-oct)', !!D.ajustes.orientacion], ['Lectura diaria de los inversores (Total Energy del 1 y del 2)', G.length > 0],
+    ['Número de paneles y watts de cada uno: contarlos en la azotea y foto a la placa de un panel (Pmax, Voc, Vmp)', !!D.ajustes.numPaneles], ['¿Qué pasó con el Inversor 1? (marca 0 kWh en septiembre y su contador empezó en octubre)', !!D.ajustes.inv1Nota], ['Fecha de instalación y del contrato NETMET con CFE (para medir el ahorro desde el inicio)', !!D.ajustes.instalacion], ['Reporte mensual de SolisCloud en Excel (si hay acceso)', false]];
+  // ---- las tres respuestas: ¿funcionan al 100 %?, ¿cuánto ahorramos?, ¿de cuánto sería el recibo sin paneles? ----
+  const mV = medDe('V366EB'), eV = mV && estimar(mV), sV = eV && !eV.sin ? ahorroPaneles(mV, eV) : null, inv = estadoInversores(), ep = estadoPaneles();
+  const veredSol = pctProm == null ? ['i', '⏳', 'Todavía no sé', 'Necesito la lectura de los inversores dos días seguidos (⚡ Tomar lecturas › ☀️ Inversores).']
+    : pctProm >= 85 && (!inv || inv.c === 'v') ? ['v', '✅', 'Sí, trabajan bien', 'Dieron el ' + num(pctProm, 0) + ' % de lo que debían con el sol que hubo.' + (ep.estado === 'sucio' ? ' Lo que falta para el 100 % es el polvo: limpios deben acercarse al 100 %.' : '')]
+    : pctProm >= 65 ? ['a', '⚠️', 'Rinden menos de lo que deberían', 'Dieron el ' + num(pctProm, 0) + ' % de lo esperado.' + (ep.estado === 'sucio' ? ' Están sucios: la limpieza debe recuperar buena parte.' : ' Revisar limpieza, sombras y los strings (V_DC / I_DC).')]
+    : ['r', '⛔', 'Algo está pasando', 'Solo dieron el ' + num(pctProm, 0) + ' % de lo esperado: revisar inversores, strings, fusibles y pastillas.'];
+  const resumen = '<div class="card" style="margin-bottom:16px;border-top:5px solid #E07A2E"><h2>☀️ Paneles solares en V366EB: lo importante</h2><div class="grid3">' +
+    '<div class="aviso ' + veredSol[0] + '" style="margin:0"><span class="e">' + veredSol[1] + '</span><div><span class="small muted" style="display:block;font-weight:700;letter-spacing:.05em">¿FUNCIONAN AL 100 %?</span><b style="font-size:19px">' + veredSol[2] + '</b>' + veredSol[3] +
+      (inv ? '<br><span class="small">' + inv.t + '</span>' : '') + '</div></div>' +
+    '<div class="aviso v" style="margin:0"><span class="e">💰</span><div><span class="small muted" style="display:block;font-weight:700;letter-spacing:.05em">¿CUÁNTO AHORRAMOS?</span>' + (sV ? '<b style="font-size:24px">' + din0(sV.pesos) + '</b>en este recibo (' + fC(eV.per.ini) + ' – ' + fC(eV.per.fin) + ')<br>≈ <b style="display:inline">' + din0(sV.pesos / eV.diasPer * 30.4) + ' al mes</b> · ≈ <b style="display:inline">' + din0(sV.pesos / eV.diasPer * 365) + ' al año</b><br><span class="small muted">' + num(sV.kwh) + ' kWh ' + (sV.real ? 'medidos en los inversores' : 'esperados (faltan lecturas de inversores)') + '</span>' : '<b>—</b>Faltan lecturas de V366EB en el periodo.') + '</div></div>' +
+    '<div class="aviso i" style="margin:0"><span class="e">🧾</span><div><span class="small muted" style="display:block;font-weight:700;letter-spacing:.05em">SIN PANELES, EL RECIBO DE V366EB SALDRÍA EN</span>' + (sV ? '<b style="font-size:24px">' + din0(sV.sinTotal) + '</b>en lugar de <b style="display:inline">' + din0(eV.proy.total) + '</b> con paneles (todo incluido: energía, demanda, 2 %, FP, IVA y DAP).' + (sV.polvoPesos ? '<br><span class="small">🟫 Limpios ahorraríamos ≈ ' + din0(sV.polvoPesos) + ' más en este recibo.</span>' : '') : '<b>—</b>') + '</div></div>' +
+    '</div></div>';
+  box.innerHTML = resumen + '<div class="grid2"><div class="card">' + svgSolar(c) + '<div class="kp" style="grid-template-columns:repeat(3,1fr);margin-top:10px">' +
       '<div><b>' + (c ? iconoClima(c.act.cloud_cover) + ' ' + c.act.cloud_cover + ' %' : '—') + '</b><span>Nubosidad ahora</span></div><div><b>' + (c ? Math.round(c.act.shortwave_radiation) + ' W/m²' : '—') + '</b><span>Radiación solar ahora</span></div><div><b>' + (c ? num(c.act.temperature_2m, 0) + ' °C' : '—') + '</b><span>Temperatura</span></div></div>' +
       '<p class="small muted" style="margin:8px 0 0">Clima en vivo de Aguascalientes (Open-Meteo). ' + (c ? '' : 'Sin conexión al servicio de clima en este momento.') + '</p></div>' +
     '<div class="card"><h2>⚡ ¿Los paneles están al 100 %?</h2>' +
       (pctProm != null ? gaugePct(pctProm) + '<p>Últimos días los paneles dieron el <b>' + num(pctProm, 0) + ' %</b> de lo que debían con el sol que hubo. ' + (pctProm >= 85 ? '<span class="tag v">Trabajando bien</span>' : pctProm >= 65 ? '<span class="tag a">Rinden menos: revisar limpieza y sombras</span>' : '<span class="tag r">Muy bajo: revisar inversores, fusibles y paneles</span>') + '</p>'
-        : '<div class="aviso a"><span class="e">📋</span><div><b>Falta la lectura de los inversores</b>En la captura de V366EB ya están las tarjetas <span style="font-weight:700">INV1</span> e <span style="font-weight:700">INV2</span>: el técnico anota a las 10:00 el kWh total (E-Total, no los W de Power) de cada inversor. Con dos días de lecturas te digo el rendimiento real.</div></div>') +
+        : '<div class="aviso a"><span class="e">📋</span><div><b>Falta la lectura de los inversores</b>En ⚡ Tomar lecturas está la tarjeta <span style="font-weight:700">☀️ Inversores</span> con la guía: a las 10:00 se anota el "Total Energy" de cada inversor. Con dos días de lecturas te digo el rendimiento real.</div></div>') +
       '<div class="kp"><div><b>' + (esperadoHoy != null ? num(esperadoHoy) + ' kWh' : '—') + '</b><span>Deberían generar hoy (' + (hoyC ? iconoClima(hoyC.nubes, hoyC.cod) + ' ' + num(hoyC.rad, 1) + ' kWh/m²' : 'sin pronóstico') + ')</span></div><div><b>' + (esp30 != null ? num(esp30) + ' kWh' : '—') + '</b><span>Generación esperada últimos 30 días</span></div>' +
       '<div><b>' + num(genMes) + ' kWh</b><span>Generación real este mes</span></div><div><b>' + din0((genMes || esp30 || 0) * precio) + '</b><span>Ahorro ' + (genMes ? 'real este mes' : 'esperado en 30 días') + ' (energía que no le compramos a CFE)</span></div></div></div></div>' +
     '<div class="grid2" style="margin-top:16px"><div class="card"><h2>🌤️ Pronóstico de generación</h2><div class="kp" style="grid-template-columns:repeat(4,1fr)">' +
       (c ? c.dias.filter(x => x.fecha >= hoy).slice(0, 4).map(x => '<div style="text-align:center"><span style="font-size:28px">' + iconoClima(x.nubes, x.cod) + '</span><b>' + num(esperadoDia(x.rad)) + ' kWh</b><span>' + DIAS[aFecha(x.fecha).getDay()].slice(0, 3) + ' ' + fC(x.fecha) + ' · ' + num(x.nubes, 0) + ' % nubes</span></div>').join('') : '<div>Sin pronóstico</div>') + '</div>' +
       '<div style="height:220px;margin-top:10px"><canvas id="gSol"></canvas></div><p class="small muted">Barras: lo que debían generar con el sol de cada día (' + kwp() + ' kW × radiación × ' + num(prSol() * 100, 0) + ' % de rendimiento típico). Puntos: lo que marcaron los inversores.</p></div>' +
     '<div class="card"><h2>📋 Datos que me faltan de los paneles</h2>' + falt.map(([t2, ok]) => '<div class="row" style="margin-bottom:6px"><span class="tag ' + (ok ? 'v' : 'a') + '">' + (ok ? '✓' : 'falta') + '</span><span class="small">' + t2 + '</span></div>').join('') +
-      '<form id="solCfg" class="form" style="margin-top:10px"><label class="f">Potencia de paneles (kWp; medido ≈ 76 el 30-oct)<input name="k" type="number" step="any" value="' + kwp() + '"></label><label class="f">Rendimiento típico (0.75–0.82)<input name="p" type="number" step="0.01" value="' + prSol() + '"></label>' +
-      '<label class="f">Número de paneles × watts<input name="n" value="' + esc(D.ajustes.numPaneles || '') + '" placeholder="Ej. 110 × 550 W"></label><label class="f">Orientación / inclinación<input name="o" value="' + esc(D.ajustes.orientacion || '') + '" placeholder="Ej. sur, 20°"></label><div class="full"><button class="btn pri" type="submit">Guardar datos de paneles</button></div></form>' +
+      '<form id="solCfg" class="form" style="margin-top:10px"><label class="f">Potencia de paneles (kWp; medido ≈ 72 el 30-oct)<input name="k" type="number" step="any" value="' + kwp() + '"></label><label class="f">Rendimiento típico (0.75–0.82)<input name="p" type="number" step="0.01" value="' + prSol() + '"></label>' +
+      '<label class="f">Número de paneles × watts<input name="n" value="' + esc(D.ajustes.numPaneles || '') + '" placeholder="Ej. 110 × 550 W"></label><label class="f">Inclinación (°)<input name="inc" type="number" step="1" value="' + (Number(D.ajustes.inclinacion) || 22) + '"></label><label class="f">Orientación (azimut °, 180 = sur)<input name="az" type="number" step="1" value="' + (Number(D.ajustes.azimut) || 180) + '"></label>' +
+      '<label class="f">Instalación / alta NETMET<input name="ins" type="date" value="' + esc(D.ajustes.instalacion || '') + '"></label><label class="f">Inversor 1: ¿qué pasó en septiembre?<input name="i1" value="' + esc(D.ajustes.inv1Nota || '') + '" placeholder="Ej. se cambió por garantía el 2-oct"></label><div class="full"><button class="btn pri" type="submit">Guardar datos de paneles</button></div></form>' +
       '<p class="small muted">Dos inversores Solis S5-GC30K-LV (30 kW c/u, 4 MPPT, hasta 8 strings), 220 V, en la subestación (Inversor 1 sin etiqueta, Inversor 2 rotulado), instalados en 2024; verificado con fotos el 31-oct-2026. Conectados a V366EB (recibo con NETMET).</p></div></div>' +
     '<div class="grid2" style="margin-top:16px"><div class="card"><h2>🔌 Transformador V366EB: CFE + paneles</h2>' + (() => { const m = medDe('V366EB'), e = m && estimar(m); return e && !e.sin ? balanceSolar(m, e) : '<div class="vacio"><span class="e">📭</span>Faltan lecturas de V366EB en este periodo para hacer el balance.</div>'; })() + '</div>' +
     '<div class="card"><h2>🧽 Limpieza de los paneles</h2>' + (() => {
@@ -888,7 +1059,9 @@ async function vPaneles() {
     D.acciones = D.acciones.filter(a => !(a.tipo === 'limpiezaSolar' && a.desde === hoyISO())).concat([{ id: nuevoId('a'), tipo: 'limpiezaSolar', titulo: 'Limpieza de paneles solares (V366EB)', de: '09:00', a: '14:30', horas: 5.5, periodo: 'I', kw: kwRec, dias: 30, detalle: 'Se recupera la generación que se perdía por polvo', desde: hoyISO(), activo: true }]);
     guardar(); toast('✨ Limpieza registrada: entra en los ahorros'); };
   $('#pPerd').onchange = e => { D.ajustes.perdidaSucio = Math.max(0, Math.min(40, Number(e.target.value) || 0)) / 100; guardar(); };
-  $('#solCfg').onsubmit = e => { e.preventDefault(); const F = e.target; D.ajustes.kwp = Number(F.k.value) || 76; D.ajustes.pr = Number(F.p.value) || 0.78; D.ajustes.numPaneles = F.n.value.trim(); D.ajustes.orientacion = F.o.value.trim(); guardar(); toast('☀️ Datos de paneles guardados'); };
+  $('#solCfg').onsubmit = e => { e.preventDefault(); const F = e.target; D.ajustes.kwp = Number(F.k.value) || 72; D.ajustes.pr = Number(F.p.value) || 0.78; D.ajustes.numPaneles = F.n.value.trim();
+    D.ajustes.inclinacion = Number(F.inc.value) || 22; D.ajustes.azimut = Number(F.az.value) || 180; D.ajustes.orientacion = (D.ajustes.azimut === 180 ? 'Sur' : 'Azimut') + ' (' + D.ajustes.azimut + '°), inclinación ' + D.ajustes.inclinacion + '°';
+    D.ajustes.instalacion = F.ins.value; D.ajustes.inv1Nota = F.i1.value.trim(); climaT = 0; guardar(); toast('☀️ Datos de paneles guardados'); };
   if (window.Chart && c) { const ds = c.dias.filter(x => x.fecha <= hoy).slice(-21);
     graficas.push(new Chart($('#gSol'), { data: { labels: ds.map(x => fC(x.fecha)), datasets: [{ type: 'bar', label: 'Esperada (kWh)', data: ds.map(x => Math.round(esperadoDia(x.rad))), backgroundColor: '#FFC62B' },
       { type: 'line', label: 'Real de inversores (kWh/día)', data: ds.map(x => { const g = G.find(y => x.fecha > y.desde && x.fecha <= y.hasta); return g ? Math.round(g.kwh / g.dias) : null; }), borderColor: '#1E8E5A', backgroundColor: '#1E8E5A', spanGaps: true }] }, options: { maintainAspectRatio: false } })); }
@@ -1258,7 +1431,7 @@ async function excel(avisar) {
     hoja('RESUMEN', [14, 22, 14, 14, 14, 14, 16, 16, 12], ['Medidor', 'Periodo', 'Días', 'kWh medidos', 'kWh/día', 'kW demanda', 'Llevamos $', 'Pronóstico $', 'FP %'],
       D.medidores.map(m => { const e = estimar(m); return e.sin ? [m.id, fF(e.per.ini) + ' – ' + fF(e.per.fin), '', '', '', '', '', '', ''] : [m.id, fF(e.per.ini) + ' – ' + fF(e.per.fin), e.diasCub + ' de ' + e.diasPer, Math.round(e.q), Math.round(e.kwhDia), e.dmax, r2(e.real.total), r2(e.proy.total), r2(e.fp)]; }), { 7: '"$"#,##0.00', 8: '"$"#,##0.00' });
     hoja('LECTURAS', [12, 10, 8, 12, 12, 30, 12, 12, 12, 11, 11, 11, 11, 12, 13, 13, 30], ['Fecha', 'Medidor', 'Hora', 'Lectura', 'kWh', 'Tomó', 'kWh base', 'kWh int.', 'kWh punta', 'kW máx B', 'kW máx I', 'kW máx P', 'kW máx', 'kVArh', 'kWh a CFE B', 'kWh a CFE I', 'Nota'],
-      [...D.lecturas].sort((x, y) => x.fecha.localeCompare(y.fecha) || x.med.localeCompare(y.med)).map(l => { const m = medDe(l.med), L = lecturasDe(l.med), i = L.indexOf(l), d = i > 0 ? delta(m, L[i - 1].lec, l.lec) : null; return [aFecha(l.fecha), l.med, l.hora, l.lec, d != null ? d * m.mult : null, l.porN, l.kwhB, l.kwhI, l.kwhP, l.kwB, l.kwI, l.kwP, l.kwMax, l.kvarh, l.expB, l.expI, l.nota]; }), { 1: 'dd/mm/yyyy' });
+      D.lecturas.filter(l => l.med !== 'SOLAR').sort((x, y) => x.fecha.localeCompare(y.fecha) || x.med.localeCompare(y.med)).map(l => { const m = medDe(l.med), L = lecturasDe(l.med), i = L.indexOf(l), d = i > 0 ? delta(m, L[i - 1].lec, l.lec) : null; return [aFecha(l.fecha), l.med, l.hora, l.lec, d != null ? d * m.mult : null, l.porN, l.kwhB, l.kwhI, l.kwhP, l.kwB, l.kwI, l.kwP, l.kwMax, l.kvarh, l.expB, l.expI, l.nota]; }), { 1: 'dd/mm/yyyy' });
     hoja('RECIBOS', [10, 12, 12, 10, 10, 10, 8, 8, 10, 10, 14, 14, 14, 14], ['Medidor', 'Inicio', 'Fin', 'kWh base', 'kWh int.', 'kWh punta', 'kWMax', 'kW punta', 'kVArh', 'FP %', 'Energía', 'Subtotal', 'Facturación', 'Réplica'],
       [...D.recibos].sort((x, y) => x.periodo_fin.localeCompare(y.periodo_fin)).map(r => { const rp = replicaDe(r); return [r.medidor, aFecha(r.periodo_inicio), aFecha(r.periodo_fin), r.kWh_base, r.kWh_intermedia, r.kWh_punta, r.kWMax, r.kW_punta, r.kVArh, r.factor_potencia_pct, r.energia, r.subtotal, r.facturacion_periodo, rp ? r2(rp.subtotal + rp.iva) : null]; }), { 2: 'dd/mm/yyyy', 3: 'dd/mm/yyyy' });
     const tk = Object.keys(Object.assign({}, TARIFAS_CFE, D.tarifas)).sort();
@@ -1280,6 +1453,6 @@ async function tareasAdmin() {
 
 // ===================== arranque =====================
 if (window.claude && window.LI) conectar(); else document.querySelector('main').innerHTML = '<div class="card vacio"><span class="e">🌐</span>Abre la app desde su liga en internet.</div>';
-if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').then(r => { swReg = r; }).catch(() => {});
 </script>
 </body></html>
