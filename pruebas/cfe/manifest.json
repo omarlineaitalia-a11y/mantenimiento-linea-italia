@@ -1,6 +1,6 @@
 {
-  "name": "Lecturas CFE · Energía Línea Italia",
-  "short_name": "Lecturas CFE",
+  "name": "Lecturas CFE (PRUEBA) · Línea Italia",
+  "short_name": "CFE PRUEBA",
   "description": "Lecturas diarias de los medidores CFE, recibo estimado, factor de potencia y horario punta",
   "lang": "es-MX",
   "start_url": "./",
