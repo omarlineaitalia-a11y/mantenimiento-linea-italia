@@ -52,7 +52,8 @@ tr.tot td{font-weight:800;border-top:2px solid var(--ink)}
 .aviso.late{animation:late 1.4s ease-in-out infinite}
 @keyframes late{50%{box-shadow:0 0 0 6px rgba(198,40,40,.18)}}
 /* alerta grande de lectura (se ve de lejos aunque nadie esté frente a la tablet) */
-#alertaLec{position:fixed;inset:0;z-index:40;display:grid;place-items:center;padding:16px;color:#fff;text-align:center}
+[hidden]{display:none!important}
+#alertaLec{position:fixed;inset:0;z-index:120;display:grid;place-items:center;padding:16px;color:#fff;text-align:center}
 #alertaLec.pre{background:radial-gradient(circle at 50% 40%,#F5A623,#B86A00)}
 #alertaLec.tarde{background:radial-gradient(circle at 50% 40%,#E04848,#8E1515);animation:alLat 1.2s ease-in-out infinite}
 @keyframes alLat{50%{filter:brightness(1.25)}}
@@ -160,6 +161,7 @@ if (window.DEMO) {
   <span class="esp"></span>
   <span class="chip periodo" id="chPeriodo"></span>
   <span class="chip" id="chHoy" style="cursor:default"></span>
+  <button class="chip" id="chLec" type="button" hidden style="background:rgba(214,69,69,.9);color:#fff"></button>
   <button class="chip" id="btnInstalar" type="button" hidden>📲 Instalar en este equipo</button>
   <button class="chip" id="btnAvisos" type="button">🔕 Activar avisos</button>
   <button class="chip" id="quien" type="button"></button>
@@ -276,7 +278,7 @@ async function conectar() {
 }
 const cfgValor = k => k === 'medidores' ? { lista: D.medidores } : k === 'tarifas' ? { m: D.tarifas } : D.ajustes;
 let tR;
-function refrescar() { clearTimeout(tR); tR = setTimeout(() => { if (!(listo.per && COLS.every(c => listo[c]))) return; if (!YO) return pantallaNomina(); pintar(); tareasAdmin(); }, 60); }
+function refrescar() { clearTimeout(tR); tR = setTimeout(() => { if (!(listo.per && COLS.every(c => listo[c]))) return; revisarAlerta(); if (!YO) return pantallaNomina(); pintar(); tareasAdmin(); }, 60); }
 let enviando = Promise.resolve();
 function guardar() { pintar(); enviando = enviando.then(sincronizar).catch(e => toast('No se pudo guardar: ' + (e.message || e.code || e))); }
 async function sincronizar() {
@@ -444,7 +446,7 @@ const esDiaLectura = s => aFecha(s).getDay() !== 0;
 function pendientesHoy() { const s = hoyISO(), p = D.medidores.filter(m => !D.lecturas.some(l => l.med === m.id && l.fecha === s)); if (!D.lecturas.some(l => l.med === 'SOLAR' && l.fecha === s)) p.push({ id: 'Inversores ☀️' }); return p; }
 function avisosLectura() {
   // domingo: la planta está sola, no se toma lectura ni se muestra ningún aviso (la del lunes cubre el fin de semana)
-  const s = hoyISO(), A = []; if (!esDiaLectura(s)) return A;
+  const s = hoyISO(), A = []; if (!esDiaLectura(s) || esAdmin()) return A;   // al administrador solo le sale el aviso chico de arriba
   const [hh, mm] = D.ajustes.hora.split(':').map(Number), ahora = new Date(), objetivo = new Date(); objetivo.setHours(hh, mm, 0, 0);
   const min = Math.round((objetivo - ahora) / 60000), pend = pendientesHoy();
   if (!pend.length) { const L = D.lecturas.filter(l => l.fecha === s && l.med !== 'SOLAR'); return [['v', '✅', '<b>Lecturas de hoy completas.</b>' + L.map(l => l.med + ' por ' + esc((l.porN || '').split(' ')[0]) + ' a las ' + esc(l.hora)).join(' · ')]]; }
@@ -465,24 +467,57 @@ async function pantallaEncendida() { if (!navigator.wakeLock || document.hidden)
 function revisarAlerta() {
   const el = $('#alertaLec'); if (!el) return;
   const s = hoyISO(), listoDatos = listo.per && COLS.every(c => listo[c]);
-  if (!listoDatos || !esDiaLectura(s)) { el.hidden = true; return; }
+  if (!listoDatos || !esDiaLectura(s)) { el.hidden = true; if (listoDatos) chipAdmin('', 0, ''); return; }
   const [hh, mi] = D.ajustes.hora.split(':').map(Number), obj = new Date(); obj.setHours(hh, mi, 0, 0);
   const min = (obj - new Date()) / 60000, pend = pendientesHoy(), ahora = Date.now();
   // aviso de 30 min antes hasta la hora; después, en rojo hasta que se capture (se apaga a las 18:00)
   const nivel = !pend.length ? '' : min > 0 && min <= D.ajustes.avisoMin ? 'pre' : min <= 0 && new Date().getHours() < 18 ? 'tarde' : '';
   if (nivel !== alNivel) { alNivel = nivel; ultNotif = 0; if (nivel) alOculta = 0; }
   const lista = pend.map(m => m.id).join(' · ');
-  if (nivel && ahora - ultNotif > (nivel === 'pre' ? 3600e3 : 30 * 60e3)) { ultNotif = ahora;
+  if (nivel && !(esAdmin() && nivel === 'pre') && ahora - ultNotif > (nivel === 'pre' ? 3600e3 : 30 * 60e3)) { ultNotif = ahora;
     avisoSistema(nivel === 'pre' ? '⏰ Lectura CFE a las ' + D.ajustes.hora : '🚨 LECTURA CFE PENDIENTE', (nivel === 'pre' ? 'En ' + Math.ceil(min) + ' min toca tomar la lectura. ' : 'Ya pasó la hora (' + Math.round(-min) + ' min de retraso). ') + 'Faltan: ' + lista); }
-  if (!nivel || ahora < alOculta || $('.modal')) { el.hidden = true; return; }
+  // administrador: nada de pantalla completa, solo un aviso chico arriba cuando el técnico ya va tarde
+  chipAdmin(nivel, min, lista);
+  if (!nivel || esAdmin() || ahora < alOculta || $('.modal')) { el.hidden = true; return; }
   const mm = Math.abs(min), rel = Math.floor(mm / 60) ? Math.floor(mm / 60) + ':' + String(Math.floor(mm % 60)).padStart(2, '0') + ' h' : Math.ceil(mm) + ' min';
   el.className = nivel; el.hidden = false;
   el.innerHTML = '<div><div class="ic">' + (nivel === 'pre' ? '⏰' : '🚨') + '</div><h2>' + (nivel === 'pre' ? 'Ya casi toca la lectura de CFE' : '¡Toca tomar la lectura de CFE!') + '</h2>' +
     '<div class="rel">' + (nivel === 'pre' ? 'faltan ' + rel : rel + ' tarde') + '</div><p>Lectura de las <b>' + D.ajustes.hora + '</b> · Pendientes: <b>' + esc(lista) + '</b></p>' +
     '<p style="opacity:.85">' + (nivel === 'pre' ? 'Prepara la tablet y ve a la subestación.' : 'Tómala ahora para no perder el dato del día.') + '</p>' +
     '<div class="row"><button class="btn big" id="alIr" type="button" style="background:#fff;color:#14212E">📷 Tomar lecturas ahora</button><button class="btn big" id="alOc" type="button" style="background:transparent;color:#fff;border-color:#fff">Ocultar 10 min</button></div></div>';
-  $('#alIr').onclick = () => { el.hidden = true; alOculta = Date.now() + 5 * 60e3; if (YO) { tab = 'lecturas'; pintar(); } else { const n = $('#nomina input'); if (n) n.focus(); } };
+  $('#alIr').onclick = () => { el.hidden = true; alOculta = Date.now() + 15 * 60e3; if (YO) { tab = 'lecturas'; pintar(); } else { const n = $('#nomina input'); if (n) n.focus(); } };
   $('#alOc').onclick = () => { alOculta = Date.now() + 10 * 60e3; el.hidden = true; };
+}
+// días pasados (lunes a sábado) en que nadie tomó la lectura; el domingo no cuenta, pero si alguien la toma se guarda normal
+function diasSinLectura() {
+  const hoy = hoyISO(), L = D.lecturas.filter(l => l.med !== 'SOLAR'), S = D.lecturas.filter(l => l.med === 'SOLAR');
+  if (!L.length) return [];
+  const ini = L.reduce((a, l) => l.fecha < a ? l.fecha : a, hoy), iniS = S.length ? S.reduce((a, l) => l.fecha < a ? l.fecha : a, hoy) : null, o = [];
+  for (let i = 1, d = sumaD(hoy, -1); i <= 14; i++, d = sumaD(d, -1)) {
+    if (!esDiaLectura(d) || d < ini) continue;
+    const f = D.medidores.filter(m => !D.lecturas.some(l => l.med === m.id && l.fecha === d)).map(m => m.id);
+    if (iniS && d > iniS && !S.some(l => l.fecha === d)) f.push('Inversores');
+    if (f.length) o.push({ d, f });
+  }
+  return o;
+}
+const vistoSin = () => { try { return localStorage.getItem('cfe_visto_sinlec') || ''; } catch (e) { return ''; } };
+// aviso chico del administrador: hoy va tarde el técnico, o un día pasado se quedó sin lectura
+function chipAdmin(nivel, min, lista) {
+  const ch = $('#chLec'); if (!ch) return;
+  if (!esAdmin()) { ch.hidden = true; return; }
+  if (nivel === 'tarde') { ch.hidden = false; ch.style.background = 'rgba(214,69,69,.9)'; ch.style.color = '#fff'; ch.textContent = '⚠️ Lecturas sin tomar · ' + Math.round(-min) + ' min'; ch.title = 'Faltan: ' + lista; ch.onclick = () => { tab = 'lecturas'; pintar(); }; return; }
+  const sin = diasSinLectura().filter(x => x.d > vistoSin());
+  ch.hidden = !sin.length; if (!sin.length) return;
+  ch.style.background = 'rgba(242,179,61,.95)'; ch.style.color = '#3A2600';
+  ch.textContent = '📭 Sin lectura: ' + sin.slice(0, 2).map(x => DIAS[aFecha(x.d).getDay()].slice(0, 3) + ' ' + fC(x.d)).join(', ') + (sin.length > 2 ? ' y ' + (sin.length - 2) + ' más' : '');
+  ch.title = 'Nadie tomó la lectura completa esos días';
+  ch.onclick = () => { const mm = modal('📭 Días sin lectura', '<p class="small">Días de lunes a sábado en que no se tomó la lectura completa (los domingos no cuentan).</p><div class="tw"><table><thead><tr><th>Día</th><th>Faltó</th></tr></thead><tbody>' +
+      sin.map(x => '<tr><td>' + DIAS[aFecha(x.d).getDay()] + ' ' + fN(x.d) + '</td><td>' + x.f.join(', ') + '</td></tr>').join('') + '</tbody></table></div>' +
+      '<p class="small muted">El consumo de esos días se reparte con la siguiente lectura; el pronóstico no se pierde, solo queda menos fino.</p>' +
+      '<div class="row"><button class="btn pri" id="sinOk" type="button">✓ Enterado</button><button class="btn" id="sinHis" type="button">📋 Ver historial</button><button class="btn" type="button" data-x>Cerrar</button></div>');
+    $('#sinOk', mm).onclick = () => { try { localStorage.setItem('cfe_visto_sinlec', sin[0].d); } catch (e) {} mm.remove(); chipAdmin('', 0, ''); };
+    $('#sinHis', mm).onclick = () => { mm.remove(); tab = 'lecturas'; pintar(); }; };
 }
 setInterval(revisarAlerta, 20000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { pantallaEncendida(); revisarAlerta(); } });
@@ -565,13 +600,14 @@ function vLecturas() {
         : !esDiaLectura(s) ? '<div class="estado-lec" style="background:#EEF2F6;color:var(--muted)">Domingo: no se toma lectura</div>'
         : '<div class="estado-lec" style="background:var(--ambar-s);color:#8A5A00">⏳ Pendiente de hoy' + (prevS ? ' · la anterior: Inv 1 <b>' + num(prevS.invS) + '</b> · Inv 2 <b>' + num(prevS.invG) + '</b> (' + fC(prevS.fecha) + ')' : '') + '</div>') +
       (u ? '<div class="kp"><div><b>' + num(u.s / u.dias) + ' kWh</b><span>Inversor 1 por día</span></div><div><b>' + num(u.g / u.dias) + ' kWh</b><span>Inversor 2 por día</span></div></div>' : '') + '</div>'; })() +
-  historialHTML() +
-  '<div class="card" style="margin-top:16px"><h2>🗓️ Últimas lecturas</h2><div class="tw"><table><thead><tr><th>Fecha</th><th>Medidor</th><th class="m">Lectura</th><th class="m">kWh</th><th>Tomó</th><th>Hora</th></tr></thead><tbody>' +
+  (esAdmin() ? historialHTML() : '') +   // el técnico solo toma lecturas; el historial es del administrador
+  '<div class="card" id="ultLec" style="margin-top:16px"><h2>🗓️ Últimas lecturas</h2><div class="tw"><table><thead><tr><th>Fecha</th><th>Medidor</th><th class="m">Lectura</th><th class="m">kWh</th><th>Tomó</th><th>Hora</th></tr></thead><tbody>' +
     D.lecturas.filter(l => l.med !== 'SOLAR').sort((a, b) => b.fecha.localeCompare(a.fecha) || a.med.localeCompare(b.med)).slice(0, 24).map(l => { const m = medDe(l.med), L = lecturasDe(l.med), i = L.indexOf(l), d = i > 0 ? delta(m, L[i - 1].lec, l.lec) : null;
       return '<tr><td>' + DIAS[aFecha(l.fecha).getDay()].slice(0, 3) + ' ' + fN(l.fecha) + '</td><td><b style="color:' + m.color + '">' + l.med + '</b></td><td class="m">' + num(l.lec, 1) + '</td><td class="m">' + (d != null ? num(d * m.mult) : '—') + '</td><td>' + esc(l.porN || '') + '</td><td>' + esc(l.hora || '') + (l.foto ? (esAdmin() ? ' <button class="btn sm" data-foto="' + l.foto + '" type="button">📷</button>' : ' 📷') : '') + '</td></tr>'; }).join('') +
   '</tbody></table></div></div>';
   $$('[data-cap]').forEach(b => b.onclick = () => dlgLectura(medDe(b.dataset.cap)));
   $('#capSol').onclick = dlgInversores;
+  if (!esAdmin()) $('#ultLec').remove();
   $$('[data-foto]').forEach(b => b.onclick = async () => { const s = await DB.doc('fotos/' + b.dataset.foto).get(), d = s.exists && s.data(); modal('📷 Foto del medidor', d ? '<img src="' + d.d + '" alt="Foto del medidor" style="width:100%;border-radius:10px"><div class="row" style="margin-top:8px"><button class="btn" type="button" data-x>Cerrar</button></div>' : '<p>La foto ya se borró (se guardan ' + D.ajustes.retencionFotos + ' días).</p><button class="btn" type="button" data-x>Cerrar</button>'); });
 }
 // historial: quién tomó cada lectura, a qué hora y si fue a tiempo (hasta 15 min después de la hora fijada)
