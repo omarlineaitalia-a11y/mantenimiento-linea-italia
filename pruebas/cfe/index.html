@@ -236,7 +236,7 @@ const MED_DEF = [
   { id: 'PT477E', nombre: 'Servicio 220 V', kva: 112.5, volt: 220, tarifa: 'GDMTO', mult: 1, contratada: 68, conectada: 68, vuelta: 100000, corte: 15, bt: true, netmet: false, color: '#1E8E5A', servicio: '', multDem: 1, marca: 'Elster A3RAL',
     pantallas: [['kvarh', '35'], ['kwMax', '6'], ['lec', '5']] }
 ];
-const AJ_DEF = { hora: '10:00', avisoMin: 30, retencionFotos: 35, diasPago: 13, kwp: 60, pr: 0.78, perdidaSucio: 0.12, limpiezas: [{ fecha: '2026-10-31', estado: 'sucio', nota: 'Reportado por Ing. Omar: paneles con polvo' }] };
+const AJ_DEF = { hora: '10:00', avisoMin: 30, retencionFotos: 35, diasPago: 13, kwp: 76, pr: 0.78, perdidaSucio: 0.12, limpiezas: [{ fecha: '2026-10-31', estado: 'sucio', nota: 'Reportado por Ing. Omar: paneles con polvo' }] };
 let D = { usuarios: {}, ajustes: Object.assign({}, AJ_DEF), medidores: JSON.parse(JSON.stringify(MED_DEF)), tarifas: {}, lecturas: [], recibos: [], acciones: [], cargas: [] };
 let DB = null, YO = null, tab = 'lecturas', carpeta = null;
 const listo = {}, ULT = {}; COLS.forEach(c => ULT[c] = {}); let ULT_CFG = {};
@@ -809,7 +809,7 @@ async function clima() {
   } catch (e) { try { CLIMA = CLIMA || JSON.parse(localStorage.getItem('cfe_clima') || 'null'); } catch (x) {} }
   return CLIMA;
 }
-const kwp = () => Number(D.ajustes.kwp) || 60, prSol = () => Number(D.ajustes.pr) || 0.78;
+const kwp = () => Number(D.ajustes.kwp) || 76, prSol = () => Number(D.ajustes.pr) || 0.78;
 const esperadoDia = rad => rad * kwp() * prSol();            // kWh que deberían generar los paneles ese día
 const iconoClima = (nubes, cod) => cod >= 61 ? '🌧️' : nubes > 80 ? '☁️' : nubes > 45 ? '⛅' : nubes > 15 ? '🌤️' : '☀️';
 // generación real por día con las lecturas de los inversores (E-Total), repartida entre los días que cubre cada lectura
@@ -863,7 +863,7 @@ async function vPaneles() {
       (c ? c.dias.filter(x => x.fecha >= hoy).slice(0, 4).map(x => '<div style="text-align:center"><span style="font-size:28px">' + iconoClima(x.nubes, x.cod) + '</span><b>' + num(esperadoDia(x.rad)) + ' kWh</b><span>' + DIAS[aFecha(x.fecha).getDay()].slice(0, 3) + ' ' + fC(x.fecha) + ' · ' + num(x.nubes, 0) + ' % nubes</span></div>').join('') : '<div>Sin pronóstico</div>') + '</div>' +
       '<div style="height:220px;margin-top:10px"><canvas id="gSol"></canvas></div><p class="small muted">Barras: lo que debían generar con el sol de cada día (' + kwp() + ' kW × radiación × ' + num(prSol() * 100, 0) + ' % de rendimiento típico). Puntos: lo que marcaron los inversores.</p></div>' +
     '<div class="card"><h2>📋 Datos que me faltan de los paneles</h2>' + falt.map(([t2, ok]) => '<div class="row" style="margin-bottom:6px"><span class="tag ' + (ok ? 'v' : 'a') + '">' + (ok ? '✓' : 'falta') + '</span><span class="small">' + t2 + '</span></div>').join('') +
-      '<form id="solCfg" class="form" style="margin-top:10px"><label class="f">Potencia instalada (kW de inversores)<input name="k" type="number" step="any" value="' + kwp() + '"></label><label class="f">Rendimiento típico (0.75–0.82)<input name="p" type="number" step="0.01" value="' + prSol() + '"></label>' +
+      '<form id="solCfg" class="form" style="margin-top:10px"><label class="f">Potencia de paneles (kWp; medido ≈ 76 el 30-oct)<input name="k" type="number" step="any" value="' + kwp() + '"></label><label class="f">Rendimiento típico (0.75–0.82)<input name="p" type="number" step="0.01" value="' + prSol() + '"></label>' +
       '<label class="f">Número de paneles × watts<input name="n" value="' + esc(D.ajustes.numPaneles || '') + '" placeholder="Ej. 110 × 550 W"></label><label class="f">Orientación / inclinación<input name="o" value="' + esc(D.ajustes.orientacion || '') + '" placeholder="Ej. sur, 20°"></label><div class="full"><button class="btn pri" type="submit">Guardar datos de paneles</button></div></form>' +
       '<p class="small muted">Dos inversores Solis S5-GC30K-LV (30 kW c/u, 4 MPPT, hasta 8 strings), 220 V, en la subestación (Inversor 1 sin etiqueta, Inversor 2 rotulado), instalados en 2024; verificado con fotos el 31-oct-2026. Conectados a V366EB (recibo con NETMET).</p></div></div>' +
     '<div class="grid2" style="margin-top:16px"><div class="card"><h2>🔌 Transformador V366EB: CFE + paneles</h2>' + (() => { const m = medDe('V366EB'), e = m && estimar(m); return e && !e.sin ? balanceSolar(m, e) : '<div class="vacio"><span class="e">📭</span>Faltan lecturas de V366EB en este periodo para hacer el balance.</div>'; })() + '</div>' +
@@ -888,7 +888,7 @@ async function vPaneles() {
     D.acciones = D.acciones.filter(a => !(a.tipo === 'limpiezaSolar' && a.desde === hoyISO())).concat([{ id: nuevoId('a'), tipo: 'limpiezaSolar', titulo: 'Limpieza de paneles solares (V366EB)', de: '09:00', a: '14:30', horas: 5.5, periodo: 'I', kw: kwRec, dias: 30, detalle: 'Se recupera la generación que se perdía por polvo', desde: hoyISO(), activo: true }]);
     guardar(); toast('✨ Limpieza registrada: entra en los ahorros'); };
   $('#pPerd').onchange = e => { D.ajustes.perdidaSucio = Math.max(0, Math.min(40, Number(e.target.value) || 0)) / 100; guardar(); };
-  $('#solCfg').onsubmit = e => { e.preventDefault(); const F = e.target; D.ajustes.kwp = Number(F.k.value) || 60; D.ajustes.pr = Number(F.p.value) || 0.78; D.ajustes.numPaneles = F.n.value.trim(); D.ajustes.orientacion = F.o.value.trim(); guardar(); toast('☀️ Datos de paneles guardados'); };
+  $('#solCfg').onsubmit = e => { e.preventDefault(); const F = e.target; D.ajustes.kwp = Number(F.k.value) || 76; D.ajustes.pr = Number(F.p.value) || 0.78; D.ajustes.numPaneles = F.n.value.trim(); D.ajustes.orientacion = F.o.value.trim(); guardar(); toast('☀️ Datos de paneles guardados'); };
   if (window.Chart && c) { const ds = c.dias.filter(x => x.fecha <= hoy).slice(-21);
     graficas.push(new Chart($('#gSol'), { data: { labels: ds.map(x => fC(x.fecha)), datasets: [{ type: 'bar', label: 'Esperada (kWh)', data: ds.map(x => Math.round(esperadoDia(x.rad))), backgroundColor: '#FFC62B' },
       { type: 'line', label: 'Real de inversores (kWh/día)', data: ds.map(x => { const g = G.find(y => x.fecha > y.desde && x.fecha <= y.hasta); return g ? Math.round(g.kwh / g.dias) : null; }), borderColor: '#1E8E5A', backgroundColor: '#1E8E5A', spanGaps: true }] }, options: { maintainAspectRatio: false } })); }
