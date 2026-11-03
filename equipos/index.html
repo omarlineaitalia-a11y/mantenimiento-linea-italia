@@ -172,6 +172,7 @@ mark{background:#FFF0A8;border-radius:3px;padding:0 1px}
 .man .mi{font-size:28px;width:44px;height:44px;display:grid;place-items:center;background:#EEF4FC;border-radius:10px}
 .man .mt{flex:1;min-width:180px}.man .mt b{display:block}.man .mt span{font-size:12.5px;color:var(--muted)}
 .man .ma{display:flex;gap:6px}
+.editable [data-ed]{cursor:pointer;position:relative;border-radius:8px;transition:background .12s}.editable [data-ed]:hover{background:rgba(31,111,209,.08);outline:2px dashed #9CC2F0;outline-offset:1px}.editable [data-ed]::after{content:'✏';position:absolute;right:5px;top:3px;font-size:11px;opacity:.5}.editable .cab [data-ed]::after{color:#fff;opacity:.8}.editable [data-ed]:has(.edin)::after{display:none}.editable [data-ed]:has(.edin){grid-column:1/-1;outline:0;background:none}.editable [data-ed]:has(.edin)>:not(.edin){display:none}.edin{background:#fff;color:var(--ink);border:2px solid var(--azul);border-radius:10px;padding:8px;box-shadow:var(--sombra);font-size:14px;font-weight:400;text-align:left}.edin input,.edin textarea{width:100%;border:1px solid #C7D2DE;border-radius:8px;padding:7px 9px;font-size:15px}
 .visorman{align-items:center}.visorman input{border:1px solid #C7D2DE;border-radius:8px;padding:6px}
 .ref{background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:var(--sombra)}
 .ref .img{height:130px;background:#F4F7FA;display:grid;place-items:center;cursor:zoom-in}
@@ -452,7 +453,7 @@ $('#quien').onclick = () => { try { sessionStorage.removeItem('eq_nom'); } catch
     Object.keys(D.eq).forEach(id => { if (D.eq[id].cat === c.k) delete D.eq[id]; });
     if (s.exists) Object.entries((s.data() || {}).items || {}).forEach(([id, e]) => { if (e && typeof e === 'object') D.eq[id] = Object.assign(e, { id, cat: c.k }); });
     revisarSemilla(); programarPintar();
-    if (FICHA && D.eq[FICHA] && $('#modal').classList.contains('on') && !$('#modal form')) pintarFicha(D.eq[FICHA], true);
+    if (FICHA && D.eq[FICHA] && $('#modal').classList.contains('on') && !$('#modal form') && !$('#modal .edin')) pintarFicha(D.eq[FICHA], true);
   }, err => { D.cargado[c.k] = 'error'; toast('⚠ No se pudo leer ' + c.k + ': ' + (err.message || err), 6000); }));
   cargarHist();
   window.addEventListener('hashchange', abrirDesdeHash);
@@ -645,14 +646,14 @@ document.addEventListener('keydown', ev => { if (ev.key === 'Escape') { if ($('#
 function placaHTML(e) {
   const v = k => { const x = e[k]; if (!x) return '<dd class="no">—</dd>'; const t = esc(x); return '<dd>' + (verif(x) ? '<span class="ver" title="Dato por verificar">' + t + '</span>' : t) + '</dd>'; };
   return '<div class="placa"><span class="rem" style="left:8px;top:8px"></span><span class="rem" style="right:8px;top:8px"></span><span class="rem" style="left:8px;bottom:8px"></span><span class="rem" style="right:8px;bottom:8px"></span>' +
-    '<div class="ph"><div><b>' + esc(e.marca || e.fab || 'Sin marca') + '</b><div style="font-size:12px;font-weight:700;color:#3C4855">' + esc(e.fab && e.fab !== e.marca ? e.fab : '') + '</div></div><span>DATOS DE PLACA<br>' + esc(e.clave) + '</span></div>' +
-    '<dl>' + PLACA.map(k => '<div><dt>' + esc(ETQ[k].replace('Tipo de aceite / refrigerante', 'Aceite / refrigerante').replace('Número de serie', 'No. de serie')) + '</dt>' + v(k) + '</div>').join('') + '</dl></div>';
+    '<div class="ph"><div><b data-ed="marca">' + esc(e.marca || e.fab || 'Sin marca') + '</b><div data-ed="fab" style="font-size:12px;font-weight:700;color:#3C4855">' + esc(e.fab && e.fab !== e.marca ? e.fab : '') + '</div></div><span>DATOS DE PLACA<br>' + esc(e.clave) + '</span></div>' +
+    '<dl>' + PLACA.map(k => '<div data-ed="' + k + '"><dt>' + esc(ETQ[k].replace('Tipo de aceite / refrigerante', 'Aceite / refrigerante').replace('Número de serie', 'No. de serie')) + '</dt>' + v(k) + '</div>').join('') + '</dl></div>';
 }
 function periodosHTML(p) {
   if (!p) return '<span class="muted">Sin periodo</span>';
   return String(p).split('/').map(x => x.trim()).filter(Boolean).map(x => { const P = PERIODOS.find(q => norm(q[0]) === norm(x)); return '<span class="per" style="background:' + (P ? P[2] : '#5B6B7B') + '">' + esc(x) + '</span>'; }).join('');
 }
-function dato(k, e, html) { const v = e[k]; return '<div class="dato"><span>' + esc(ETQ[k] || k) + '</span><b>' + (html != null ? html : (v ? (verif(v) ? '<span class="pill v">' + esc(v) + '</span>' : esc(v)) : '<span class="muted">—</span>')) + '</b></div>'; }
+function dato(k, e, html) { const v = e[k]; return '<div class="dato"' + (k === 'dep' ? '' : ' data-ed="' + k + '"') + '><span>' + esc(ETQ[k] || k) + '</span><b>' + (html != null ? html : (v ? (verif(v) ? '<span class="pill v">' + esc(v) + '</span>' : esc(v)) : '<span class="muted">—</span>')) + '</b></div>'; }
 
 // ===================== salud, vida útil y depreciación =====================
 const isoD = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
@@ -768,7 +769,7 @@ function pintarFicha(e, quieto) {
   const marco = (tipo, titulo, id) => '<div class="marco"><div class="t">' + titulo + '<span>' +
     ((!id || ed) ? '<button class="btn sm" data-ft="' + tipo + '">📷 ' + (id ? 'Cambiar' : 'Tomar foto') + '</button><button class="btn sm" data-fs="' + tipo + '" title="Elegir de la galería">🖼</button>' : '') + '</span></div>' +
     '<div class="img" data-ver="' + (id || '') + '">' + (id ? '<img data-foto="' + id + '" alt="">' : '<div class="vacio">' + svg(tipo === 'fp' ? 'placa' : 'camara', '').replace('<svg', '<svg style="color:' + c.c + '"') + '<div>' + (tipo === 'fp' ? 'Falta la foto de la placa original' : 'Falta la foto del equipo') + '</div></div>') + '</div></div>';
-  md.innerHTML = '<div class="hoja"><div class="cab" style="--c:' + c.c + '">' + svg(c.ic) + '<div style="flex:1;min-width:0"><span class="clave">' + esc(e.clave) + '</span><h2 style="margin-top:6px">' + esc(nombreDe(e)) + '</h2><p>' + esc(c.n) + ' · ' + esc(e.nombre || '') + (e.eco && e.eco !== e.clave ? ' · No. económico ' + esc(e.eco) : '') + ' · No. ' + esc(e.no || '—') + '</p></div><button class="x" title="Cerrar">✕</button></div>' +
+  md.innerHTML = '<div class="hoja"><div class="cab" style="--c:' + c.c + '">' + svg(c.ic) + '<div style="flex:1;min-width:0"><span class="clave" data-ed="clave">' + esc(e.clave) + '</span><h2 style="margin-top:6px" data-ed="corto">' + esc(nombreDe(e)) + '</h2><p>' + esc(c.n) + ' · ' + esc(e.nombre || '') + (e.eco && e.eco !== e.clave ? ' · No. económico ' + esc(e.eco) : '') + ' · No. ' + esc(e.no || '—') + '</p></div><button class="x" title="Cerrar">✕</button></div>' +
     '<div class="cuerpo">' +
     '<div class="acciones"><button class="btn pri" id="fPdf">📄 Ver PDF del equipo</button>' + (ed ? '<button class="btn" id="fEd">✏ Modificar datos</button>' : '<span class="pill" title="Pide a Omar permiso para modificar esta categoría">🔒 Solo consulta en ' + c.k + '</span>') +
       (esAdmin() ? '<button class="btn peligro" id="fBaja">🗑 Dar de baja</button>' : '') + '</div>' +
@@ -788,6 +789,7 @@ function pintarFicha(e, quieto) {
   md.classList.add('on'); document.body.style.overflow = 'hidden';
   if (!quieto) md.scrollTop = 0;
   $('.cab .x', md).onclick = cerrarModal;
+  if (esAdmin()) { $('.hoja', md).classList.add('editable'); $$('[data-ed]', md).forEach(d => d.onclick = ev => { if (ev.target.closest('a,button,input,textarea,select') || d.querySelector('.edin')) return; ev.stopPropagation(); editarCampo(e, d.dataset.ed, d); }); }
   $$('[data-ft],[data-fs]', md).forEach(b => b.onclick = async () => { const tipo = b.dataset.ft || b.dataset.fs; const f = await pedirFoto(!!b.dataset.ft); if (!f) return;
     try { const id = await subirFoto(f); await guardarCampos(e, { [tipo]: id }, tipo === 'fp' ? 'Foto de placa' : 'Foto del equipo'); } catch (x) { toast('⚠ ' + (x.message || x)); } });
   $$('[data-ver]', md).forEach(d => d.onclick = () => { const i = $('img', d); if (i && i.src) visor(i.src); });
@@ -802,6 +804,25 @@ function pintarFicha(e, quieto) {
   $$('[data-ref]', md).forEach(b => b.onclick = () => formRef(e, +b.dataset.ref));
   cargarFotos(md);
   historialFicha(e);
+}
+// edición directa en la ficha (solo administradores): se toca el dato, se cambia y se guarda
+const ETQ_EXTRA = { clave: 'Clave de control LI' };
+function editarCampo(e, k, d) {
+  const largo = k === 'obs' || k === 'vida', val = e[k] == null ? '' : String(e[k]);
+  const caja = document.createElement('div'); caja.className = 'edin';
+  caja.innerHTML = '<label class="small muted" style="display:block;font-weight:700;margin-bottom:3px">✏ ' + esc(ETQ[k] || ETQ_EXTRA[k] || k) + '</label>' +
+    (largo ? '<textarea rows="3"></textarea>' : '<input type="text">') + '<div class="row" style="margin-top:6px"><button class="btn sm ok" type="button">✔ Guardar</button><button class="btn sm" type="button">✕ Cancelar</button></div>';
+  const i = caja.querySelector('input,textarea'); i.value = val;
+  d.appendChild(caja); i.focus(); i.select();
+  const cancelar = () => caja.remove();
+  const guardar = async () => {
+    const nv = i.value.trim(); if (nv === val.trim()) return cancelar();
+    if (k === 'clave') { if (!nv) return toast('⚠ La clave no puede quedar vacía'); if (lista().some(x => x.id !== e.id && compacto(x.clave) === compacto(nv))) return toast('⚠ La clave ' + nv + ' ya la tiene otro equipo', 5000); }
+    const campos = { [k]: nv }; if (k === 'corto' || k === 'eco' || k === 'clave') campos.pk = llavePlan(k === 'corto' ? nv : e.corto, (k === 'eco' ? nv : e.eco) || e.no);
+    try { await guardarCampos(e, campos, 'Modificación'); pintarFicha(D.eq[e.id] || e, true); programarPintar(); } catch (x) { toast('⚠ ' + (x.message || x), 6000); cancelar(); }
+  };
+  const [bG, bC] = caja.querySelectorAll('button'); bG.onclick = guardar; bC.onclick = cancelar;
+  i.onkeydown = ev => { if (ev.key === 'Escape') cancelar(); else if (ev.key === 'Enter' && !largo) guardar(); };
 }
 function refsHTML(e) {
   const R = e.refs || [];
