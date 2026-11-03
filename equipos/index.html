@@ -405,7 +405,7 @@ function pantallaNomina() {
     if (!u || u.a === false) { $('#nMsg').textContent = 'La nómina ' + n + ' no tiene acceso. Pide tu alta a un administrador.'; return; }
     try { sessionStorage.setItem('eq_nom', n); } catch (x) {}
     identificar(); if (DB) DB.collection('accesos').add({ t: new Date().toISOString(), nom: n, n: u.n }).catch(() => {});
-    d.remove(); pintar(); tareasAdmin(); abrirDesdeHash(); };
+    d.remove(); pintar(); tareasAdmin(); abrirDesdeHash(); revisarSemilla(); };
   setTimeout(() => $('input', d).focus(), 50);
 }
 $('#quien').onclick = () => { try { sessionStorage.removeItem('eq_nom'); } catch (e) {} YO = null; identificar(); pantallaNomina(); };
@@ -417,7 +417,7 @@ $('#quien').onclick = () => { try { sessionStorage.removeItem('eq_nom'); } catch
   if (!DB) { $('#main').innerHTML = '<div class="aviso ambar">No hay conexión con la base de datos.</div>'; return; }
   try { const s = await DB.doc('config/personal').get(); D.personal = (s.exists && s.data().p) || copia(window.LI_PERSONAL_INICIAL); } catch (e) { D.personal = copia(window.LI_PERSONAL_INICIAL); }
   identificar();
-  DB.doc('config/personal').onSnapshot(s => { if (s.exists) { D.personal = s.data().p || {}; identificar(); programarPintar(); } });
+  DB.doc('config/personal').onSnapshot(s => { if (s.exists) { D.personal = s.data().p || {}; identificar(); revisarSemilla(); programarPintar(); } });
   DB.doc('config/ajustes').onSnapshot(s => { D.ajustes = s.exists ? (s.data() || {}) : {}; if (D.ajustes.ultExcel) D.excel = D.ajustes.ultExcel; programarPintar(); });
   CATS.forEach(c => DB.doc('cat/' + c.k).onSnapshot(s => {
     D.cargado[c.k] = s.exists ? 'ok' : 'no';
@@ -425,7 +425,7 @@ $('#quien').onclick = () => { try { sessionStorage.removeItem('eq_nom'); } catch
     if (s.exists) Object.entries((s.data() || {}).items || {}).forEach(([id, e]) => { if (e && typeof e === 'object') D.eq[id] = Object.assign(e, { id, cat: c.k }); });
     revisarSemilla(); programarPintar();
     if (FICHA && D.eq[FICHA] && $('#modal').classList.contains('on') && !$('#modal form')) pintarFicha(D.eq[FICHA], true);
-  }));
+  }, err => { D.cargado[c.k] = 'error'; toast('⚠ No se pudo leer ' + c.k + ': ' + (err.message || err), 6000); }));
   cargarHist();
   window.addEventListener('hashchange', abrirDesdeHash);
   if (!YO) pantallaNomina(); else { tareasAdmin(); }
@@ -441,12 +441,15 @@ async function revisarSemilla() {
   if (!faltan.length) return;
   if (!esAdmin()) return;
   D.sembrado = true;
-  for (const c of faltan) {
-    const items = {};
-    (window.EQ_BASE || []).filter(e => e.cat === c.k).forEach(e => { const o = copia(e); o.pk = llavePlan(o.corto, o.eco || o.no); o.alta = { t: new Date().toISOString(), por: 'Excel base' }; items[o.id] = o; });
-    await DB.doc('cat/' + c.k).set({ items });
-  }
-  toast('✅ Base de datos cargada: ' + (window.EQ_BASE || []).length + ' equipos');
+  toast('⏳ Subiendo la base de datos de equipos a la nube…', 4000);
+  try {
+    for (const c of faltan) {
+      const items = {};
+      (window.EQ_BASE || []).filter(e => e.cat === c.k).forEach(e => { const o = copia(e); o.pk = llavePlan(o.corto, o.eco || o.no); o.alta = { t: new Date().toISOString(), por: 'Excel base' }; items[o.id] = o; });
+      await DB.doc('cat/' + c.k).set({ items });
+    }
+    toast('✅ Base de datos cargada: ' + (window.EQ_BASE || []).length + ' equipos');
+  } catch (e) { D.sembrado = false; toast('⚠ No se pudo subir la base: ' + (e.message || e), 8000); }
 }
 
 // ===================== historial (plan maestro + registros) =====================
