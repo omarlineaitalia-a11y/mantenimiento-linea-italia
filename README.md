@@ -7,6 +7,7 @@ Aplicaciones web del área de mantenimiento de Línea Italia (Creaciones Industr
 | `almacen/` | Almacén de refacciones: existencias, estantes, fotos, retiros, límites por persona, gasto y valor. |
 | `paros/` | Control de paros: alertas de falla, tiempos de llegada y reparación, tablero, gráficas y reportes en Excel. |
 | `cfe/` | Lecturas CFE: lectura diaria de medidores e inversores, pronóstico y réplica del recibo, paneles solares y ahorro. |
+| `equipos/` | Base de Datos de equipos: búsqueda por clave, placa, fotos, refacciones, salud y depreciación, mantenimientos realizados del plan y Excel de la base actualizado. |
 
 Estado: en migración. La base de datos se conectará a **Firebase (Firestore + Authentication)**. Mientras tanto, las versiones con datos en vivo siguen en claude.ai.
 

@@ -1,0 +1,1177 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Base de Datos LI · Equipos de planta</title>
+<link rel="manifest" href="manifest.json"><meta name="theme-color" content="#0E2A47"><link rel="icon" href="icono-192.png"><link rel="apple-touch-icon" href="icono-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Base de Datos LI">
+<style>
+:root{
+  --bg:#EEF2F6;--card:#fff;--ink:#14212E;--muted:#5B6B7B;--line:#D8E0E8;
+  --navy:#0E2A47;--azul:#1F6FD1;--azul-s:#E3EEFB;--ambar:#F5A623;--ambar-s:#FFF3DC;--verde:#1E8E5A;--verde-s:#E1F4EA;--rojo:#C62828;--rojo-s:#FDE5E5;
+  --sombra:0 1px 2px rgba(14,42,71,.06),0 8px 22px rgba(14,42,71,.08);color-scheme:light}
+*{box-sizing:border-box}html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 "Segoe UI",system-ui,-apple-system,Arial,sans-serif}
+button,input,select,textarea{font:inherit;color:inherit}
+[hidden]{display:none!important}
+.wrap{max-width:1240px;margin:0 auto;padding:0 16px 60px}
+header.top{background:radial-gradient(1200px 300px at 80% -60%,#2a5a8f 0,transparent 60%),linear-gradient(120deg,#0B1F35,#0E2A47 55%,#173E66);color:#EAF2FB;padding:14px 0 16px;position:relative;overflow:hidden}
+header.top::after{content:"";position:absolute;inset:auto -10% 0 -10%;height:3px;background:linear-gradient(90deg,transparent,#3FC1C9,var(--ambar),transparent);animation:chispa 4s linear infinite}
+@keyframes chispa{from{transform:translateX(-60%)}to{transform:translateX(60%)}}
+.top .wrap{display:flex;gap:14px;align-items:center;flex-wrap:wrap;padding-bottom:0}
+.top h1{margin:0;font-size:23px;letter-spacing:.01em}.top p{margin:2px 0 0;opacity:.8;font-size:13px}.esp{flex:1}
+.logo{width:46px;height:46px;border-radius:10px;background:#fff1;border:1px solid #fff3;display:grid;place-items:center}
+.chip{display:inline-flex;align-items:center;gap:6px;border-radius:99px;padding:5px 12px;font-size:13px;font-weight:600;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);color:#fff;cursor:pointer}
+nav.tabs{position:sticky;top:0;z-index:50;background:#fffffff2;backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+nav.tabs .wrap{display:flex;gap:4px;overflow-x:auto;padding:6px 16px;scrollbar-width:none}
+nav.tabs button{border:0;background:none;padding:9px 14px;border-radius:10px;font-weight:700;color:var(--muted);cursor:pointer;white-space:nowrap;font-size:14.5px}
+nav.tabs button.on{background:var(--navy);color:#fff}
+nav.tabs button:not(.on):hover{background:#EEF2F6}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--sombra);padding:18px}
+h2{margin:0 0 12px;font-size:19px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}h3{margin:16px 0 8px;font-size:16px}
+.muted{color:var(--muted)}.small{font-size:13px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.btn{border:1px solid #C7D2DE;background:#fff;border-radius:10px;padding:9px 14px;font-weight:700;cursor:pointer;display:inline-flex;gap:6px;align-items:center;justify-content:center;transition:transform .12s,background .12s}
+.btn:hover{background:#F3F6FA}.btn:active{transform:scale(.97)}.btn:disabled{opacity:.5;cursor:default}
+.btn.pri{background:var(--azul);border-color:var(--azul);color:#fff}.btn.pri:hover{background:#1A5FB4}
+.btn.ok{background:var(--verde);border-color:var(--verde);color:#fff}
+.btn.peligro{color:var(--rojo);border-color:#E9B4B4}
+.btn.big{padding:13px 20px;font-size:16px;border-radius:12px}
+.btn.sm{padding:5px 10px;font-size:13px;border-radius:8px}
+input[type=text],input[type=number],input[type=search],input:not([type]),select,textarea{border:1px solid #C7D2DE;border-radius:10px;padding:9px 11px;background:#fff;width:100%}
+input:focus,select:focus,textarea:focus{outline:2px solid #9CC2F0;border-color:var(--azul)}
+textarea{min-height:70px;resize:vertical}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:12.5px;font-weight:700;color:var(--muted)}
+.grid{display:grid;gap:12px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}
+/* ---- búsqueda ---- */
+.hero{margin:18px 0 14px;padding:22px;border-radius:20px;background:linear-gradient(135deg,#fff,#F3F8FE);border:1px solid var(--line);box-shadow:var(--sombra);position:relative;overflow:hidden}
+.hero h2{font-size:22px;margin-bottom:4px}
+.buscador{position:relative;margin-top:12px}
+.buscador input{font-size:21px;padding:15px 16px 15px 54px;border-radius:14px;border:2px solid #BFD3EA;box-shadow:0 6px 18px rgba(31,111,209,.10)}
+.buscador input:focus{border-color:var(--azul);outline:none;box-shadow:0 0 0 5px rgba(31,111,209,.15)}
+.buscador .lupa{position:absolute;left:16px;top:50%;transform:translateY(-50%);font-size:24px;animation:lupa 2.8s ease-in-out infinite}
+@keyframes lupa{0%,100%{transform:translateY(-50%) rotate(0)}50%{transform:translateY(-50%) rotate(-14deg)}}
+.ejemplos{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.ejemplos button{border:1px dashed #A9BED6;background:#fff;border-radius:99px;padding:3px 11px;font-size:13px;cursor:pointer;color:#33506E}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:14px 0}
+.stat{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 14px;box-shadow:var(--sombra)}
+.stat b{display:block;font-size:26px;line-height:1.1}.stat span{font-size:12.5px;color:var(--muted);font-weight:600}
+/* ---- categorías ---- */
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px}
+.tile{--c:#1F6FD1;position:relative;border:0;border-radius:18px;padding:14px 14px 12px;background:#fff;box-shadow:var(--sombra);cursor:pointer;text-align:left;overflow:hidden;transition:transform .18s,box-shadow .18s;border-top:5px solid var(--c);animation:sube .45s both;animation-delay:calc(var(--i,0)*45ms)}
+.tile:hover{transform:translateY(-4px) rotate(-.4deg);box-shadow:0 14px 30px rgba(14,42,71,.16)}
+.tile .ic{width:104px;height:86px;color:var(--c);transition:transform .3s;filter:drop-shadow(0 4px 6px rgba(14,42,71,.18))}
+.tile:hover .ic{transform:scale(1.08) translateY(-2px)}
+.tile b{display:block;font-size:15px;margin-top:4px}.tile small{color:var(--muted);font-weight:600}
+.tile .n{position:absolute;right:12px;top:10px;font-size:24px;font-weight:800;color:var(--c)}
+.tile::after{content:"";position:absolute;right:-30px;bottom:-30px;width:110px;height:110px;border-radius:50%;background:var(--c);opacity:.07}
+.tile.sel{outline:3px solid var(--c)}
+@keyframes sube{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+/* ---- tarjetas de equipo ---- */
+.lista{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;margin-top:12px}
+.eq{--c:#1F6FD1;background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden;cursor:pointer;box-shadow:var(--sombra);display:flex;flex-direction:column;transition:transform .15s,box-shadow .15s;animation:sube .35s both;animation-delay:calc(min(var(--i,0),20)*25ms)}
+.eq:hover{transform:translateY(-3px);box-shadow:0 12px 26px rgba(14,42,71,.15)}
+.eq .foto{height:140px;background:linear-gradient(135deg,color-mix(in srgb,var(--c) 14%,#fff),#fff);display:grid;place-items:center;position:relative}
+.eq .foto img{width:100%;height:100%;object-fit:cover}
+.eq .foto svg{width:132px;height:110px;color:var(--c);filter:drop-shadow(0 5px 8px rgba(14,42,71,.2))}
+.clave{display:inline-flex;align-items:center;gap:4px;background:var(--c);color:#fff;font-weight:800;border-radius:8px;padding:2px 9px;font-size:14px;letter-spacing:.04em;font-family:Consolas,"Segoe UI",monospace}
+.eq .foto .clave{position:absolute;left:10px;top:10px;box-shadow:0 2px 8px rgba(0,0,0,.25);font-size:15px}
+.eq .foto .bad{position:absolute;right:8px;bottom:8px;display:flex;gap:4px}
+.bad span{background:#ffffffe6;border-radius:99px;padding:1px 7px;font-size:12px;font-weight:700}
+.eq .cuerpo{padding:10px 12px 12px}
+.eq .cuerpo b{display:block;font-size:15px;line-height:1.25}
+.eq .cuerpo small{display:block;color:var(--muted);font-size:12.5px;margin-top:2px}
+.pill{display:inline-block;border-radius:99px;padding:1px 8px;font-size:12px;font-weight:700;background:#EEF2F6;color:#3A4B5C}
+.pill.v{background:var(--ambar-s);color:#8A5A00}
+mark{background:#FFF0A8;border-radius:3px;padding:0 1px}
+/* ---- áreas ---- */
+.areas{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.area{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px;cursor:pointer;display:flex;gap:10px;align-items:center;box-shadow:var(--sombra);transition:transform .15s;animation:sube .35s both;animation-delay:calc(min(var(--i,0),30)*15ms)}
+.area:hover{transform:translateY(-2px)}
+.area .pin{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;background:#E1F4EA;font-size:22px;flex:none}
+.area b{display:block;line-height:1.2}.area .mini{display:flex;gap:3px;margin-top:4px;flex-wrap:wrap}
+.area .mini i{font-style:normal;font-size:11px;font-weight:800;color:#fff;border-radius:5px;padding:0 5px}
+/* ---- ficha ---- */
+#modal{position:fixed;inset:0;z-index:200;background:rgba(9,20,34,.55);display:none;overflow:auto;padding:18px 10px}
+#modal.on{display:block;animation:fondo .2s}
+@keyframes fondo{from{background:rgba(9,20,34,0)}}
+.hoja{max-width:1000px;margin:0 auto;background:var(--bg);border-radius:20px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.35);animation:entra .28s cubic-bezier(.2,.9,.3,1.2)}
+@keyframes entra{from{transform:translateY(40px) scale(.97);opacity:0}}
+.hoja .cab{--c:#1F6FD1;background:linear-gradient(120deg,var(--c),color-mix(in srgb,var(--c) 60%,#0B1F35));color:#fff;padding:18px 20px;display:flex;gap:14px;align-items:center;position:relative}
+.hoja .cab .ic{width:96px;height:80px;color:#fff;flex:none;background:#ffffff24;border-radius:14px;padding:4px;filter:drop-shadow(0 4px 8px rgba(0,0,0,.25))}
+.hoja .cab h2{margin:0;font-size:22px;color:#fff}.hoja .cab p{margin:2px 0 0;opacity:.85;font-size:13.5px}
+.hoja .cab .clave{background:#fff;color:var(--c);font-size:22px;padding:4px 12px}
+.hoja .cab .x{position:absolute;right:12px;top:12px;border:0;background:#ffffff26;color:#fff;width:38px;height:38px;border-radius:50%;font-size:20px;cursor:pointer}
+.hoja .cuerpo{padding:16px;display:grid;gap:14px}
+.acciones{display:flex;gap:8px;flex-wrap:wrap}
+.fotos2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:640px){.fotos2{grid-template-columns:1fr}}
+.marco{background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:var(--sombra)}
+.marco .t{padding:8px 12px;font-weight:800;font-size:13.5px;display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+.marco .t span{display:flex;gap:4px}
+.marco .img{height:260px;background:#F4F7FA;display:grid;place-items:center;cursor:zoom-in;position:relative}
+.marco .img img{width:100%;height:100%;object-fit:contain}
+.marco .vacio{text-align:center;color:var(--muted);padding:10px}
+.marco .vacio svg{width:70px;height:70px;opacity:.5}
+/* placa metálica */
+.placa{position:relative;border-radius:14px;padding:18px 22px 16px;background:linear-gradient(160deg,#F4F6F8 0%,#D5DBE1 35%,#EEF1F4 55%,#C3CAD2 100%);border:1px solid #9AA5B1;box-shadow:inset 0 1px 0 #fff,inset 0 -2px 6px rgba(0,0,0,.12),0 6px 18px rgba(14,42,71,.12);color:#1D2833;overflow:hidden}
+.placa::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,rgba(255,255,255,.16) 0 1px,transparent 1px 3px);pointer-events:none}
+.placa::after{content:"";position:absolute;top:0;left:-60%;width:40%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.55),transparent);animation:brillo 5s ease-in-out infinite;pointer-events:none}
+@keyframes brillo{0%,60%{left:-60%}100%{left:130%}}
+.placa .rem{position:absolute;width:12px;height:12px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff,#8995A1 60%,#5D6874);box-shadow:0 1px 2px rgba(0,0,0,.4)}
+.placa .ph{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;border-bottom:2px solid #6B7682;padding-bottom:8px;margin-bottom:10px;position:relative}
+.placa .ph b{font-size:22px;letter-spacing:.06em;text-transform:uppercase;font-family:"Arial Black",Arial,sans-serif}
+.placa .ph span{font-size:12px;font-weight:700;color:#3C4855;text-align:right}
+.placa dl{margin:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:2px 18px;position:relative}
+.placa dl div{display:flex;justify-content:space-between;gap:8px;border-bottom:1px dashed #8C97A3;padding:4px 0}
+.placa dt{font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#46525F}
+.placa dd{margin:0;font-family:Consolas,"Courier New",monospace;font-weight:700;font-size:14px;text-align:right;word-break:break-word}
+.placa dd.no{color:#8C97A3;font-weight:400}
+.placa .ver{background:#FFE29A;border-radius:4px;padding:0 3px}
+.datos{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px}
+.dato{background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px 11px}
+.dato span{display:block;font-size:11.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.dato b{font-weight:600;word-break:break-word}
+.per{display:inline-block;border-radius:7px;padding:1px 8px;margin:2px 3px 0 0;font-size:12.5px;font-weight:800;color:#fff}
+.dato span.per{display:inline-block;color:#fff;font-size:12px;letter-spacing:0}
+.pag{display:block;margin:0 auto 14px;max-width:100%;box-shadow:0 4px 18px rgba(0,0,0,.25);background:#fff}
+.salud{display:flex;gap:14px;align-items:stretch;flex-wrap:wrap}
+.anillo{position:relative;width:150px;height:150px;flex:none;background:#fff;border:1px solid var(--line);border-radius:16px;display:grid;place-items:center}
+.anillo svg{width:132px;height:132px}
+.anillo svg circle+circle{animation:llena 1.4s cubic-bezier(.2,.8,.2,1) .2s forwards}
+@keyframes llena{to{stroke-dashoffset:var(--fin)}}
+.anillo div{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.anillo b{font-size:36px;line-height:1}.anillo span{font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase}
+.sd{width:11px;height:11px;border-radius:50%;display:inline-block;box-shadow:0 0 0 2px #fff}
+/* refacciones */
+.refs{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.ref{background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:var(--sombra)}
+.ref .img{height:130px;background:#F4F7FA;display:grid;place-items:center;cursor:zoom-in}
+.ref .img img{width:100%;height:100%;object-fit:contain}
+.ref .c{padding:8px 10px;font-size:13.5px}.ref .c b{display:block;font-size:14.5px}
+.ref .mod{font-family:Consolas,monospace;font-weight:700;background:#EEF2F6;border-radius:6px;padding:1px 6px;display:inline-block;margin-top:3px}
+/* historial */
+.tl{position:relative;margin:0;padding:0 0 0 22px;list-style:none}
+.tl::before{content:"";position:absolute;left:8px;top:4px;bottom:4px;width:3px;background:#D8E0E8;border-radius:3px}
+.tl li{position:relative;background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px 12px;margin-bottom:8px}
+.tl li::before{content:"";position:absolute;left:-19px;top:13px;width:11px;height:11px;border-radius:50%;background:var(--pc,#1F6FD1);box-shadow:0 0 0 3px #fff}
+.barra{height:8px;border-radius:99px;background:#E6ECF2;overflow:hidden;margin-top:5px}
+.barra i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#F5A623,#1E8E5A)}
+table.t{border-collapse:collapse;width:100%;font-size:13.5px}
+table.t th{background:#EEF2F6;text-align:left;padding:7px 8px;font-size:12px;color:#3A4B5C;position:sticky;top:0}
+table.t td{border-bottom:1px solid #E6ECF2;padding:6px 8px;vertical-align:top}
+.tabla{max-height:460px;overflow:auto;border:1px solid var(--line);border-radius:12px;background:#fff}
+/* semana */
+.semana{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+.dia{background:#fff;border:1px solid var(--line);border-radius:14px;padding:10px;box-shadow:var(--sombra)}
+.dia.hoy{outline:3px solid var(--azul)}
+.dia h4{margin:0 0 6px;font-size:14px;display:flex;justify-content:space-between}
+.act{display:flex;gap:6px;align-items:flex-start;padding:5px 6px;border-radius:8px;cursor:pointer;font-size:13px;border-left:4px solid var(--c,#999);background:#F7F9FB;margin-bottom:5px}
+.act:hover{background:#EEF4FB}
+.act .pct{margin-left:auto;font-weight:800;font-size:12px;white-space:nowrap}
+/* avisos */
+.aviso{border-radius:14px;padding:12px 14px;margin:12px 0;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.aviso.verde{background:var(--verde-s);border:1px solid #9FD6B9}
+.aviso.ambar{background:var(--ambar-s);border:1px solid #F3CF8C}
+.aviso.azul{background:var(--azul-s);border:1px solid #A8C8F0}
+#toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:400;display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none}
+#toast div{background:#14212E;color:#fff;padding:10px 16px;border-radius:12px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.3);animation:sube .25s}
+#visor{position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.9);display:grid;place-items:center;cursor:zoom-out}
+#visor img{max-width:96vw;max-height:94vh;object-fit:contain}
+#nomina{position:fixed;inset:0;z-index:150;background:linear-gradient(135deg,#0B1F35,#173E66);display:grid;place-items:center;padding:16px}
+#nomina .card{width:min(400px,100%);text-align:center}
+#nomina input{font-size:24px;text-align:center;letter-spacing:.1em}
+.formsec{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+.formsec h4{margin:0 0 8px;font-size:14px;display:flex;gap:6px;align-items:center}
+.chk{display:inline-flex;gap:5px;align-items:center;border:1px solid #C7D2DE;border-radius:99px;padding:4px 10px;margin:3px;font-size:13px;font-weight:600;cursor:pointer;background:#fff}
+.chk input{margin:0}
+.fotoin{display:flex;gap:10px;align-items:center}
+.fotoin .prev{width:90px;height:70px;border-radius:10px;background:#F4F7FA;border:1px dashed #C7D2DE;display:grid;place-items:center;overflow:hidden;flex:none}
+.fotoin .prev img{width:100%;height:100%;object-fit:cover}
+#print{display:none}
+@media print{
+  @page{size:letter;margin:11mm}
+  body>*:not(#print){display:none!important}
+  #print{display:block;font:10.5px/1.4 "Segoe UI",Arial,sans-serif;color:#000}
+  #print .hojaimp{page-break-after:always;text-align:center}#print .hojaimp:last-child{page-break-after:auto}#print .hojaimp img{width:100%;max-height:257mm;object-fit:contain}
+  #print .pc{display:flex;gap:12px;align-items:center;border-bottom:3px solid #0E2A47;padding-bottom:6px;margin-bottom:8px}
+  #print .pc .cl{font:800 26px Consolas,monospace;border:2px solid #000;border-radius:6px;padding:2px 10px}
+  #print h1{font-size:18px;margin:0}#print h3{font-size:13px;margin:10px 0 4px;border-bottom:1px solid #999}
+  #print .fx{display:flex;gap:10px}#print .fx>div{flex:1;border:1px solid #bbb;border-radius:6px;padding:4px;text-align:center}
+  #print .fx img{max-width:100%;max-height:200px;object-fit:contain}
+  #print table{border-collapse:collapse;width:100%}#print td,#print th{border:1px solid #bbb;padding:3px 5px;text-align:left;vertical-align:top}#print th{background:#eee}
+  #print .rf{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}#print .rf div{border:1px solid #bbb;border-radius:5px;padding:4px;break-inside:avoid}#print .rf img{width:100%;height:80px;object-fit:contain}
+  #print .etq{display:inline-flex;gap:10px;align-items:center;border:2px dashed #000;border-radius:10px;padding:10px 14px;margin:6px;break-inside:avoid}
+  #print .etq b{font:800 30px Consolas,monospace;display:block}
+  #print .firmas{display:flex;gap:30px;margin-top:26px}#print .firmas div{flex:1;border-top:1px solid #000;text-align:center;padding-top:3px}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+<script>
+// Datos en Firebase bajo apps/equipos/ (misma capa li-firebase.js que las demás apps). Entrada solo con nómina (la sesión del equipo se abre una vez).
+window.LI_APP = 'equipos'; window.LI_AREA = 'Mantenimiento'; window.LI_PEDIR_ACCESO = true;
+window.LI_PERSONAL_INICIAL = {
+  '4781': { n: 'AMÍLCAR OMAR ANDRACA HERRERA', r: 'general', a: true },
+  '1162': { n: 'CARLOS ALBERTO MARTÍNEZ JASSO', r: 'admin', a: true },
+  '3626': { n: 'EDGAR ADRIÁN MARTÍNEZ MARTÍNEZ', r: 'admin', a: true },
+  '2000': { n: 'MARISELA MARTÍNEZ MALDONADO', r: 'admin', a: true },
+  '4237': { n: 'JOSÉ ANTONIO TORRES LÓPEZ', r: 'usuario', a: true, cats: [] },
+  '4573': { n: 'JAIME PACHECO LOBATOS', r: 'usuario', a: true, cats: [] },
+  '4643': { n: 'OSCAR DAVID CORTEZ LARA', r: 'usuario', a: true, cats: [] },
+  '4647': { n: 'GIOVANNI LOERA MARTÍNEZ', r: 'usuario', a: true, cats: [] },
+  '4695': { n: 'ALEJANDRO CHÁVEZ GALICIA', r: 'usuario', a: true, cats: [] },
+  '4698': { n: 'JORGE LUIS ARRIAGA ENCARNACIÓN', r: 'usuario', a: true, cats: [] },
+  '4767': { n: 'JACOBO DANIEL ESPARZA DE LUNA', r: 'usuario', a: true, cats: [] },
+  '4768': { n: 'PABLO EMMANUEL CASTAÑEDA ESPARZA', r: 'usuario', a: true, cats: [] }
+};
+// Modo demostración (?demo, ?demo=<nómina> o abierto como archivo de la PC): base en memoria con la semilla; no toca Firebase.
+window.DEMO = /[?&]demo\b/.test(location.search) || location.protocol === 'file:';
+if (window.DEMO) {
+  const store = { 'config/personal': { p: JSON.parse(JSON.stringify(window.LI_PERSONAL_INICIAL)) } }, subs = [];
+  const copia = o => o === undefined ? undefined : JSON.parse(JSON.stringify(o)), avisar = () => setTimeout(() => subs.forEach(f => f()), 0);
+  const mezclar = (dst, src) => { Object.keys(src).forEach(k => { const v = src[k];
+    if (v && typeof v === 'object' && v.__delete__ === true) delete dst[k];
+    else if (v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length) { if (!dst[k] || typeof dst[k] !== 'object' || Array.isArray(dst[k])) dst[k] = {}; mezclar(dst[k], v); }
+    else dst[k] = copia(v); }); };
+  const docRef = p => ({ get: async () => ({ exists: p in store, data: () => copia(store[p]) }), set: async d => { store[p] = copia(d); avisar(); },
+    update: async d => { if (!(p in store)) throw { code: 'not-found' }; mezclar(store[p], d); avisar(); }, delete: async () => { delete store[p]; avisar(); },
+    onSnapshot: cb => { let u = ''; const f = () => { const j = JSON.stringify(store[p]); if (j === u) return; u = j; cb({ exists: p in store, data: () => copia(store[p]) }); }; subs.push(f); f(); return () => {}; } });
+  const docsDe = c => Object.keys(store).filter(k => k.startsWith(c + '/') && k.split('/').length === c.split('/').length + 1).map(k => ({ id: k.split('/').pop(), data: () => copia(store[k]) }));
+  const colRef = (c, fil = []) => { const q = { orderBy: () => q, limit: () => q, where: (f, op, v) => colRef(c, fil.concat([[f, v]])),
+    get: async () => ({ docs: docsDe(c).filter(d => fil.every(([f, v]) => d.data()[f] === v)).sort((a, b) => String(b.data().t).localeCompare(String(a.data().t))) }),
+    onSnapshot: cb => { const f = () => cb({ docs: docsDe(c) }); subs.push(f); f(); return () => {}; }, add: async d => { store[c + '/' + Math.random().toString(36).slice(2)] = copia(d); avisar(); }, doc: id => docRef(c + '/' + id) }; return q; };
+  window.claude = { use: async n => n === 'db' ? { doc: docRef, collection: c => colRef(c) } : null };
+  window.LI = { nomina: () => '4781', salir: async () => location.reload() };
+} else {
+  document.write('<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"><\/script>' +
+    '<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"><\/script>' +
+    '<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"><\/script>' +
+    '<script src="../firebase-config.js"><\/script><script src="li-firebase.js"><\/script>');
+}
+</script>
+<script src="equipos-base.js"></script><script src="iconos.js"></script>
+</head><body>
+<header class="top"><div class="wrap">
+  <div class="logo" id="logo"></div>
+  <div><h1>Base de Datos · Equipos Línea Italia</h1><p>Busca, ubica y conoce cada equipo de la planta</p></div>
+  <div class="esp"></div>
+  <button class="chip" id="btnInstalar" type="button" hidden>📲 Instalar en este equipo</button>
+  <span class="chip" id="quien" title="Cambiar de persona">👤 …</span>
+</div></header>
+<nav class="tabs"><div class="wrap" id="tabs"></div></nav>
+<main class="wrap" id="main"><p class="muted" style="padding:30px 0">Cargando la base de datos…</p></main>
+<div id="modal"></div><div id="print"></div><div id="toast"></div>
+<input type="file" id="archivo" accept="image/*" hidden>
+<script>
+'use strict';
+// ===================== catálogos =====================
+const CATS = [
+  { k: 'MTA', n: 'Maquinaria tipo A', c: '#1F4FBF', ic: 'mta', d: 'Máquinas críticas de producción' },
+  { k: 'MTB', n: 'Maquinaria tipo B', c: '#E07B1A', ic: 'mtb', d: 'Prensas, dobladoras, taladros de banco' },
+  { k: 'MTC', n: 'Maquinaria tipo C', c: '#7B4BC4', ic: 'mtc', d: 'Herramienta: taladros, pulidoras, sierras' },
+  { k: 'AA', n: 'Aires acondicionados', c: '#1597D3', ic: 'aa', d: 'Minisplits y unidades paquete' },
+  { k: 'EA', n: 'Equipo auxiliar', c: '#0E9F96', ic: 'ea', d: 'Compresores, extractores, gas, inversores' },
+  { k: 'EBT', n: 'Eléctrico baja tensión', c: '#D2453C', ic: 'ebt', d: 'Tableros y transformadores secos' },
+  { k: 'EMT', n: 'Eléctrico media tensión', c: '#8E2A2A', ic: 'emt', d: 'Subestación y transformadores' },
+  { k: 'EM', n: 'Equipo móvil', c: '#8A5A2B', ic: 'em', d: 'Montacargas y patines' },
+  { k: 'IL', n: 'Iluminación', c: '#D9A400', ic: 'il', d: 'Luminarias' },
+  { k: 'AG', n: 'Áreas generales', c: '#2E9E5B', ic: 'ag', d: 'Oficinas, baños, naves y patios' }
+];
+const CAT = Object.fromEntries(CATS.map(c => [c.k, c]));
+// campos = columnas de la hoja Inventario del Excel (mismo orden)
+const CAMPOS = [
+  ['no', 'No.'], ['nombre', 'Número de equipo interno'], ['eco', 'Número económico LI'], ['catN', 'Categoría'], ['cat', 'Nombre corto categoría'],
+  ['corto', 'Nombre corto máquina'], ['fab', 'Fabricante'], ['marca', 'Marca'], ['modelo', 'Modelo'], ['serie', 'Número de serie'],
+  ['kw', 'Potencia (kW)'], ['kwh', 'Potencia (kWh)'], ['w', 'Potencia (W)'], ['amp', 'Corriente (A)'], ['vc', 'Voltaje de control (V)'],
+  ['vo', 'Voltaje de operación (V)'], ['aceite', 'Tipo de aceite / refrigerante'], ['lub', 'Tipo de lubricante'], ['periodo', 'Periodo de mantenimiento'],
+  ['ffab', 'Fecha de fabricación'], ['finst', 'Fecha de instalación o llegada a planta'], ['vida', 'Vida útil según manual'], ['hdia', 'Horas de uso diario'],
+  ['htot', 'Horas totales'], ['dep', 'Equipo depreciado'], ['prov', 'Proveedor'], ['tel', 'Contacto del proveedor'], ['poliza', 'Póliza'],
+  ['ubic', 'Ubicación'], ['obs', 'Observaciones']
+];
+const ETQ = Object.fromEntries(CAMPOS);
+const PLACA = ['modelo', 'serie', 'kw', 'kwh', 'w', 'amp', 'vo', 'vc', 'aceite', 'ffab'];
+const PERIODOS = [['Diario', 'D', '#E8B10E'], ['Semanal', 'S', '#8A5A2B'], ['Quincenal', 'Q', '#2E9E5B'], ['Mensual', '1M', '#D6487E'], ['Trimestral', '3M', '#7B4BC4'], ['Semestral', '6M', '#1F6FD1'], ['Anual', 'A', '#6A1B9A']];
+const PER_FR = Object.fromEntries(PERIODOS.map(p => [p[1], p]));
+const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+const MESES = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
+const ARRANQUE = '2026-11-02'; // arranque oficial del programa de mantenimiento
+
+// ===================== ilustraciones (SVG) =====================
+const ICON = {
+  mta: '<rect x="6" y="34" width="52" height="18" rx="3" fill="currentColor" opacity=".25"/><rect x="6" y="34" width="52" height="18" rx="3" fill="none" stroke="currentColor" stroke-width="3"/><path d="M12 34V14h40v20" fill="none" stroke="currentColor" stroke-width="3"/><rect x="26" y="14" width="12" height="12" rx="2" fill="currentColor"/><path d="M32 26v6" stroke="currentColor" stroke-width="3"/><path d="M29 32h6l-3 3z" fill="currentColor"/><circle cx="14" cy="57" r="3" fill="currentColor"/><circle cx="50" cy="57" r="3" fill="currentColor"/><rect x="44" y="39" width="9" height="8" rx="1.5" fill="currentColor"/>',
+  mtb: '<path d="M14 8h28v10H24v26h18v10H14z" fill="currentColor" opacity=".25" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/><rect x="34" y="18" width="10" height="12" fill="currentColor"><animate attributeName="y" values="18;24;18" dur="1.6s" repeatCount="indefinite"/></rect><rect x="30" y="38" width="22" height="6" rx="1" fill="currentColor"/><rect x="10" y="54" width="44" height="5" rx="2" fill="currentColor"/>',
+  mtc: '<path d="M10 22h30a6 6 0 0 1 6 6v0a6 6 0 0 1-6 6H22l-4 22h-8l2-22h-2z" fill="currentColor" opacity=".25" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/><path d="M46 26h6v4h-6" fill="currentColor"/><path d="M52 28h9" stroke="currentColor" stroke-width="3" stroke-linecap="round"><animate attributeName="stroke-dasharray" values="2 2;3 1;2 2" dur=".4s" repeatCount="indefinite"/></path><rect x="16" y="40" width="5" height="8" fill="currentColor"/>',
+  aa: '<rect x="6" y="12" width="52" height="22" rx="5" fill="currentColor" opacity=".25" stroke="currentColor" stroke-width="3"/><path d="M12 28h40" stroke="currentColor" stroke-width="2.5"/><circle cx="50" cy="19" r="2" fill="currentColor"/><g stroke="currentColor" stroke-width="2.5" stroke-linecap="round" fill="none"><path d="M18 40q-3 6 0 12"><animate attributeName="opacity" values="1;.2;1" dur="1.4s" repeatCount="indefinite"/></path><path d="M32 40q-3 6 0 12"><animate attributeName="opacity" values=".2;1;.2" dur="1.4s" repeatCount="indefinite"/></path><path d="M46 40q-3 6 0 12"><animate attributeName="opacity" values="1;.2;1" dur="1.4s" repeatCount="indefinite"/></path></g>',
+  ea: '<rect x="8" y="26" width="38" height="22" rx="11" fill="currentColor" opacity=".25" stroke="currentColor" stroke-width="3"/><circle cx="46" cy="18" r="9" fill="#fff" stroke="currentColor" stroke-width="3"/><path d="M46 18l4-4" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><animateTransform attributeName="transform" type="rotate" values="-40 46 18;30 46 18;-40 46 18" dur="2.4s" repeatCount="indefinite"/></path><path d="M14 48v8M40 48v8" stroke="currentColor" stroke-width="3"/><path d="M46 27v4" stroke="currentColor" stroke-width="3"/>',
+  ebt: '<rect x="12" y="6" width="40" height="52" rx="4" fill="currentColor" opacity=".25" stroke="currentColor" stroke-width="3"/><path d="M34 14l-10 18h8l-4 16 12-20h-8l4-14z" fill="currentColor"><animate attributeName="opacity" values="1;.4;1" dur="1.2s" repeatCount="indefinite"/></path>',
+  emt: '<path d="M32 6v52M18 14h28M14 26h36" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/><path d="M22 58l10-44 10 44" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="18" cy="14" r="3" fill="currentColor"/><circle cx="46" cy="14" r="3" fill="currentColor"/><circle cx="14" cy="26" r="3" fill="currentColor"/><circle cx="50" cy="26" r="3" fill="currentColor"/>',
+  em: '<rect x="8" y="26" width="30" height="20" rx="3" fill="currentColor" opacity=".25" stroke="currentColor" stroke-width="3"/><path d="M14 26V12h16l6 14" fill="none" stroke="currentColor" stroke-width="3"/><path d="M44 8v42h14" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"><animate attributeName="d" values="M44 8v42h14;M44 8v36h14;M44 8v42h14" dur="2s" repeatCount="indefinite"/></path><circle cx="16" cy="50" r="6" fill="#fff" stroke="currentColor" stroke-width="3"/><circle cx="34" cy="50" r="6" fill="#fff" stroke="currentColor" stroke-width="3"/>',
+  il: '<path d="M32 8a16 16 0 0 0-9 29c2 2 3 4 3 7h12c0-3 1-5 3-7a16 16 0 0 0-9-29z" fill="currentColor" opacity=".3" stroke="currentColor" stroke-width="3"><animate attributeName="opacity" values=".3;.6;.3" dur="2s" repeatCount="indefinite"/></path><path d="M26 50h12M28 56h8" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><g stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 24h5M53 24h5M12 8l4 4M52 8l-4 4"/></g>',
+  ag: '<path d="M6 56V24l16-10v42M22 56V8h36v48" fill="currentColor" opacity=".2" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/><g fill="currentColor"><rect x="28" y="14" width="7" height="7"/><rect x="42" y="14" width="7" height="7"/><rect x="28" y="27" width="7" height="7"/><rect x="42" y="27" width="7" height="7"/><rect x="11" y="30" width="6" height="6"/></g><rect x="35" y="42" width="10" height="14" fill="currentColor"/>',
+  pin: '<path d="M32 4a18 18 0 0 0-18 18c0 14 18 36 18 36s18-22 18-36A18 18 0 0 0 32 4z" fill="currentColor" opacity=".25" stroke="currentColor" stroke-width="3"/><circle cx="32" cy="22" r="7" fill="currentColor"/>',
+  placa: '<rect x="6" y="14" width="52" height="36" rx="4" fill="currentColor" opacity=".2" stroke="currentColor" stroke-width="3"/><path d="M14 26h20M14 34h36M14 42h28" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><circle cx="11" cy="19" r="2" fill="currentColor"/><circle cx="53" cy="19" r="2" fill="currentColor"/>',
+  camara: '<rect x="6" y="18" width="52" height="36" rx="6" fill="currentColor" opacity=".2" stroke="currentColor" stroke-width="3"/><path d="M22 18l4-8h12l4 8" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="32" cy="36" r="10" fill="none" stroke="currentColor" stroke-width="3"/>'
+};
+// las categorías usan las ilustraciones realistas de iconos.js (viewBox 120×100); pin, placa y cámara siguen siendo íconos sencillos
+const svg = (k, cls = 'ic') => (window.ICON_R && ICON_R[k])
+  ? '<svg class="' + cls + '" viewBox="0 0 120 100" aria-hidden="true">' + ICON_R[k] + '</svg>'
+  : '<svg class="' + cls + '" viewBox="0 0 64 64" aria-hidden="true">' + (ICON[k] || ICON.mta) + '</svg>';
+
+// ===================== utilidades =====================
+const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const norm = s => String(s == null ? '' : s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+const compacto = s => norm(s).replace(/[^a-z0-9]/g, '');
+const copia = o => JSON.parse(JSON.stringify(o));
+const hoyISO = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+const fechaTxt = iso => { if (!iso) return ''; const [a, m, d] = iso.slice(0, 10).split('-'); return d + '/' + MESES[+m - 1].toLowerCase() + '/' + a; };
+const horaTxt = iso => { try { return new Date(iso).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' }); } catch (e) { return iso; } };
+const verif = v => /verificar|ilegible/i.test(String(v || ''));
+function toast(t, ms = 2600) { const d = document.createElement('div'); d.textContent = t; $('#toast').appendChild(d); setTimeout(() => d.remove(), ms); }
+function cargarScript(src) { return new Promise((ok, no) => { if (document.querySelector('script[src="' + src + '"]')) return ok(); const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = no; document.head.appendChild(s); }); }
+const areaDe = e => e.cat === 'AG' ? (e.corto || e.nombre) : (String(e.ubic || '').replace(/\s*\(verificar\)/i, '').trim() || 'Sin ubicación');
+const nombreDe = e => e.corto || e.nombre || e.clave;
+const llavePlan = (corto, ref) => compacto(corto) + '|' + compacto(ref);
+
+// ---- caché de fotos en el equipo (IndexedDB) para no gastar lecturas
+const IDB = (() => { let p; const abrir = () => p || (p = new Promise((ok, no) => { const r = indexedDB.open('equipos-li', 1); r.onupgradeneeded = () => { r.result.createObjectStore('fotos'); r.result.createObjectStore('kv'); }; r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); }));
+  const op = (st, modo, fn) => abrir().then(db => new Promise((ok, no) => { const t = db.transaction(st, modo); const q = fn(t.objectStore(st)); t.oncomplete = () => ok(q && q.result); t.onerror = () => no(t.error); }));
+  return { get: (st, k) => op(st, 'readonly', s => s.get(k)).catch(() => undefined), set: (st, k, v) => op(st, 'readwrite', s => s.put(v, k)).catch(() => {}) }; })();
+const FOTOS = {};
+function foto(id) {
+  if (!id) return Promise.resolve('');
+  if (FOTOS[id]) return FOTOS[id];
+  return FOTOS[id] = IDB.get('fotos', id).then(d => d || DB.doc('fotos/' + id).get().then(s => { const v = s.exists ? s.data().data : ''; if (v) IDB.set('fotos', id, v); return v; })).catch(() => '');
+}
+// pinta las <img data-foto="id"> que aparezcan
+function cargarFotos(raiz = document) {
+  $$('img[data-foto]:not([src])', raiz).forEach(img => foto(img.dataset.foto).then(d => { if (d) img.src = d; else img.replaceWith(document.createTextNode('')); }));
+}
+// comprime la foto a 1000 px y ≈150 KB (JPEG) para guardarla en la base
+function comprimir(file, lado = 1000, maxB = 160000) {
+  return new Promise((ok, no) => {
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = () => {
+      const sc = Math.min(1, lado / Math.max(img.width, img.height)), cv = document.createElement('canvas');
+      cv.width = Math.round(img.width * sc); cv.height = Math.round(img.height * sc);
+      const g = cv.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height); g.drawImage(img, 0, 0, cv.width, cv.height);
+      URL.revokeObjectURL(url);
+      let q = 0.78, d = cv.toDataURL('image/jpeg', q);
+      while (d.length > maxB * 1.37 && q > 0.3) { q -= 0.08; d = cv.toDataURL('image/jpeg', q); }
+      ok(d);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); no(new Error('La imagen no se pudo leer')); };
+    img.src = url;
+  });
+}
+function nuevoId(p = '') { return p + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+async function subirFoto(file) {
+  const d = await comprimir(file), id = nuevoId('f');
+  await DB.doc('fotos/' + id).set({ data: d, t: new Date().toISOString(), por: YO ? YO.nom : '' });
+  FOTOS[id] = Promise.resolve(d); IDB.set('fotos', id, d);
+  toast('📷 Foto guardada (' + Math.round(d.length / 1370) + ' KB)');
+  return id;
+}
+function pedirFoto(camara = true) {
+  return new Promise(ok => { const i = $('#archivo'); i.value = ''; if (camara) i.setAttribute('capture', 'environment'); else i.removeAttribute('capture');
+    i.onchange = () => ok(i.files[0] || null); i.click(); });
+}
+function visor(src) { if (!src) return; const v = document.createElement('div'); v.id = 'visor'; v.innerHTML = '<img alt="">'; v.firstChild.src = src; v.onclick = () => v.remove(); document.body.appendChild(v); }
+
+// ===================== estado =====================
+let DB = null, YO = null, tab = 'inicio', FICHA = null, PINTAR_T = 0, SEMANA = null;
+const D = { eq: {}, personal: {}, ajustes: {}, hist: {}, cargado: {}, sembrado: false, histCargado: false, excel: null };
+const F = { q: '', cat: '', area: '' };
+const esAdmin = () => !!(YO && YO.admin);
+const esGeneral = () => !!(YO && YO.r === 'general');
+const puede = cat => esAdmin() || !!(YO && (YO.cats || []).includes(cat));
+const lista = () => Object.values(D.eq).filter(e => !e.baja);
+
+function identificar() {
+  let nom = ''; try { nom = sessionStorage.getItem('eq_nom') || ''; } catch (e) {}
+  if (window.DEMO && !nom) { const m = location.search.match(/demo=(\d+)/); nom = m ? m[1] : '4781'; }
+  const u = nom && D.personal[nom];
+  YO = u && u.a !== false ? { nom, n: u.n, r: u.r, cats: u.cats || [], admin: u.r === 'admin' || u.r === 'general' } : null;
+  $('#quien').textContent = YO ? '👤 ' + YO.n.split(' ').slice(0, 2).join(' ') + (YO.admin ? ' · admin' : '') : '👤 Entrar';
+}
+function pantallaNomina() {
+  if ($('#nomina')) return;
+  const d = document.createElement('div'); d.id = 'nomina';
+  d.innerHTML = '<div class="card">' + svg('ag', 'ic') .replace('class="ic"', 'style="width:80px;height:80px;color:#1F6FD1"') +
+    '<h2 style="justify-content:center;margin:6px 0 2px">Base de Datos · Equipos LI</h2><p class="muted small" style="margin:0 0 16px">Equipos de la planta Línea Italia. Entra con tu número de nómina.</p>' +
+    '<form autocomplete="off" style="display:grid;gap:10px"><input name="n" inputmode="numeric" placeholder="Nómina" required><p class="small" style="margin:0;color:var(--rojo)" id="nMsg"></p><button class="btn pri big" type="submit">Entrar</button></form></div>';
+  document.body.appendChild(d);
+  $('form', d).onsubmit = e => { e.preventDefault(); const n = e.target.n.value.trim(), u = D.personal[n];
+    if (!u || u.a === false) { $('#nMsg').textContent = 'La nómina ' + n + ' no tiene acceso. Pide tu alta a un administrador.'; return; }
+    try { sessionStorage.setItem('eq_nom', n); } catch (x) {}
+    identificar(); if (DB) DB.collection('accesos').add({ t: new Date().toISOString(), nom: n, n: u.n }).catch(() => {});
+    d.remove(); pintar(); tareasAdmin(); abrirDesdeHash(); };
+  setTimeout(() => $('input', d).focus(), 50);
+}
+$('#quien').onclick = () => { try { sessionStorage.removeItem('eq_nom'); } catch (e) {} YO = null; identificar(); pantallaNomina(); };
+
+// ===================== arranque =====================
+(async function init() {
+  $('#logo').innerHTML = svg('ag', 'ic').replace('class="ic"', 'style="width:34px;height:34px;color:#fff"');
+  DB = await window.claude.use('db');
+  if (!DB) { $('#main').innerHTML = '<div class="aviso ambar">No hay conexión con la base de datos.</div>'; return; }
+  try { const s = await DB.doc('config/personal').get(); D.personal = (s.exists && s.data().p) || copia(window.LI_PERSONAL_INICIAL); } catch (e) { D.personal = copia(window.LI_PERSONAL_INICIAL); }
+  identificar();
+  DB.doc('config/personal').onSnapshot(s => { if (s.exists) { D.personal = s.data().p || {}; identificar(); programarPintar(); } });
+  DB.doc('config/ajustes').onSnapshot(s => { D.ajustes = s.exists ? (s.data() || {}) : {}; if (D.ajustes.ultExcel) D.excel = D.ajustes.ultExcel; programarPintar(); });
+  CATS.forEach(c => DB.doc('cat/' + c.k).onSnapshot(s => {
+    D.cargado[c.k] = s.exists ? 'ok' : 'no';
+    Object.keys(D.eq).forEach(id => { if (D.eq[id].cat === c.k) delete D.eq[id]; });
+    if (s.exists) Object.entries((s.data() || {}).items || {}).forEach(([id, e]) => { if (e && typeof e === 'object') D.eq[id] = Object.assign(e, { id, cat: c.k }); });
+    revisarSemilla(); programarPintar();
+    if (FICHA && D.eq[FICHA] && $('#modal').classList.contains('on') && !$('#modal form')) pintarFicha(D.eq[FICHA], true);
+  }));
+  cargarHist();
+  window.addEventListener('hashchange', abrirDesdeHash);
+  if (!YO) pantallaNomina(); else { tareasAdmin(); }
+  pintar();
+  setTimeout(abrirDesdeHash, 600);
+})();
+function programarPintar() { clearTimeout(PINTAR_T); PINTAR_T = setTimeout(pintar, 120); }
+
+// primera vez: un administrador sube la base del Excel (equipos-base.js) a la nube
+async function revisarSemilla() {
+  if (D.sembrado || CATS.some(c => !D.cargado[c.k])) return;
+  const faltan = CATS.filter(c => D.cargado[c.k] === 'no');
+  if (!faltan.length) return;
+  if (!esAdmin()) return;
+  D.sembrado = true;
+  for (const c of faltan) {
+    const items = {};
+    (window.EQ_BASE || []).filter(e => e.cat === c.k).forEach(e => { const o = copia(e); o.pk = llavePlan(o.corto, o.eco || o.no); o.alta = { t: new Date().toISOString(), por: 'Excel base' }; items[o.id] = o; });
+    await DB.doc('cat/' + c.k).set({ items });
+  }
+  toast('✅ Base de datos cargada: ' + (window.EQ_BASE || []).length + ' equipos');
+}
+
+// ===================== historial (plan maestro + registros) =====================
+function mesesHist() { const out = []; const d = new Date(2026, 10, 1), fin = new Date(); fin.setMonth(fin.getMonth() + 2); while (d <= fin && out.length < 40) { out.push(d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0')); d.setMonth(d.getMonth() + 1); } return out; }
+async function cargarHist() {
+  const ms = mesesHist();
+  await Promise.all(ms.map(m => DB.doc('hist/' + m).get().then(s => { if (s.exists) D.hist[m] = s.data(); }).catch(() => {})));
+  D.histCargado = true; programarPintar();
+}
+const planTodo = () => Object.values(D.hist).flatMap(h => (h.r || []));
+function planDe(e) {
+  const ks = new Set([e.pk, llavePlan(e.corto, e.eco || e.no)].filter(Boolean));
+  return planTodo().filter(r => ks.has(r.k)).sort((a, b) => a.f.localeCompare(b.f));
+}
+function equipoDePlan(r) {
+  if (!equipoDePlan.m || equipoDePlan.n !== Object.keys(D.eq).length) {
+    equipoDePlan.m = {}; equipoDePlan.n = Object.keys(D.eq).length;
+    Object.values(D.eq).forEach(e => { equipoDePlan.m[e.pk || ''] = e; equipoDePlan.m[llavePlan(e.corto, e.eco || e.no)] = e; });
+  }
+  return equipoDePlan.m[r.k] || null;
+}
+
+// ===================== pintar =====================
+function pestañas() {
+  const t = [['inicio', '🔎 Buscar'], ['cats', '🗂 Categorías'], ['areas', '📍 Áreas y oficinas']];
+  if (esAdmin()) t.push(['config', '⚙ Configuración']);
+  $('#tabs').innerHTML = t.map(([k, n]) => '<button data-t="' + k + '" class="' + (tab === k ? 'on' : '') + '">' + n + '</button>').join('') +
+    '<span class="esp"></span><button data-t="alta" style="color:var(--verde)">➕ Agregar equipo</button>';
+  $$('#tabs button').forEach(b => b.onclick = () => { if (b.dataset.t === 'alta') return abrirForm(null); tab = b.dataset.t; if (tab !== 'cats') F.cat = ''; pintar(); scrollTo({ top: 0, behavior: 'smooth' }); });
+}
+function pintar() {
+  if (!DB) return;
+  pestañas();
+  const m = $('#main');
+  const cargando = CATS.some(c => !D.cargado[c.k]);
+  if (cargando) { m.innerHTML = '<p class="muted" style="padding:30px 0">Cargando la base de datos…</p>'; return; }
+  if (!lista().length && !esAdmin()) { m.innerHTML = '<div class="aviso ambar">La base todavía no se ha cargado. Un administrador debe abrir la aplicación la primera vez.</div>'; return; }
+  const foco = document.activeElement && document.activeElement.id === 'q';
+  ({ inicio: vInicio, cats: vCats, areas: vAreas, config: vConfig }[tab] || vInicio)(m);
+  if (foco && $('#q')) { const i = $('#q'); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }
+  cargarFotos(m);
+}
+
+// ---- tarjeta de equipo
+function tarjeta(e, i = 0, q = '') {
+  const c = CAT[e.cat] || CATS[0], nf = (e.fm ? 1 : 0) + (e.fp ? 1 : 0) + (e.fx || []).length, S = salud(e);
+  return '<div class="eq" style="--c:' + c.c + ';--i:' + i + '" data-id="' + e.id + '">' +
+    '<div class="foto">' + (e.fm ? '<img data-foto="' + e.fm + '" alt="">' : svg(c.ic, '')) + '<span class="clave">' + esc(e.clave) + '</span>' +
+    '<span class="bad">' + (S.na || S.indice == null ? '' : '<span title="Salud ' + S.indice + ' · ' + esc(S.estado) + '"><i class="sd" style="background:' + S.color + '"></i> ' + S.indice + '</span>') + (nf ? '<span>📷 ' + nf + '</span>' : '') + (e.fp ? '<span title="Tiene foto de placa">🏷</span>' : '') + ((e.refs || []).length ? '<span title="Refacciones">🔩 ' + e.refs.length + '</span>' : '') + '</span></div>' +
+    '<div class="cuerpo"><b>' + resaltar(nombreDe(e), q) + '</b><small>' + resaltar([e.marca, e.modelo].filter(Boolean).join(' · ') || c.n, q) + '</small>' +
+    '<small>📍 ' + resaltar(areaDe(e), q) + '</small></div></div>';
+}
+function resaltar(t, q) {
+  t = esc(t); if (!q) return t;
+  norm(q).split(/\s+/).filter(x => x.length > 1).forEach(w => { const i = norm(t).indexOf(w); if (i >= 0) t = t.slice(0, i) + '<mark>' + t.slice(i, i + w.length) + '</mark>' + t.slice(i + w.length); });
+  return t;
+}
+function enlazarTarjetas(r) { $$('.eq', r).forEach(x => x.onclick = () => abrirFicha(x.dataset.id)); }
+
+// ---- búsqueda
+function buscar(q, base = lista()) {
+  const qn = norm(q).trim(); if (!qn) return [];
+  const qc = compacto(q), toks = qn.split(/\s+/);
+  return base.map(e => {
+    const cl = compacto(e.clave), pajar = norm([e.clave, cl, e.nombre, e.corto, e.marca, e.fab, e.modelo, e.serie, areaDe(e), e.ubic, (CAT[e.cat] || {}).n, e.cat, e.eco, 'no' + e.no, (e.refs || []).map(r => r.n + ' ' + r.mod).join(' ')].join(' '));
+    if (!toks.every(t => pajar.includes(t) || pajar.replace(/[^a-z0-9]/g, '').includes(t.replace(/[^a-z0-9]/g, '')))) return null;
+    let s = 0; if (cl === qc) s = 1000; else if (cl.startsWith(qc)) s = 600; else if (cl.endsWith(qc)) s = 500; else if (cl.includes(qc)) s = 400;
+    if (norm(nombreDe(e)).startsWith(qn)) s += 200;
+    return { e, s };
+  }).filter(Boolean).sort((a, b) => b.s - a.s || String(a.e.clave).localeCompare(String(b.e.clave), 'es', { numeric: true })).map(x => x.e);
+}
+
+// ===================== vista: inicio / buscar =====================
+function vInicio(m) {
+  const L = lista(), conF = L.filter(e => e.fm).length, conP = L.filter(e => e.fp).length, ver = L.filter(e => CAMPOS.some(([k]) => verif(e[k]))).length;
+  m.innerHTML = avisosArriba() +
+    '<section class="hero"><h2>¿Qué equipo buscas?</h2><p class="muted small" style="margin:0">Escribe la clave, el nombre, la marca, el modelo, el número de serie o el área.</p>' +
+    '<div class="buscador"><span class="lupa">🔎</span><input type="search" id="q" placeholder="Ej.: a12, taladro, Selexx, Mirage, Troqueles…" value="' + esc(F.q) + '" autocomplete="off"></div>' +
+    '<div class="ejemplos">' + ['AA-12', 'Taladro', 'Selexx', 'Compresor', 'Pulidora', 'Troqueles', 'EBT-10', 'TR-01'].map(x => '<button>' + x + '</button>').join('') + '</div>' +
+    '<div class="row" style="margin-top:12px"><button class="btn sm" id="xBaja">📊 Descargar Excel de la base de datos</button><span class="small muted">' + (D.excel ? 'Actualizado al ' + horaTxt(D.excel.t) : 'Se actualiza cada viernes') + '</span></div></section>' +
+    '<div id="res"></div>';
+  const pintaRes = () => {
+    const r = $('#res');
+    if (!F.q.trim()) {
+      r.innerHTML = '<div class="stats">' +
+        '<div class="stat"><b>' + L.length + '</b><span>equipos y áreas</span></div>' +
+        '<div class="stat"><b style="color:var(--verde)">' + conF + '</b><span>con foto del equipo</span></div>' +
+        '<div class="stat"><b style="color:var(--azul)">' + conP + '</b><span>con foto de placa</span></div>' +
+        '<div class="stat"><b style="color:#B7791F">' + ver + '</b><span>con datos por verificar</span></div></div>' +
+        '<h3>Categorías</h3>' + tilesHTML() + recientesHTML();
+      $$('.tile', r).forEach(t => t.onclick = () => { F.cat = t.dataset.k; tab = 'cats'; pintar(); scrollTo({ top: 0 }); });
+      enlazarTarjetas(r); cargarFotos(r); return;
+    }
+    const R = buscar(F.q);
+    r.innerHTML = '<h3>' + (R.length ? R.length + ' resultado' + (R.length > 1 ? 's' : '') : 'Sin resultados') + ' para “' + esc(F.q) + '”</h3>' +
+      (R.length ? '<div class="lista">' + R.slice(0, 60).map((e, i) => tarjeta(e, i, F.q)).join('') + '</div>' + (R.length > 60 ? '<p class="muted small">Se muestran 60. Escribe más para afinar.</p>' : '') :
+        '<div class="aviso azul">No encontramos “' + esc(F.q) + '”. ¿Es un equipo nuevo? <button class="btn sm ok" id="altaQ">➕ Darlo de alta</button></div>');
+    enlazarTarjetas(r); cargarFotos(r);
+    const b = $('#altaQ'); if (b) b.onclick = () => abrirForm(null);
+    if (R.length === 1 && compacto(R[0].clave) === compacto(F.q)) { /* coincidencia exacta: abrir directo con Enter */ }
+  };
+  const i = $('#q');
+  i.oninput = () => { F.q = i.value; pintaRes(); };
+  i.onkeydown = ev => { if (ev.key === 'Enter') { const R = buscar(F.q); if (R.length) abrirFicha(R[0].id); } };
+  $$('.ejemplos button').forEach(b => b.onclick = () => { F.q = b.textContent; i.value = F.q; pintaRes(); });
+  pintaRes(); avisosEnlazar();
+}
+function tilesHTML(sel = '') {
+  const L = lista();
+  return '<div class="tiles">' + CATS.map((c, i) => { const n = L.filter(e => e.cat === c.k).length;
+    return '<button class="tile' + (sel === c.k ? ' sel' : '') + '" style="--c:' + c.c + ';--i:' + i + '" data-k="' + c.k + '"><span class="n">' + n + '</span>' + svg(c.ic) + '<b>' + c.n + '</b><small>' + c.k + ' · ' + c.d + '</small></button>'; }).join('') + '</div>';
+}
+function recientesHTML() {
+  const R = lista().filter(e => e.mod || e.fm).sort((a, b) => String((b.mod || b.alta || {}).t || '').localeCompare(String((a.mod || a.alta || {}).t || ''))).slice(0, 8);
+  if (!R.length) return '';
+  return '<h3>Últimos actualizados</h3><div class="lista">' + R.map((e, i) => tarjeta(e, i)).join('') + '</div>';
+}
+
+// ===================== vista: categorías =====================
+function vCats(m) {
+  const c = CAT[F.cat];
+  let L = c ? lista().filter(e => e.cat === c.k) : [];
+  m.innerHTML = '<h2 style="margin-top:18px">🗂 Categorías</h2>' + tilesHTML(F.cat) + '<div id="catL"></div>';
+  $$('.tile', m).forEach(t => t.onclick = () => { F.cat = F.cat === t.dataset.k ? '' : t.dataset.k; pintar(); setTimeout(() => { const l = $('#catL'); if (l && F.cat) l.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 60); });
+  if (!c) { $('#catL').innerHTML = '<p class="muted" style="margin-top:14px">Toca una categoría para ver sus equipos.</p>'; return; }
+  L.sort((a, b) => String(a.clave).localeCompare(String(b.clave), 'es', { numeric: true }));
+  const tipos = [...new Set(L.map(e => e.corto || ''))].sort();
+  $('#catL').innerHTML = '<div class="card" style="margin-top:16px;border-top:5px solid ' + c.c + '"><h2 style="color:' + c.c + '">' + svg(c.ic, '').replace('<svg', '<svg style="width:34px;height:34px"') + c.n + ' <span class="pill">' + L.length + '</span></h2>' +
+    '<div class="row"><input type="search" id="qc" placeholder="Filtrar en ' + esc(c.n) + '…" style="max-width:340px"><select id="tc" style="max-width:260px"><option value="">Todos los tipos</option>' + tipos.map(t => '<option>' + esc(t) + '</option>').join('') + '</select></div>' +
+    '<div class="lista" id="lc"></div></div>';
+  const pinta = () => { const q = $('#qc').value, t = $('#tc').value; let R = q ? buscar(q, L) : L; if (t) R = R.filter(e => (e.corto || '') === t);
+    $('#lc').innerHTML = R.map((e, i) => tarjeta(e, i, q)).join('') || '<p class="muted">Sin equipos.</p>'; enlazarTarjetas($('#lc')); cargarFotos($('#lc')); };
+  $('#qc').oninput = pinta; $('#tc').onchange = pinta; pinta();
+}
+
+// ===================== vista: áreas =====================
+function vAreas(m) {
+  const g = {}; lista().forEach(e => { const a = areaDe(e); (g[a] = g[a] || []).push(e); });
+  const A = Object.keys(g).sort((a, b) => a.localeCompare(b, 'es'));
+  m.innerHTML = '<h2 style="margin-top:18px">📍 Áreas y oficinas <span class="pill">' + A.length + '</span></h2><p class="muted small" style="margin-top:-6px">Toca un área para ver qué equipos tiene y su foto.</p>' +
+    '<input type="search" id="qa" placeholder="Buscar área u oficina…" style="max-width:380px;margin-bottom:12px" value="' + esc(F.area) + '"><div class="areas" id="la"></div><div id="det"></div>';
+  const pinta = () => { const q = norm($('#qa').value);
+    $('#la').innerHTML = A.filter(a => !q || norm(a).includes(q)).map((a, i) => { const es = g[a], ag = es.find(e => e.cat === 'AG'), cats = [...new Set(es.map(e => e.cat))];
+      return '<div class="area" style="--i:' + i + '" data-a="' + esc(a) + '"><div class="pin">' + (ag && ag.fm ? '<img data-foto="' + ag.fm + '" alt="" style="width:44px;height:44px;object-fit:cover;border-radius:12px">' : (/oficina|sala|recep|direcc|rh|finan|marketing|compras|nómina|costos/i.test(a) ? '🏢' : /baño/i.test(a) ? '🚻' : /patio|estacion|jard/i.test(a) ? '🌳' : '🏭')) + '</div>' +
+        '<div><b>' + esc(a) + '</b><span class="muted small">' + es.length + ' registro' + (es.length > 1 ? 's' : '') + '</span><div class="mini">' + cats.map(k => '<i style="background:' + CAT[k].c + '">' + k + '</i>').join('') + '</div></div></div>'; }).join('');
+    $$('.area', m).forEach(x => x.onclick = () => verArea(x.dataset.a)); cargarFotos($('#la')); };
+  const verArea = a => { const es = g[a].sort((x, y) => String(x.clave).localeCompare(String(y.clave), 'es', { numeric: true }));
+    $('#det').innerHTML = '<div class="card" style="margin-top:16px;border-top:5px solid #2E9E5B"><h2>📍 ' + esc(a) + ' <span class="pill">' + es.length + '</span></h2><div class="lista">' + es.map((e, i) => tarjeta(e, i)).join('') + '</div></div>';
+    enlazarTarjetas($('#det')); cargarFotos($('#det')); $('#det').scrollIntoView({ behavior: 'smooth' }); };
+  $('#qa').oninput = () => { F.area = $('#qa').value; pinta(); }; pinta();
+}
+
+// ===================== ficha del equipo =====================
+function abrirFicha(id) { const e = D.eq[id]; if (!e) return; FICHA = id; pintarFicha(e); try { history.replaceState(null, '', '#' + encodeURIComponent(e.clave)); } catch (x) {} }
+function cerrarModal() { $('#modal').classList.remove('on'); $('#modal').innerHTML = ''; FICHA = null; document.body.style.overflow = ''; try { history.replaceState(null, '', location.pathname + location.search); } catch (x) {} }
+function abrirDesdeHash() {
+  if (!YO) return; const h = decodeURIComponent(location.hash.slice(1)); if (!h) return;
+  const e = lista().find(x => compacto(x.clave) === compacto(h)); if (e && FICHA !== e.id) abrirFicha(e.id);
+}
+$('#modal').addEventListener('click', ev => { if (ev.target.id === 'modal') cerrarModal(); });
+document.addEventListener('keydown', ev => { if (ev.key === 'Escape') { if ($('#visor')) $('#visor').remove(); else if ($('#modal').classList.contains('on')) cerrarModal(); } });
+
+function placaHTML(e) {
+  const v = k => { const x = e[k]; if (!x) return '<dd class="no">—</dd>'; const t = esc(x); return '<dd>' + (verif(x) ? '<span class="ver" title="Dato por verificar">' + t + '</span>' : t) + '</dd>'; };
+  return '<div class="placa"><span class="rem" style="left:8px;top:8px"></span><span class="rem" style="right:8px;top:8px"></span><span class="rem" style="left:8px;bottom:8px"></span><span class="rem" style="right:8px;bottom:8px"></span>' +
+    '<div class="ph"><div><b>' + esc(e.marca || e.fab || 'Sin marca') + '</b><div style="font-size:12px;font-weight:700;color:#3C4855">' + esc(e.fab && e.fab !== e.marca ? e.fab : '') + '</div></div><span>DATOS DE PLACA<br>' + esc(e.clave) + '</span></div>' +
+    '<dl>' + PLACA.map(k => '<div><dt>' + esc(ETQ[k].replace('Tipo de aceite / refrigerante', 'Aceite / refrigerante').replace('Número de serie', 'No. de serie')) + '</dt>' + v(k) + '</div>').join('') + '</dl></div>';
+}
+function periodosHTML(p) {
+  if (!p) return '<span class="muted">Sin periodo</span>';
+  return String(p).split('/').map(x => x.trim()).filter(Boolean).map(x => { const P = PERIODOS.find(q => norm(q[0]) === norm(x)); return '<span class="per" style="background:' + (P ? P[2] : '#5B6B7B') + '">' + esc(x) + '</span>'; }).join('');
+}
+function dato(k, e, html) { const v = e[k]; return '<div class="dato"><span>' + esc(ETQ[k] || k) + '</span><b>' + (html != null ? html : (v ? (verif(v) ? '<span class="pill v">' + esc(v) + '</span>' : esc(v)) : '<span class="muted">—</span>')) + '</b></div>'; }
+
+// ===================== salud, vida útil y depreciación =====================
+const isoD = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+// Máquinas tipo A: índice de la app Vida de máquinas (edad, paros, gasto y condición). Las demás: edad × uso contra su vida útil.
+const VIDA_MAP = { selexx: 'e1', gabbiani: 'e103', homag: 'e104', 'ench-blue': 'e105', gweike1: 'e106', gweike2: 'e107', 'gweike-cama': 'e108', 'cnc-blue': 'e153',
+  prensa90: 'e3', prensa60: 'e2', cajas: 'e158', 'horno-curado': 'e155', 'horno-secado': 'e156', tunel: 'e157', flejadora: 'e154' };
+const VIDA_DE = Object.fromEntries(Object.entries(VIDA_MAP).map(([v, e]) => [e, v]));
+const VIDA_DEF = { MTA: 15, MTB: 25, MTC: 5, AA: 10, EA: 15, EBT: 25, EMT: 30, EM: 10, IL: 10 };
+const COLS = { 'Sana': '#1E8A4C', 'Aceptable': '#B98A00', 'En riesgo': '#D4651C', 'Crítica': '#BF3A2B', 'Sin datos': '#9AA5B1', 'No aplica': '#9AA5B1' };
+const nums = s => (String(s == null ? '' : s).replace(/,/g, '').match(/\d+(\.\d+)?/g) || []).map(Number);
+const vidaMaq = id => ((window.EQ_VIDA || {}).maquinas || []).find(m => m.id === id);
+function anioDe(e) {
+  for (const k of ['finst', 'ffab']) { const m = String(e[k] || '').match(/(19|20)\d{2}/); if (m) return +m[0]; }
+  const vm = VIDA_DE[e.id] && vidaMaq(VIDA_DE[e.id]); return vm && vm.anio ? +vm.anio : null;
+}
+function vidaAnios(e) {
+  const t = String(e.vida || ''); if (/año/i.test(t)) { const n = nums(t); if (n.length) return n.length > 1 ? (n[0] + n[1]) / 2 : n[0]; }
+  const vm = VIDA_DE[e.id] && vidaMaq(VIDA_DE[e.id]); if (vm && vm.vida) return +vm.vida;
+  const c = norm(e.corto);
+  if (e.cat === 'MTB' && /prensa/.test(c)) return 30;
+  if (e.cat === 'EA' && /inversor/.test(c)) return 12;
+  if (e.cat === 'EA' && /tanque/.test(c)) return 20;
+  if (e.cat === 'EM' && /patin/.test(c)) return 8;
+  return VIDA_DEF[e.cat] || null;
+}
+function vidaHoras(e) { const c = norm(e.corto); if (e.cat === 'EA' && /compresor/.test(c)) return 60000; if (e.cat === 'EM' && /montacargas/.test(c)) return 20000; return null; }
+// depreciación fiscal (LISR): maquinaria y equipo 10 %, herramienta 35 %, equipo de transporte 25 %, generación con fuentes renovables 100 %
+function tasaFiscal(e) { if (e.cat === 'MTC') return 35; if (e.cat === 'EA' && /inversor/.test(norm(e.corto))) return 100; if (e.cat === 'EM') return 25; return 10; }
+// misma fórmula que la app Vida de máquinas (4 aspectos de 25 puntos)
+function calcVida(m) {
+  const V = window.EQ_VIDA, c = V.cfg, pts = {}, hoy = new Date(), cl = x => Math.max(0, Math.min(25, x));
+  const vida = Number(m.vida) || c.vidas[m.tipo] || 15;
+  if (m.anio) pts.edad = cl(25 * (1 - (1 - c.edadFin) * (hoy.getFullYear() + hoy.getMonth() / 12 - Number(m.anio)) / vida));
+  const d0 = new Date(); d0.setMonth(d0.getMonth() - c.ventanaMeses); const desde = isoD(d0);
+  const disp = m.disp || []; let imp = null;
+  const dm = disp.filter(x => x.min != null && x.prog > 0 && (x.per || '') >= desde.slice(0, 7));
+  if (dm.length) imp = dm.reduce((s, x) => s + +x.min, 0) / dm.reduce((s, x) => s + +x.prog, 0);
+  else { const u = disp.filter(x => x.pct != null).sort((a, b) => String(b.per).localeCompare(String(a.per)))[0]; if (u) imp = +u.pct; }
+  if (imp != null) pts.disp = cl(25 * (1 - imp / c.impTope));
+  const C = V.compras || [], prim = C.reduce((a, x) => !a || x.f < a ? x.f : a, null);
+  const meses = Math.min(c.ventanaMeses, prim ? Math.max(1, (hoy - new Date(prim)) / (30.44 * 864e5)) : c.ventanaMeses);
+  const g12 = C.filter(x => x.maq === m.id && x.f >= desde).reduce((s, x) => s + +(x.imp || 0), 0) * 12 / meses, valor = +m.usd > 0 ? +m.usd * c.tc : null;
+  if (valor) pts.costo = cl(25 * (1 - (g12 / valor) / c.costoTope));
+  const ins = (m.insp || []).filter(x => (x.s || []).length === 6 && x.s.every(v => v !== null && v !== '')).sort((a, b) => String(b.f).localeCompare(String(a.f)))[0];
+  if (ins) pts.cond = ins.s.reduce((s, v) => s + +v, 0) / 24 * 25;
+  const ks = Object.keys(pts); if (!ks.length) return { indice: null, n: 0 };
+  let i = ks.reduce((s, k) => s + pts[k], 0) / (ks.length * 25) * 100; if (m.critico) i = Math.min(i, c.topeCritico);
+  return { indice: Math.round(i), n: ks.length };
+}
+function salud(e) {
+  if (e.cat === 'AG') return { na: true, estado: 'No aplica', recom: 'Área: no se deprecia', color: COLS['No aplica'] };
+  const hoy = new Date(), anio = anioDe(e), vida = vidaAnios(e);
+  const edad = anio ? Math.max(0, hoy.getFullYear() + hoy.getMonth() / 12 - anio) : null;
+  const hd = nums(e.hdia), hdia = hd.length ? (hd.length > 1 ? (hd[0] + hd[1]) / 2 : hd[0]) : null;
+  const factor = ['EBT', 'EMT'].includes(e.cat) || hdia == null ? 1 : Math.min(1.5, Math.max(0.5, hdia / 8));
+  let consumo = edad != null && vida ? edad * factor / vida : null, consH = null;
+  const vh = vidaHoras(e), ht = nums(e.htot)[0];
+  if (vh && ht && !/seman|mens/i.test(String(e.htot))) { consH = ht / vh; consumo = consumo == null ? consH : Math.max(consumo, consH); }
+  const vm = VIDA_DE[e.id] && vidaMaq(VIDA_DE[e.id]); let indice = null, fuente = '';
+  if (vm) { const r = calcVida(vm); if (r.indice != null) { indice = r.indice; fuente = 'Vida de máquinas (' + r.n + ' de 4 aspectos)'; } }
+  if (indice == null && consumo != null) { indice = Math.round(Math.max(0, Math.min(100, 100 * (1 - 0.5 * consumo)))); fuente = 'Edad y uso'; }
+  const estado = indice == null ? 'Sin datos' : indice >= 80 ? 'Sana' : indice >= 60 ? 'Aceptable' : indice >= 40 ? 'En riesgo' : 'Crítica';
+  const tasa = tasaFiscal(e), depPct = edad != null ? Math.min(100, Math.round(edad * tasa)) : null;
+  let recom;
+  if (consumo == null && indice == null) recom = 'Falta el año de llegada para calcular';
+  else if ((consumo != null && consumo >= 1) || (indice != null && indice < 40)) recom = 'Jubilar: evaluar reemplazo y comprar otro';
+  else if ((consumo != null && consumo >= 0.85) || (indice != null && indice < 60)) recom = 'Planear reemplazo (meterlo al presupuesto)';
+  else if (consumo != null && consumo >= 0.6) recom = 'Depreciándose: vigilar costo y fallas';
+  else recom = 'Vigente: preventivo normal';
+  return { anio, edad, vida, hdia, factor, consumo, consH, indice, estado, fuente, tasa, depPct, dep: depPct == null ? null : depPct >= 100, recom, color: COLS[estado] };
+}
+const depTexto = S => S.na ? 'No aplica' : S.depPct == null ? 'Sin año de llegada' : (S.dep ? 'Sí' : 'No') + ' (' + S.depPct + ' % · ' + S.tasa + ' % anual)';
+function saludHTML(e, S) {
+  if (S.na) return '';
+  const p = S.indice == null ? 0 : S.indice, C = 2 * Math.PI * 42, cons = S.consumo == null ? null : Math.round(S.consumo * 100);
+  return '<div><h3>❤ Salud y vida útil</h3><div class="salud">' +
+    '<div class="anillo"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="42" fill="none" stroke="#E6ECF2" stroke-width="11"/>' +
+      '<circle cx="50" cy="50" r="42" fill="none" stroke="' + S.color + '" stroke-width="11" stroke-linecap="round" transform="rotate(-90 50 50)" stroke-dasharray="' + C + '" stroke-dashoffset="' + C + '" style="--fin:' + (C * (1 - p / 100)) + '"/></svg>' +
+      '<div><b style="color:' + S.color + '">' + (S.indice == null ? '—' : S.indice) + '</b><span>' + esc(S.estado) + '</span></div></div>' +
+    '<div class="datos" style="flex:1">' +
+      '<div class="dato"><span>Llegada a planta</span><b>' + (S.anio || '<span class="muted">Falta el año</span>') + (S.edad != null ? ' · ' + S.edad.toFixed(1) + ' años' : '') + '</b></div>' +
+      '<div class="dato"><span>Vida útil</span><b>' + (S.vida ? S.vida + ' años' : '—') + '</b></div>' +
+      '<div class="dato"><span>Uso</span><b>' + (S.hdia != null ? S.hdia + ' h/día · factor ×' + S.factor.toFixed(2) : 'Sin horas: se toma 1 turno') + '</b></div>' +
+      '<div class="dato"><span>Vida consumida</span><b>' + (cons == null ? '—' : cons + ' %') + '</b>' + (cons == null ? '' : '<div class="barra"><i style="width:' + Math.min(100, cons) + '%;background:' + (cons >= 100 ? '#BF3A2B' : cons >= 85 ? '#D4651C' : cons >= 60 ? '#B98A00' : '#1E8A4C') + '"></i></div>') + '</div>' +
+      '<div class="dato"><span>Equipo depreciado (fiscal)</span><b>' + esc(depTexto(S)) + '</b></div>' +
+      '<div class="dato" style="border-color:' + S.color + '"><span>Recomendación</span><b style="color:' + S.color + '">' + esc(S.recom) + '</b></div>' +
+    '</div></div><p class="small muted" style="margin:6px 0 0">Salud: ' + esc(S.fuente || 'sin datos') + '. 80–100 sana · 60–79 aceptable · 40–59 en riesgo · 0–39 crítica. Vida consumida = años en planta × (horas de uso ÷ 8) ÷ vida útil' + (S.consH != null ? ' (o por horas totales, lo que sea mayor)' : '') + '.</p></div>';
+}
+
+// ===================== mantenimientos realizados (plan mensual con 50 % o más) =====================
+const pctDe = r => Number(r.pct) || 0;
+function realizados(e, desde, hasta) { const hoy = hoyISO(); return planDe(e).filter(r => pctDe(r) >= 50 && r.f <= hoy && (!desde || r.f >= desde) && (!hasta || r.f <= hasta)); }
+function horasDe(e, r) { const m = (window.EQ_MIN || {})[e.no + '|' + r.fr]; return m ? m / 60 : null; }
+const frNombre = fr => (PER_FR[fr] || [fr || 'Preventivo'])[0];
+const diaDe = f => DIAS[new Date(f + 'T12:00').getDay()];
+const horasTxt = h => h == null ? '—' : (h < 1 ? Math.round(h * 60) + ' min' : (Math.round(h * 10) / 10) + ' h');
+function historialFicha(e) {
+  const h = $('#fHist'); if (!h) return;
+  const hoy = hoyISO(), mes = hoy.slice(0, 7), R = realizados(e, mes + '-01', mes + '-31').sort((a, b) => b.f.localeCompare(a.f));
+  const pend = planDe(e).filter(r => r.f.startsWith(mes) && pctDe(r) < 50);
+  const tot = R.reduce((s, r) => s + (horasDe(e, r) || 0), 0);
+  h.innerHTML = (R.length ? '<div class="tabla"><table class="t"><thead><tr><th>Fecha</th><th>Día</th><th>Mantenimiento</th><th>Lo realizó</th><th>OT</th><th>Avance</th><th>Horas</th><th>Bitácora</th></tr></thead><tbody>' +
+      R.map(r => { const P = PER_FR[r.fr]; return '<tr><td><b>' + fechaTxt(r.f) + '</b></td><td>' + diaDe(r.f) + '</td><td><span class="per" style="background:' + (P ? P[2] : '#5B6B7B') + '">' + esc(r.fr || '') + '</span> ' + esc(frNombre(r.fr)) + '</td><td>' + esc(r.em || '—') + '</td><td>' + esc(r.ot || '—') + '</td>' +
+        '<td><b style="color:' + (pctDe(r) >= 100 ? 'var(--verde)' : '#B7791F') + '">' + pctDe(r) + ' %</b></td><td>' + horasTxt(horasDe(e, r)) + '</td><td>' + esc(r.bit || '—') + '</td></tr>'; }).join('') +
+      '</tbody></table></div><p class="small muted" style="margin:6px 0 0">' + R.length + ' realizado(s) · ' + horasTxt(tot) + ' en total.' : '<p class="muted small" style="margin:0">Todavía no hay mantenimientos realizados este mes.') +
+    (pend.length ? ' Pendientes del mes: ' + pend.map(r => fechaTxt(r.f) + ' (' + esc(r.fr) + ', ' + esc(r.em || '—') + ')').join(', ') + '.' : '') +
+    ' Se registran cuando el plan mensual marca 50 % o 100 %; la lista se reinicia cada mes y el historial completo viene en el PDF.</p>';
+}
+
+// ===================== ficha del equipo =====================
+function pintarFicha(e, quieto) {
+  const c = CAT[e.cat] || CATS[0], md = $('#modal'), ed = puede(e.cat), S = salud(e), mesTxt = MESES[new Date().getMonth()].toLowerCase() + ' ' + new Date().getFullYear();
+  const marco = (tipo, titulo, id) => '<div class="marco"><div class="t">' + titulo + '<span>' +
+    ((!id || ed) ? '<button class="btn sm" data-ft="' + tipo + '">📷 ' + (id ? 'Cambiar' : 'Tomar foto') + '</button><button class="btn sm" data-fs="' + tipo + '" title="Elegir de la galería">🖼</button>' : '') + '</span></div>' +
+    '<div class="img" data-ver="' + (id || '') + '">' + (id ? '<img data-foto="' + id + '" alt="">' : '<div class="vacio">' + svg(tipo === 'fp' ? 'placa' : 'camara', '').replace('<svg', '<svg style="color:' + c.c + '"') + '<div>' + (tipo === 'fp' ? 'Falta la foto de la placa original' : 'Falta la foto del equipo') + '</div></div>') + '</div></div>';
+  md.innerHTML = '<div class="hoja"><div class="cab" style="--c:' + c.c + '">' + svg(c.ic) + '<div style="flex:1;min-width:0"><span class="clave">' + esc(e.clave) + '</span><h2 style="margin-top:6px">' + esc(nombreDe(e)) + '</h2><p>' + esc(c.n) + ' · ' + esc(e.nombre || '') + (e.eco && e.eco !== e.clave ? ' · No. económico ' + esc(e.eco) : '') + ' · No. ' + esc(e.no || '—') + '</p></div><button class="x" title="Cerrar">✕</button></div>' +
+    '<div class="cuerpo">' +
+    '<div class="acciones"><button class="btn pri" id="fPdf">📄 Ver PDF del equipo</button>' + (ed ? '<button class="btn" id="fEd">✏ Modificar datos</button>' : '<span class="pill" title="Pide a Omar permiso para modificar esta categoría">🔒 Solo consulta en ' + c.k + '</span>') +
+      (esAdmin() ? '<button class="btn peligro" id="fBaja">🗑 Dar de baja</button>' : '') + '</div>' +
+    '<div class="fotos2">' + marco('fm', '📸 Foto del equipo', e.fm) + marco('fp', '🏷 Placa de datos original', e.fp) + '</div>' +
+    '<div><h3 style="margin-top:0">🏷 Placa digital</h3>' + placaHTML(e) + '</div>' +
+    saludHTML(e, S) +
+    '<div><h3>📍 Ubicación y mantenimiento</h3><div class="datos">' + dato('ubic', e, '<span style="font-size:16px">📍 ' + esc(areaDe(e)) + '</span>' + (verif(e.ubic) ? ' <span class="pill v">verificar</span>' : '')) +
+      dato('periodo', e, periodosHTML(e.periodo)) + dato('lub', e) + dato('hdia', e) + dato('htot', e) + dato('finst', e) + dato('vida', e) + dato('dep', e, esc(depTexto(S))) + '</div></div>' +
+    '<div><h3>🤝 Proveedor</h3><div class="datos">' + dato('prov', e) + dato('tel', e, e.tel ? '<a href="tel:' + esc(String(e.tel).replace(/[^\d+]/g, '')) + '">📞 ' + esc(e.tel) + '</a>' : null) + dato('poliza', e) + '</div>' +
+      (e.obs ? '<div class="aviso ambar" style="margin-top:10px">📝 ' + esc(e.obs) + '</div>' : '') + '</div>' +
+    '<div><h3 style="display:flex;justify-content:space-between;align-items:center">🔩 Refacciones que usa este equipo <button class="btn sm ok" id="fRef">➕ Agregar refacción</button></h3><div class="refs" id="fRefs">' + refsHTML(e) + '</div></div>' +
+    '<div><h3 style="display:flex;justify-content:space-between;align-items:center">🖼 Más fotos (ubicación, detalles) <button class="btn sm" id="fFx">➕ Agregar foto</button></h3><div class="refs">' + (e.fx || []).map(f => '<div class="ref"><div class="img" data-ver="' + f + '"><img data-foto="' + f + '" alt=""></div></div>').join('') + ((e.fx || []).length ? '' : '<p class="muted small">Sin fotos extra. Toma una foto del lugar para que sea fácil encontrarlo.</p>') + '</div></div>' +
+    '<div><h3>🛠 Mantenimientos realizados · ' + mesTxt + '</h3><div id="fHist"></div></div>' +
+    '<div><h3>🕘 Altas y modificaciones</h3><div class="small muted">' + (e.alta ? 'Alta: ' + horaTxt(e.alta.t) + ' · ' + esc(e.alta.n || e.alta.por || '') + '<br>' : '') + (e.mod ? 'Última modificación: ' + horaTxt(e.mod.t) + ' · ' + esc(e.mod.n || e.mod.por || '') : '') + '</div></div>' +
+    '</div></div>';
+  md.classList.add('on'); document.body.style.overflow = 'hidden';
+  if (!quieto) md.scrollTop = 0;
+  $('.cab .x', md).onclick = cerrarModal;
+  $$('[data-ft],[data-fs]', md).forEach(b => b.onclick = async () => { const tipo = b.dataset.ft || b.dataset.fs; const f = await pedirFoto(!!b.dataset.ft); if (!f) return;
+    try { const id = await subirFoto(f); await guardarCampos(e, { [tipo]: id }, tipo === 'fp' ? 'Foto de placa' : 'Foto del equipo'); } catch (x) { toast('⚠ ' + (x.message || x)); } });
+  $$('[data-ver]', md).forEach(d => d.onclick = () => { const i = $('img', d); if (i && i.src) visor(i.src); });
+  const ed1 = $('#fEd'); if (ed1) ed1.onclick = () => abrirForm(e);
+  $('#fRef').onclick = () => formRef(e, null);
+  $('#fFx').onclick = async () => { const f = await pedirFoto(false); if (!f) return; const id = await subirFoto(f); await guardarCampos(e, { fx: (e.fx || []).concat(id) }, 'Foto extra'); };
+  $('#fPdf').onclick = () => verPdf(e);
+  const bj = $('#fBaja'); if (bj) bj.onclick = () => darBaja(e);
+  $$('[data-ref]', md).forEach(b => b.onclick = () => formRef(e, +b.dataset.ref));
+  cargarFotos(md);
+  historialFicha(e);
+}
+function refsHTML(e) {
+  const R = e.refs || [];
+  if (!R.length) return '<p class="muted small">Aún no hay refacciones registradas. Agrega la pieza con su foto y modelo exacto para que cualquier técnico la identifique.</p>';
+  return R.map((r, i) => '<div class="ref"><div class="img" data-ver="' + (r.f || '') + '">' + (r.f ? '<img data-foto="' + r.f + '" alt="">' : '<span style="font-size:40px">🔩</span>') + '</div>' +
+    '<div class="c"><b>' + esc(r.n) + '</b>' + (r.mod ? '<span class="mod">' + esc(r.mod) + '</span>' : '') +
+    '<div class="muted small">' + [r.marca && 'Marca: ' + esc(r.marca), r.np && 'No. parte: ' + esc(r.np), r.cant && 'Cantidad: ' + esc(r.cant), r.alm && 'Almacén: ' + esc(r.alm)].filter(Boolean).join('<br>') + '</div>' +
+    (r.nota ? '<div class="small" style="margin-top:3px">📝 ' + esc(r.nota) + '</div>' : '') +
+    (puede(e.cat) ? '<button class="btn sm" style="margin-top:6px" data-ref="' + i + '">✏ Editar</button>' : '') + '</div></div>').join('');
+}
+
+// ===================== PDF del equipo (vista previa antes de imprimir) =====================
+const rgb = h => [1, 3, 5].map(i => parseInt(String(h).slice(i, i + 2), 16));
+const medidas = src => new Promise(ok => { const i = new Image(); i.onload = () => ok({ w: i.naturalWidth, h: i.naturalHeight }); i.onerror = () => ok(null); i.src = src; });
+async function pdfEquipo(e) {
+  await cargarScript('lib/jspdf.umd.min.js'); await cargarScript('lib/jspdf.plugin.autotable.min.js');
+  const doc = new window.jspdf.jsPDF({ unit: 'mm', format: 'letter' }), W = 215.9, H = 279.4, M = 12, c = CAT[e.cat] || CATS[0], S = salud(e), azul = [14, 42, 71];
+  doc.setFillColor(...azul); doc.rect(0, 0, W, 30, 'F'); doc.setFillColor(...rgb(c.c)); doc.rect(0, 30, W, 2, 'F');
+  doc.setTextColor(255); doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.text('LÍNEA ITALIA · MANTENIMIENTO · BASE DE DATOS DE EQUIPOS', M, 9);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(17); doc.text(doc.splitTextToSize(nombreDe(e), W - 2 * M - 56)[0], M, 18.5);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.text(doc.splitTextToSize(c.n + ' · ' + (e.nombre || '') + ' · No. ' + (e.no || '—') + ' · Ubicación: ' + areaDe(e), W - 2 * M - 56)[0], M, 25.5);
+  doc.setFillColor(255); doc.roundedRect(W - M - 50, 6, 50, 19, 2, 2, 'F'); doc.setTextColor(...rgb(c.c)); doc.setFont('courier', 'bold'); doc.setFontSize(e.clave.length > 6 ? 17 : 21); doc.text(e.clave, W - M - 25, 18.2, { align: 'center' });
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5); doc.text('CLAVE DE CONTROL LI', W - M - 25, 23, { align: 'center' });
+  // fotos
+  let y = 37; const bw = (W - 2 * M - 6) / 2, bh = 62;
+  const caja = async (id, x, titulo) => {
+    doc.setDrawColor(200, 208, 218); doc.setFillColor(246, 248, 250); doc.roundedRect(x, y, bw, bh, 2, 2, 'FD');
+    doc.setTextColor(60, 72, 85); doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.text(titulo, x + 3, y + 5);
+    const src = await foto(id);
+    if (src) { const d = await medidas(src); if (d) { const mw = bw - 6, mh = bh - 10, k = Math.min(mw / d.w, mh / d.h), w = d.w * k, h = d.h * k; doc.addImage(src, 'JPEG', x + 3 + (mw - w) / 2, y + 7.5 + (mh - h) / 2, w, h); } }
+    else { doc.setFont('helvetica', 'normal'); doc.setTextColor(150, 160, 170); doc.text('Sin foto todavía', x + bw / 2, y + bh / 2 + 2, { align: 'center' }); }
+  };
+  await caja(e.fm, M, 'FOTO DEL EQUIPO'); await caja(e.fp, M + bw + 6, 'PLACA DE DATOS ORIGINAL');
+  y += bh + 5;
+  // salud
+  if (!S.na) {
+    doc.setFillColor(...rgb(S.color)); doc.roundedRect(M, y, 42, 20, 2, 2, 'F'); doc.setTextColor(255); doc.setFont('helvetica', 'bold'); doc.setFontSize(20); doc.text(S.indice == null ? '—' : String(S.indice), M + 21, y + 11, { align: 'center' });
+    doc.setFontSize(7.5); doc.text('SALUD · ' + S.estado.toUpperCase(), M + 21, y + 17, { align: 'center' });
+    doc.autoTable({ startY: y, margin: { left: M + 46, right: M }, theme: 'plain', styles: { fontSize: 8, cellPadding: 0.9 }, columnStyles: { 0: { fontStyle: 'bold', textColor: [70, 82, 95], cellWidth: 38 } },
+      body: [['Llegada a planta', (S.anio || 'Falta el año') + (S.edad != null ? ' · ' + S.edad.toFixed(1) + ' años' : '')], ['Vida útil · uso', (S.vida ? S.vida + ' años' : '—') + ' · ' + (S.hdia != null ? S.hdia + ' h/día' : 'sin horas')],
+        ['Vida consumida', S.consumo == null ? '—' : Math.round(S.consumo * 100) + ' %'], ['Depreciado (fiscal)', depTexto(S)], ['Recomendación', S.recom]] });
+    y = Math.max(y + 22, doc.lastAutoTable.finalY + 2);
+  }
+  // datos
+  const campos = CAMPOS.filter(([k]) => !['no', 'catN', 'cat', 'nombre', 'corto'].includes(k)).map(([k, n]) => [n, k === 'dep' ? depTexto(S) : (e[k] || '—')]);
+  const filas = []; for (let i = 0; i < campos.length; i += 2) filas.push([campos[i][0], campos[i][1], campos[i + 1] ? campos[i + 1][0] : '', campos[i + 1] ? campos[i + 1][1] : '']);
+  doc.autoTable({ startY: y + 2, head: [['DATOS DEL EQUIPO', '', '', '']], body: filas, theme: 'grid', margin: { left: M, right: M },
+    styles: { fontSize: 7.6, cellPadding: 1.3, lineColor: [215, 222, 230], valign: 'top' }, headStyles: { fillColor: rgb(c.c), fontSize: 8.5 },
+    columnStyles: { 0: { fontStyle: 'bold', fillColor: [238, 242, 246], cellWidth: 36 }, 2: { fontStyle: 'bold', fillColor: [238, 242, 246], cellWidth: 36 } },
+    didParseCell: d => { if (d.section === 'body' && (d.column.index === 1 || d.column.index === 3) && verif(d.cell.raw)) d.cell.styles.fillColor = [255, 226, 154]; } });
+  // refacciones
+  const refs = await Promise.all((e.refs || []).map(async r => Object.assign({}, r, { src: await foto(r.f) })));
+  if (refs.length) {
+    doc.autoTable({ startY: doc.lastAutoTable.finalY + 5, head: [['FOTO', 'REFACCIÓN', 'MODELO EXACTO', 'MARCA', 'NO. DE PARTE', 'CANT.', 'ALMACÉN']], margin: { left: M, right: M },
+      body: refs.map(r => ['', r.n + (r.nota ? '\n' + r.nota : ''), r.mod || '', r.marca || '', r.np || '', r.cant || '', r.alm || '']), theme: 'grid',
+      styles: { fontSize: 7.6, cellPadding: 1.3, minCellHeight: 17, valign: 'middle' }, headStyles: { fillColor: [46, 158, 91] }, columnStyles: { 0: { cellWidth: 22 }, 2: { font: 'courier', fontStyle: 'bold' } },
+      didDrawCell: d => { const r = refs[d.row.index]; if (d.section === 'body' && d.column.index === 0 && r && r.src) { try { doc.addImage(r.src, 'JPEG', d.cell.x + 1, d.cell.y + 1, d.cell.width - 2, d.cell.height - 2); } catch (x) {} } } });
+  }
+  // mantenimientos realizados (desde el arranque del programa, con 50 % o más en el plan mensual)
+  const R = realizados(e).sort((a, b) => a.f.localeCompare(b.f)), tot = R.reduce((s, r) => s + (horasDe(e, r) || 0), 0);
+  doc.autoTable({ startY: doc.lastAutoTable.finalY + 5, margin: { left: M, right: M }, theme: 'grid',
+    head: [[{ content: 'MANTENIMIENTOS REALIZADOS · registrados en el plan mensual con 50 % o 100 % (desde el ' + fechaTxt(ARRANQUE) + ')', colSpan: 8 }], ['FECHA', 'DÍA', 'MANTENIMIENTO', 'LO REALIZÓ', 'OT', 'AVANCE', 'HORAS', 'BITÁCORA']],
+    body: R.length ? R.map(r => [fechaTxt(r.f), diaDe(r.f), (r.fr ? r.fr + ' · ' : '') + 'Preventivo ' + frNombre(r.fr).toLowerCase(), r.em || '—', r.ot || '—', pctDe(r) + ' %', horasTxt(horasDe(e, r)), r.bit || '—'])
+      .concat([[{ content: R.length + ' mantenimiento(s) realizados · ' + horasTxt(tot) + ' de trabajo', colSpan: 8, styles: { fontStyle: 'bold', fillColor: [238, 242, 246] } }]])
+      : [[{ content: 'Todavía no hay mantenimientos registrados con 50 % o más.', colSpan: 8, styles: { textColor: [120, 130, 140] } }]],
+    styles: { fontSize: 7.6, cellPadding: 1.3 }, headStyles: { fillColor: azul },
+    didParseCell: d => { if (d.section === 'body' && d.column.index === 5 && /%/.test(String(d.cell.raw))) d.cell.styles.textColor = parseInt(d.cell.raw) >= 100 ? [30, 138, 76] : [183, 121, 31]; } });
+  // pie de página
+  const n = doc.getNumberOfPages(), hecho = 'Generado ' + horaTxt(new Date().toISOString()) + (YO ? ' por ' + YO.n : '');
+  for (let i = 1; i <= n; i++) { doc.setPage(i); doc.setDrawColor(200, 208, 218); doc.line(M, H - 11, W - M, H - 11); doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(110, 120, 130);
+    doc.text('Base de Datos LI · ' + e.clave + ' · ' + nombreDe(e) + ' · ' + hecho, M, H - 7); doc.text('Página ' + i + ' de ' + n, W - M, H - 7, { align: 'right' }); }
+  return doc.output('blob');
+}
+const esperarImgs = r => Promise.all($$('img', r).map(i => i.complete ? 0 : new Promise(ok => { i.onload = i.onerror = ok; })));
+async function verPdf(e) {
+  const md = $('#modal'), c = CAT[e.cat];
+  md.innerHTML = '<div class="hoja"><div class="cab" style="--c:' + c.c + '"><span style="font-size:44px">📄</span><div style="flex:1"><h2>PDF de ' + esc(e.clave) + '</h2><p>' + esc(nombreDe(e)) + ' · revísalo antes de imprimir</p></div><button class="x" type="button">✕</button></div>' +
+    '<div class="cuerpo"><div class="acciones"><button class="btn pri" id="pImp" disabled>🖨 Imprimir</button><button class="btn" id="pDes" disabled>⬇ Descargar PDF</button><button class="btn" id="pVol">← Volver a la ficha</button></div>' +
+    '<div id="pVis" style="height:74vh;overflow:auto;border:1px solid var(--line);border-radius:12px;background:#525659;padding:14px"><p style="color:#fff;text-align:center">⏳ Armando el PDF…</p></div></div></div>';
+  md.scrollTop = 0;
+  $('.cab .x', md).onclick = $('#pVol').onclick = () => abrirFicha(e.id);
+  let url, blob;
+  try { blob = await pdfEquipo(e); url = URL.createObjectURL(blob); } catch (x) { $('#pVis').innerHTML = '<p style="color:#fff">No se pudo armar el PDF: ' + esc(x.message || x) + '</p>'; return; }
+  if (FICHA !== e.id || !$('#pVis')) return;
+  // vista previa: cada hoja se dibuja como imagen (pdf.js) para que se vea igual en PC, tableta Android y iPhone
+  let hojas = [];
+  try {
+    await cargarScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(await blob.arrayBuffer()) }).promise;
+    for (let i = 1; i <= pdf.numPages; i++) { const pg = await pdf.getPage(i), vp = pg.getViewport({ scale: 2 }), cv = document.createElement('canvas'); cv.width = vp.width; cv.height = vp.height;
+      await pg.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise; hojas.push(cv.toDataURL('image/jpeg', 0.92)); }
+    $('#pVis').innerHTML = hojas.map((h, i) => '<img class="pag" alt="Hoja ' + (i + 1) + '" src="' + h + '" style="width:min(820px,100%)">').join('');
+  } catch (x) { hojas = []; $('#pVis').innerHTML = '<iframe title="Vista previa del PDF" src="' + url + '" style="width:100%;height:100%;border:0;border-radius:8px;background:#fff"></iframe>'; }
+  const nombre = e.clave + ' - ' + nombreDe(e).replace(/[\\/:*?"<>|]/g, '') + '.pdf';
+  $('#pImp').disabled = $('#pDes').disabled = false;
+  $('#pImp').onclick = () => {
+    if (hojas.length) { $('#print').innerHTML = hojas.map(h => '<div class="hojaimp"><img src="' + h + '" alt=""></div>').join(''); esperarImgs($('#print')).then(() => window.print()); return; }
+    try { $('#pVis iframe').contentWindow.focus(); $('#pVis iframe').contentWindow.print(); } catch (x) { window.open(url, '_blank'); } };
+  $('#pDes').onclick = () => { const a = document.createElement('a'); a.href = url; a.download = nombre; document.body.appendChild(a); a.click(); a.remove(); };
+}
+
+// ---- guardar cambios de un equipo
+function sello() { return { t: new Date().toISOString(), por: YO ? YO.nom : '', n: YO ? YO.n : '' }; }
+async function registrarCambio(acc, e, det) { try { await DB.collection('cambios').add(Object.assign(sello(), { acc, id: e.id, clave: e.clave, nombre: nombreDe(e), cat: e.cat, det: det || '' })); } catch (x) {} }
+async function guardarCampos(e, campos, acc) {
+  const s = sello(); campos.mod = s;
+  await DB.doc('cat/' + e.cat).update({ items: { [e.id]: campos } });
+  Object.assign(e, campos);
+  registrarCambio(acc || 'Modificación', e, Object.keys(campos).filter(k => k !== 'mod').map(k => ETQ[k] || k).join(', '));
+  toast('✅ Guardado');
+}
+async function darBaja(e) {
+  const m = prompt('Motivo de la baja de ' + e.clave + ' (' + nombreDe(e) + '):'); if (!m) return;
+  await guardarCampos(e, { baja: Object.assign(sello(), { motivo: m }) }, 'Baja');
+  cerrarModal(); pintar();
+}
+
+// ===================== alta / modificación =====================
+function siguienteClave(cat, corto, excluir) {
+  const L = Object.values(D.eq).filter(e => e.cat === cat && e.id !== excluir), w = norm(corto).split(/\s+/)[0] || '';
+  const parse = cl => { const m = String(cl || '').match(/^([A-Z]+)(-?)(\d+)$/i); return m ? { p: m[1].toUpperCase(), s: m[2], n: +m[3], w: m[3].length } : null; };
+  const pare = L.find(e => w && norm(e.corto).split(/\s+/)[0] === w && parse(e.clave));
+  let p, s = '-', ancho = 2;
+  if (pare) { const x = parse(pare.clave); p = x.p; s = x.s; ancho = x.w; }
+  else if (cat === 'MTC' || cat === 'MTB') { p = (w[0] || 'X').toUpperCase() + cat[2]; s = ''; }
+  else p = cat;
+  const nums = L.map(e => parse(e.clave)).filter(x => x && ((cat === 'MTC' || cat === 'MTB') && !s ? !x.s : x.p === p)).map(x => x.n);
+  return p + s + String((nums.length ? Math.max(...nums) : 0) + 1).padStart(ancho, '0');
+}
+function abrirForm(e) {
+  const nuevo = !e; e = e ? copia(e) : { cat: F.cat || 'MTC' };
+  const md = $('#modal'), c0 = CAT[e.cat] || CATS[0];
+  const areas = [...new Set(lista().map(areaDe))].sort();
+  const inp = (k, ph = '') => '<label class="f">' + esc(ETQ[k]) + '<input name="' + k + '" value="' + esc(e[k] || '') + '" placeholder="' + esc(ph) + '"' + (k === 'ubic' ? ' list="dlAreas"' : '') + '></label>';
+  const pers = String(e.periodo || '').split('/').map(x => norm(x.trim()));
+  md.innerHTML = '<div class="hoja"><div class="cab" style="--c:' + c0.c + '">' + svg(nuevo ? 'camara' : c0.ic) + '<div style="flex:1"><h2>' + (nuevo ? '➕ Alta de equipo nuevo' : '✏ Modificar ' + esc(e.clave)) + '</h2><p>' + (nuevo ? 'Llena lo que tengas; lo demás se completa después.' : esc(nombreDe(e))) + '</p></div><button class="x" type="button">✕</button></div>' +
+    '<form class="cuerpo" autocomplete="off"><datalist id="dlAreas">' + areas.map(a => '<option value="' + esc(a) + '">').join('') + '</datalist>' +
+    '<div class="formsec"><h4>🆔 Identificación</h4><div class="grid g3">' +
+      '<label class="f">Categoría<select name="cat"' + (!nuevo && !esAdmin() ? ' disabled' : '') + '>' + CATS.map(c => '<option value="' + c.k + '"' + (c.k === e.cat ? ' selected' : '') + '>' + c.k + ' · ' + c.n + '</option>').join('') + '</select></label>' +
+      inp('corto', 'Ej.: Taladro, Aire Mirage') +
+      '<label class="f">Clave de control LI<input name="clave" value="' + esc(e.clave || '') + '" style="font-family:Consolas,monospace;font-weight:800;text-transform:uppercase"' + (!nuevo && !esAdmin() ? ' readonly' : '') + '><span class="small muted" id="clSug"></span></label>' +
+      inp('nombre', 'Ej.: Taladro 31') + inp('eco', 'Si ya tiene número pintado') + '</div></div>' +
+    (nuevo ? '<div class="formsec"><h4>📸 Fotos</h4><div class="grid g2">' +
+      '<div class="fotoin"><div class="prev" id="pvfm">' + svg('camara', '').replace('<svg', '<svg style="width:36px;height:36px;color:#9AA5B1"') + '</div><div><b>Foto del equipo</b><br><button class="btn sm" type="button" data-pf="fm">📷 Tomar</button> <button class="btn sm" type="button" data-pg="fm">🖼 Galería</button></div></div>' +
+      '<div class="fotoin"><div class="prev" id="pvfp">' + svg('placa', '').replace('<svg', '<svg style="width:36px;height:36px;color:#9AA5B1"') + '</div><div><b>Placa de datos</b><br><button class="btn sm" type="button" data-pf="fp">📷 Tomar</button> <button class="btn sm" type="button" data-pg="fp">🖼 Galería</button></div></div></div></div>' : '') +
+    '<div class="formsec"><h4>🏷 Datos de placa</h4><div class="grid g3">' + ['fab', 'marca', 'modelo', 'serie', 'kw', 'kwh', 'w', 'amp', 'vc', 'vo', 'aceite', 'ffab'].map(k => inp(k)).join('') + '</div></div>' +
+    '<div class="formsec"><h4>🛠 Mantenimiento</h4><div style="margin-bottom:8px"><b class="small muted">PERIODO DE MANTENIMIENTO</b><br>' + PERIODOS.map(p => '<label class="chk"><input type="checkbox" name="per" value="' + p[0] + '"' + (pers.includes(norm(p[0])) ? ' checked' : '') + '><span class="per" style="background:' + p[2] + '">' + p[1] + '</span>' + p[0] + '</label>').join('') + '</div>' +
+      '<div class="grid g3">' + ['lub', 'finst', 'vida', 'hdia', 'htot'].map(k => inp(k)).join('') + '</div></div>' +
+    '<div class="formsec"><h4>📍 Ubicación y proveedor</h4><div class="grid g3">' + inp('ubic', 'Elige o escribe el área') + ['prov', 'tel', 'poliza'].map(k => inp(k)).join('') + '</div>' +
+      '<label class="f" style="margin-top:10px">' + ETQ.obs + '<textarea name="obs">' + esc(e.obs || '') + '</textarea></label></div>' +
+    '<p class="small" id="fMsg" style="color:var(--rojo);margin:0"></p>' +
+    '<div class="row"><button class="btn ok big" type="submit">💾 Guardar</button><button class="btn big" type="button" id="cancel">Cancelar</button></div></form></div>';
+  md.classList.add('on'); md.scrollTop = 0; document.body.style.overflow = 'hidden';
+  const f = $('form', md), fotosN = {};
+  const sug = () => { if (!nuevo) return; const cl = siguienteClave(f.cat.value, f.corto.value); if (!f.clave.dataset.tocada) f.clave.value = cl; $('#clSug').textContent = 'Sugerida: ' + cl; };
+  f.cat.onchange = () => { sug(); $('.cab', md).style.setProperty('--c', CAT[f.cat.value].c); }; f.corto.oninput = sug; f.clave.oninput = () => { f.clave.dataset.tocada = 1; };
+  sug();
+  $$('[data-pf],[data-pg]', md).forEach(b => b.onclick = async () => { const k = b.dataset.pf || b.dataset.pg, fl = await pedirFoto(!!b.dataset.pf); if (!fl) return; fotosN[k] = fl; const u = URL.createObjectURL(fl); $('#pv' + k).innerHTML = '<img src="' + u + '" alt="">'; });
+  $('.cab .x', md).onclick = () => nuevo ? cerrarModal() : abrirFicha(e.id);
+  $('#cancel').onclick = $('.cab .x', md).onclick;
+  f.onsubmit = async ev => {
+    ev.preventDefault(); const msg = $('#fMsg'); msg.textContent = '';
+    const o = {}; CAMPOS.forEach(([k]) => { if (f[k] && f[k].tagName !== 'SELECT' && k !== 'cat') o[k] = f[k].value.trim(); });
+    o.periodo = $$('input[name=per]:checked', f).map(x => x.value).join(' / ');
+    o.cat = f.cat.value; o.catN = CAT[o.cat].n; o.clave = f.clave.value.trim().toUpperCase();
+    if (!o.corto && !o.nombre) { msg.textContent = 'Escribe por lo menos el nombre del equipo.'; return; }
+    if (!o.clave) { msg.textContent = 'Falta la clave de control.'; return; }
+    const dup = Object.values(D.eq).find(x => x.id !== e.id && compacto(x.clave) === compacto(o.clave));
+    if (dup) { msg.textContent = 'La clave ' + o.clave + ' ya es de ' + nombreDe(dup) + '. Usa otra.'; return; }
+    if (!o.nombre) o.nombre = o.corto;
+    const btn = $('button[type=submit]', f); btn.disabled = true; btn.textContent = 'Guardando…';
+    try {
+      if (nuevo) {
+        o.id = nuevoId('n'); o.no = Math.max(0, ...Object.values(D.eq).map(x => +x.no || 0)) + 1; o.alta = sello(); o.pk = llavePlan(o.corto, o.eco || o.no);
+        for (const k of Object.keys(fotosN)) o[k] = await subirFoto(fotosN[k]);
+        if (D.cargado[o.cat] === 'no') await DB.doc('cat/' + o.cat).set({ items: {} });
+        await DB.doc('cat/' + o.cat).update({ items: { [o.id]: o } });
+        D.eq[o.id] = Object.assign(o, {});
+        registrarCambio('Alta', o, 'Equipo nuevo');
+        toast('✅ ' + o.clave + ' dado de alta'); abrirFicha(o.id);
+      } else {
+        const ant = D.eq[e.id], cambios = {};
+        Object.keys(o).forEach(k => { if (String(ant[k] || '') !== String(o[k] || '')) cambios[k] = o[k]; });
+        if (!Object.keys(cambios).length) { abrirFicha(e.id); return; }
+        if (cambios.cat) { // cambio de categoría: se mueve de documento
+          const mov = Object.assign(copia(ant), cambios, { mod: sello() }); delete mov.cat;
+          if (D.cargado[o.cat] === 'no') await DB.doc('cat/' + o.cat).set({ items: {} });
+          await DB.doc('cat/' + o.cat).update({ items: { [e.id]: Object.assign(mov, { cat: o.cat }) } });
+          await DB.doc('cat/' + ant.cat).update({ items: { [e.id]: { __delete__: true } } });
+          registrarCambio('Modificación', Object.assign({}, ant, o), 'Cambio de categoría ' + ant.cat + ' → ' + o.cat);
+          D.eq[e.id] = Object.assign(mov, { id: e.id, cat: o.cat }); toast('✅ Guardado');
+        } else await guardarCampos(ant, cambios, 'Modificación');
+        abrirFicha(e.id);
+      }
+    } catch (x) { msg.textContent = 'No se pudo guardar: ' + (x.message || x.code || x); btn.disabled = false; btn.textContent = '💾 Guardar'; }
+  };
+}
+
+// ---- refacciones del equipo
+function formRef(e, idx) {
+  const R = copia(e.refs || []), r = idx != null ? R[idx] : {}, nueva = idx == null;
+  if (!nueva && !puede(e.cat)) return toast('🔒 Sin permiso para modificar ' + e.cat);
+  const md = $('#modal'), c = CAT[e.cat];
+  md.innerHTML = '<div class="hoja" style="max-width:640px"><div class="cab" style="--c:' + c.c + '"><span style="font-size:44px">🔩</span><div style="flex:1"><h2>' + (nueva ? 'Agregar refacción' : 'Editar refacción') + '</h2><p>' + esc(e.clave + ' · ' + nombreDe(e)) + '</p></div><button class="x" type="button">✕</button></div>' +
+    '<form class="cuerpo"><div class="fotoin"><div class="prev" id="pvr" style="width:120px;height:96px">' + (r.f ? '<img data-foto="' + r.f + '" alt="">' : '<span style="font-size:34px">🔩</span>') + '</div><div><b>Foto de la pieza</b><br><button class="btn sm" type="button" id="rCam">📷 Tomar</button> <button class="btn sm" type="button" id="rGal">🖼 Galería</button><p class="small muted" style="margin:4px 0 0">Que se vea la etiqueta o el número de la pieza.</p></div></div>' +
+    '<div class="grid g2"><label class="f">Nombre de la pieza *<input name="n" value="' + esc(r.n || '') + '" placeholder="Ej.: Rodamiento, banda, capacitor" required></label>' +
+    '<label class="f">Modelo exacto<input name="mod" value="' + esc(r.mod || '') + '" placeholder="Ej.: 6205-2RS, A-42, 35+5 µF" style="font-family:Consolas,monospace;font-weight:700"></label>' +
+    '<label class="f">Marca<input name="marca" value="' + esc(r.marca || '') + '"></label><label class="f">Número de parte<input name="np" value="' + esc(r.np || '') + '"></label>' +
+    '<label class="f">Cantidad que lleva el equipo<input name="cant" value="' + esc(r.cant || '') + '"></label><label class="f">Código en almacén<input name="alm" value="' + esc(r.alm || '') + '" placeholder="Ej.: SLX-012"></label></div>' +
+    '<label class="f">Nota<textarea name="nota" placeholder="Dónde va, cada cuánto se cambia, proveedor…">' + esc(r.nota || '') + '</textarea></label>' +
+    '<div class="row"><button class="btn ok big" type="submit">💾 Guardar</button>' + (!nueva ? '<button class="btn peligro" type="button" id="rDel">🗑 Quitar</button>' : '') + '<button class="btn" type="button" id="rCan">Cancelar</button></div></form></div>';
+  md.scrollTop = 0; cargarFotos(md);
+  let fl = null; const f = $('form', md);
+  const tomar = async cam => { const x = await pedirFoto(cam); if (!x) return; fl = x; $('#pvr').innerHTML = '<img src="' + URL.createObjectURL(x) + '" alt="">'; };
+  $('#rCam').onclick = () => tomar(true); $('#rGal').onclick = () => tomar(false);
+  $('.cab .x', md).onclick = $('#rCan').onclick = () => abrirFicha(e.id);
+  const del = $('#rDel'); if (del) del.onclick = async () => { if (!confirm('¿Quitar ' + r.n + ' de este equipo?')) return; R.splice(idx, 1); await guardarCampos(D.eq[e.id], { refs: R }, 'Refacción quitada: ' + r.n); abrirFicha(e.id); };
+  f.onsubmit = async ev => { ev.preventDefault(); const b = $('button[type=submit]', f); b.disabled = true; b.textContent = 'Guardando…';
+    const o = { n: f.n.value.trim(), mod: f.mod.value.trim(), marca: f.marca.value.trim(), np: f.np.value.trim(), cant: f.cant.value.trim(), alm: f.alm.value.trim(), nota: f.nota.value.trim(), f: r.f || '' };
+    try { if (fl) o.f = await subirFoto(fl); o.t = new Date().toISOString(); o.por = YO.nom;
+      if (nueva) R.push(o); else R[idx] = o;
+      await guardarCampos(D.eq[e.id], { refs: R }, (nueva ? 'Refacción agregada: ' : 'Refacción editada: ') + o.n); abrirFicha(e.id);
+    } catch (x) { toast('⚠ ' + (x.message || x)); b.disabled = false; b.textContent = '💾 Guardar'; } };
+}
+
+// lee las hojas mensuales del PLAN MAESTRO (bloques por semana: fila de fechas, fila "EQUIPOS | OT | BITÁCORA FÍSICA | EM | % EJECUCIÓN | FR | CAT")
+async function importarPlan(buf, nombre) {
+  toast('📥 Leyendo ' + nombre + '…', 4000);
+  try { await cargarScript('https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js'); } catch (x) { return toast('⚠ No se pudo cargar el lector de Excel'); }
+  const wb = new ExcelJS.Workbook(); await wb.xlsx.load(buf);
+  const val = c => { let v = c && c.value; if (v && typeof v === 'object' && !(v instanceof Date)) v = v.result !== undefined ? v.result : v.richText ? v.richText.map(x => x.text).join('') : v.text !== undefined ? v.text : ''; return v == null ? '' : v; };
+  const fecha = v => { if (v instanceof Date) return v.toISOString().slice(0, 10); if (typeof v === 'number' && v > 30000) return new Date(Date.UTC(1899, 11, 30) + v * 864e5).toISOString().slice(0, 10); return ''; };
+  const porMes = {};
+  wb.worksheets.forEach(ws => {
+    if (!/^(ENE|FEB|MAR|ABR|MAY|JUN|JUL|AGO|SEP|OCT|NOV|DIC)\s+\d{4}$/i.test(ws.name.trim())) return;
+    const filasH = [];
+    ws.eachRow((row, r) => { row.eachCell((c, k) => { if (String(val(c)).trim().toUpperCase() === 'EQUIPOS') filasH.push([r, k]); }); });
+    const filasUnicas = [...new Set(filasH.map(x => x[0]))].sort((a, b) => a - b);
+    filasH.forEach(([r, k]) => {
+      const f = fecha(val(ws.getCell(r - 1, k))); if (!f) return;
+      const fin = filasUnicas.find(x => x > r) || ws.rowCount + 1;
+      for (let i = r + 1; i < fin - 2; i++) {
+        const eq = String(val(ws.getCell(i, k))).trim(); if (!eq || /sin actividades|^semana/i.test(eq)) continue;
+        if (!eq.includes('·')) continue;
+        const ref = eq.split('·').pop().trim(), corto = eq.slice(0, eq.lastIndexOf('·')).trim();
+        const g = j => String(val(ws.getCell(i, k + j))).trim();
+        (porMes[f.slice(0, 7)] = porMes[f.slice(0, 7)] || []).push({ f, eq, k: llavePlan(corto, ref), ot: g(1), bit: g(2), em: g(3), pct: Number(g(4)) || 0, fr: g(5), cat: g(6) });
+      }
+    });
+  });
+  const ms = Object.keys(porMes).sort();
+  if (!ms.length) return toast('⚠ No encontré hojas de meses con actividades en ese archivo');
+  const imp = Object.assign(sello(), { arch: nombre });
+  for (const mm of ms) await DB.doc('hist/' + mm).set({ r: porMes[mm], imp });
+  ms.forEach(mm => D.hist[mm] = { r: porMes[mm], imp });
+  const tot = ms.reduce((s, mm) => s + porMes[mm].length, 0), sinEq = Object.values(porMes).flat().filter(r => !equipoDePlan(r)).length;
+  registrarCambio('Plan maestro', { id: '-', clave: '-', cat: '-' }, nombre + ': ' + tot + ' actividades (' + ms.join(', ') + ')');
+  toast('✅ Programa cargado: ' + tot + ' actividades de ' + ms.length + ' meses' + (sinEq ? ' · ' + sinEq + ' sin equipo identificado' : ''), 6000);
+  pintar();
+}
+
+// ===================== vista: configuración (administradores) =====================
+function vConfig(m) {
+  if (!esAdmin()) { tab = 'inicio'; return pintar(); }
+  const P = D.personal, gen = esGeneral(), X = D.excel;
+  const filas = Object.entries(P).sort((a, b) => (a[1].n || '').localeCompare(b[1].n || ''));
+  const imp = Object.values(D.hist).map(h => h.imp).filter(Boolean).sort((a, b) => String(b.t).localeCompare(String(a.t)))[0];
+  m.innerHTML = '<h2 style="margin-top:18px">⚙ Configuración</h2>' +
+    '<div class="card"><h2>📊 Excel de la base de datos</h2><p class="muted small" style="margin-top:-6px">Actualiza <b>tu mismo archivo</b> Base de Datos Actualizado.xlsx columna por columna (respeta su formato): datos de cada equipo, altas nuevas, <b>equipo depreciado</b> y al final clave de control, salud, vida consumida y recomendación. Se actualiza cada <b>viernes</b> desde una computadora con Edge o Chrome; esa versión queda como respaldo en la nube y es la que descargan todos.</p>' +
+      '<div class="row"><button class="btn pri" id="xAct">🔄 Actualizar el Excel ahora</button><button class="btn" id="xCam">📁 Elegir / cambiar el archivo</button><button class="btn" id="xDes">⬇ Descargar la última versión</button></div>' +
+      '<p class="small muted" id="xEst">' + (X ? 'Última actualización: ' + horaTxt(X.t) + ' por ' + esc(X.n || X.por || '') + ' · ' + esc(X.nombre || '') + ' (' + (X.kb || '?') + ' KB)' : 'Todavía no se ha actualizado desde la app.') + '</p></div>' +
+    '<div class="card" style="margin-top:14px"><h2>📥 Programa de mantenimiento (PLAN MAESTRO)</h2><p class="muted small" style="margin-top:-6px">Carga el Excel <b>PLAN MAESTRO MENSUAL</b> cada que lo actualicen. Los mantenimientos con <b>50 % o 100 %</b> de ejecución aparecen en la ficha de cada equipo (quién, cuándo, qué día y cuántas horas) y en su PDF.</p>' +
+      '<div class="row"><button class="btn pri" id="impPlan">📥 Cargar PLAN MAESTRO (Excel)</button><input type="file" id="planF" accept=".xlsx" hidden></div>' +
+      '<p class="small muted">' + (imp ? 'Cargado ' + horaTxt(imp.t) + ' por ' + esc(imp.n || imp.por) + ' · ' + esc(imp.arch || '') + ' · ' + planTodo().length + ' actividades, ' + planTodo().filter(r => pctDe(r) >= 50).length + ' realizadas' : 'Todavía no se ha cargado.') + '</p></div>' +
+    '<div class="card" style="margin-top:14px"><h2>👥 Personal y permisos</h2><p class="muted small" style="margin-top:-6px">Administradores: modifican todo. Usuarios: consultan, agregan equipos y fotos; solo <b>modifican</b> las categorías que les marques.' + (gen ? '' : ' (Solo el administrador general cambia permisos.)') + '</p>' +
+      '<div class="tabla"><table class="t"><thead><tr><th>Nómina</th><th>Nombre</th><th>Rol</th><th>Activo</th><th>Puede modificar (usuarios)</th></tr></thead><tbody>' + filas.map(([n, u]) =>
+        '<tr data-n="' + esc(n) + '"><td><b>' + esc(n) + '</b></td><td>' + esc(u.n) + '</td><td>' + (gen && n !== YO.nom ? '<select data-k="r">' + ['general', 'admin', 'usuario'].map(r => '<option value="' + r + '"' + (u.r === r || (r === 'usuario' && !['general', 'admin'].includes(u.r)) ? ' selected' : '') + '>' + ({ general: 'Admin. general', admin: 'Administrador', usuario: 'Usuario' }[r]) + '</option>').join('') + '</select>' : esc({ general: 'Admin. general', admin: 'Administrador' }[u.r] || 'Usuario')) + '</td>' +
+        '<td><input type="checkbox" data-k="a"' + (u.a !== false ? ' checked' : '') + (gen && n !== YO.nom ? '' : ' disabled') + '></td>' +
+        '<td>' + (['general', 'admin'].includes(u.r) ? '<span class="muted small">Todo</span>' : CATS.map(c => '<label class="chk" style="padding:2px 7px"><input type="checkbox" data-c="' + c.k + '"' + ((u.cats || []).includes(c.k) ? ' checked' : '') + (gen ? '' : ' disabled') + '><b style="color:' + c.c + '">' + c.k + '</b></label>').join('')) + '</td></tr>').join('') + '</tbody></table></div>' +
+      (gen ? '<form class="row" id="pAdd" style="margin-top:10px"><input name="n" placeholder="Nómina" inputmode="numeric" style="max-width:120px" required><input name="nom" placeholder="Nombre completo" style="max-width:320px" required><button class="btn ok">➕ Agregar persona</button></form><p class="small muted">Para entrar desde otra tableta la persona debe tener cuenta en Control de Paros (la sesión del equipo se abre una sola vez).</p>' : '') + '</div>' +
+    '<div class="card" style="margin-top:14px"><h2>🕘 Registro de altas y modificaciones</h2><div id="cambios" class="muted small">Cargando…</div></div>' +
+    '<div class="card" style="margin-top:14px"><h2>🗑 Equipos dados de baja</h2>' + (Object.values(D.eq).filter(e => e.baja).map(e => '<div class="row" style="border-bottom:1px solid var(--line);padding:6px 0"><b>' + esc(e.clave) + '</b> ' + esc(nombreDe(e)) + ' <span class="muted small">· ' + horaTxt(e.baja.t) + ' · ' + esc(e.baja.n || '') + ' · ' + esc(e.baja.motivo || '') + '</span><span class="esp"></span><button class="btn sm" data-res="' + e.id + '">↩ Restaurar</button></div>').join('') || '<p class="muted small">Ninguno.</p>') + '</div>';
+  $('#xAct').onclick = () => actualizarExcel(false);
+  $('#xCam').onclick = () => actualizarExcel(true);
+  $('#xDes').onclick = descargarExcel;
+  $('#impPlan').onclick = () => $('#planF').click();
+  $('#planF').onchange = ev => { const fl = ev.target.files[0]; if (fl) fl.arrayBuffer().then(b => importarPlan(b, fl.name)); };
+  $$('[data-res]', m).forEach(b => b.onclick = () => guardarCampos(D.eq[b.dataset.res], { baja: { __delete__: true } }, 'Restaurado').then(pintar));
+  if (gen) {
+    $$('tr[data-n]', m).forEach(tr => $$('select,input', tr).forEach(x => x.onchange = () => {
+      const n = tr.dataset.n, u = copia(P[n]);
+      if (x.dataset.k === 'r') u.r = x.value; else if (x.dataset.k === 'a') u.a = x.checked; else { const s = new Set(u.cats || []); x.checked ? s.add(x.dataset.c) : s.delete(x.dataset.c); u.cats = [...s]; }
+      const np = copia(P); np[n] = u; DB.doc('config/personal').set({ p: np }).then(() => toast('✅ Permisos guardados')).catch(e => toast('⚠ ' + (e.message || e)));
+    }));
+    $('#pAdd').onsubmit = ev => { ev.preventDefault(); const f = ev.target, n = f.n.value.trim(); if (P[n]) return toast('Esa nómina ya está');
+      const np = copia(P); np[n] = { n: f.nom.value.trim().toUpperCase(), r: 'usuario', a: true, cats: [] }; DB.doc('config/personal').set({ p: np }).then(() => toast('✅ Agregado')); };
+  }
+  DB.collection('cambios').orderBy('t', 'desc').limit(150).get().then(s => { const R = s.docs.map(d => d.data()), c = $('#cambios'); if (!c) return;
+    c.innerHTML = R.length ? '<div class="tabla"><table class="t"><thead><tr><th>Cuándo</th><th>Quién</th><th>Qué</th><th>Equipo</th><th>Detalle</th></tr></thead><tbody>' + R.map(r => '<tr><td>' + horaTxt(r.t) + '</td><td>' + esc(r.n || r.por) + '</td><td>' + esc(r.acc) + '</td><td><b>' + esc(r.clave) + '</b> ' + esc(r.nombre || '') + '</td><td>' + esc(r.det) + '</td></tr>').join('') + '</tbody></table></div>' : 'Sin cambios todavía.'; }).catch(() => {});
+}
+
+// ===================== Excel: se actualiza el mismo archivo (columna por columna) =====================
+const XLSX_TIPO = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+const EXCELJS = 'https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js';
+const XLS_EXTRA = [['Clave de control LI', 13], ['Salud (0 a 100)', 10], ['Estado de salud', 12], ['Años en planta', 9], ['Vida útil (años)', 9], ['Vida consumida %', 10],
+  ['Recomendación', 34], ['Fotos (equipo / placa)', 11], ['Refacciones registradas', 11], ['Mantenimientos realizados (plan ≥ 50 %)', 14], ['Última modificación en la app', 16]];
+const valCelda = c => { let v = c && c.value; if (v && typeof v === 'object' && !(v instanceof Date)) v = v.result !== undefined ? v.result : v.richText ? v.richText.map(x => x.text).join('') : v.text !== undefined ? v.text : ''; return v == null ? '' : v; };
+const estilo = c => JSON.parse(JSON.stringify(c.style || {}));
+async function rellenarExcel(buf) {
+  await cargarScript(EXCELJS);
+  const wb = new ExcelJS.Workbook(); await wb.xlsx.load(buf);
+  const inv = wb.getWorksheet('Inventario'); if (!inv) throw new Error('El archivo no tiene la hoja Inventario');
+  let hr = 0; for (let r = 1; r <= 12 && !hr; r++) if (String(valCelda(inv.getCell(r, 1))).trim() === 'No.') hr = r;
+  if (!hr) throw new Error('No encontré el encabezado "No." en la hoja Inventario');
+  const filaDe = {}; let ult = hr;
+  for (let r = hr + 1; r <= Math.max(inv.rowCount, hr + 1); r++) { const n = Number(valCelda(inv.getCell(r, 1))); if (n) { filaDe[n] = r; ult = r; } }
+  const h30 = inv.getCell(hr, 30);
+  XLS_EXTRA.forEach(([t, w], i) => { const c = inv.getCell(hr, 31 + i); c.value = t; c.style = estilo(h30); inv.getColumn(31 + i).width = w; });
+  const NCOL = 30 + XLS_EXTRA.length, TXT = ['serie', 'modelo', 'eco', 'tel', 'nombre', 'periodo', 'ffab', 'finst', 'vida', 'htot', 'kw', 'amp', 'vc', 'vo', 'w', 'kwh'];
+  let nuevos = 0, cambiados = 0;
+  for (const e of Object.values(D.eq).sort((a, b) => (+a.no || 0) - (+b.no || 0))) {
+    let r = filaDe[+e.no];
+    if (!r) { r = ++ult; filaDe[+e.no] = r; nuevos++; for (let k = 1; k <= NCOL; k++) inv.getCell(r, k).style = estilo(inv.getCell(r - 1, k)); }
+    const S = salud(e);
+    CAMPOS.forEach(([k], j) => {
+      let v = k === 'no' ? +e.no : k === 'catN' ? (CAT[e.cat] || {}).n || e.catN : k === 'cat' ? e.cat : k === 'dep' ? depTexto(S) : (e[k] == null ? '' : String(e[k]));
+      if (k === 'obs' && e.baja) v = 'DADO DE BAJA ' + fechaTxt(String(e.baja.t).slice(0, 10)) + ' (' + (e.baja.motivo || '') + ')' + (v ? ' · ' + v : '');
+      if (typeof v === 'string' && /^-?\d+(\.\d+)?$/.test(v) && !TXT.includes(k)) v = +v;
+      const c = inv.getCell(r, j + 1), ant = valCelda(c);
+      if (String(ant) !== String(v)) { c.value = v === '' ? null : v; cambiados++; }
+    });
+    [e.clave, S.indice == null ? '' : S.indice, S.estado, S.edad == null ? '' : Math.round(S.edad * 10) / 10, S.vida || '', S.consumo == null ? '' : Math.round(S.consumo * 100), S.recom,
+      (e.fm ? 'Sí' : 'No') + ' / ' + (e.fp ? 'Sí' : 'No'), (e.refs || []).length, realizados(e).length, e.mod ? horaTxt(e.mod.t) + ' · ' + (e.mod.n || e.mod.por || '') : '']
+      .forEach((v, i) => { const c = inv.getCell(r, 31 + i); c.value = v === '' ? null : v; if (r === hr + 1 || !c.style || !Object.keys(c.style).length) c.style = estilo(inv.getCell(r, 30)); });
+    const ce = inv.getCell(r, 33); ce.font = Object.assign({}, ce.font || {}, { bold: true, color: { argb: 'FF' + S.color.slice(1).toUpperCase() } });
+  }
+  (inv.conditionalFormattings || []).forEach(cf => { cf.ref = String(cf.ref).replace(/(\d+)$/, String(ult)); });
+  inv.autoFilter = { from: { row: hr, column: 1 }, to: { row: ult, column: NCOL } };
+  for (let r = 1; r < hr; r++) { const c = inv.getCell(r, 1), t = String(valCelda(c)); if (/Base de datos de planta/i.test(t)) { c.value = t.replace(/ · Actualizada desde la app[^·]*$/, '') + ' · Actualizada desde la app Base de Datos LI el ' + fechaTxt(hoyISO()); } }
+  // Por revisar: se rehace con los datos "por verificar" de hoy
+  const pr = wb.getWorksheet('Por revisar');
+  if (pr) {
+    let ph = 0; for (let r = 1; r <= 12 && !ph; r++) if (String(valCelda(pr.getCell(r, 1))).trim() === 'No.') ph = r;
+    if (ph) {
+      const est = [1, 2, 3, 4, 5].map(k => estilo(pr.getCell(ph + 1, k)));
+      for (let r = ph + 1; r <= pr.rowCount; r++) for (let k = 1; k <= 5; k++) pr.getCell(r, k).value = null;
+      const nRev = Object.values(D.eq).filter(e => !e.baja && CAMPOS.some(([k]) => verif(e[k]))).length; (pr.conditionalFormattings || []).forEach(cf => { cf.ref = String(cf.ref).replace(/(\d+)$/, String(Math.max(ph + 1, ph + nRev))); });
+      Object.values(D.eq).filter(e => !e.baja && CAMPOS.some(([k]) => verif(e[k]))).sort((a, b) => (+a.no || 0) - (+b.no || 0)).forEach((e, i) => {
+        [+e.no, nombreDe(e), e.eco || e.clave, e.cat, CAMPOS.filter(([k]) => verif(e[k])).map(([k, n]) => n + ': ' + e[k]).join(' · ')].forEach((v, k) => { const c = pr.getCell(ph + 1 + i, k + 1); c.value = v; c.style = est[k]; });
+      });
+    }
+  }
+  wb.calcProperties = Object.assign({}, wb.calcProperties || {}, { fullCalcOnLoad: true });
+  return { blob: new Blob([await wb.xlsx.writeBuffer()], { type: XLSX_TIPO }), nuevos, cambiados, filas: ult - hr };
+}
+const aBase64 = blob => new Promise((ok, no) => { const fr = new FileReader(); fr.onload = () => ok(String(fr.result).split(',')[1]); fr.onerror = no; fr.readAsDataURL(blob); });
+async function actualizarExcel(elegir) {
+  const est = $('#xEst'), avisa = t => { if (est) est.textContent = t; toast(t, 4000); };
+  if (!window.showOpenFilePicker) return avisa('⚠ Para actualizar el Excel abre la app en Edge o Chrome de una computadora.');
+  try {
+    let h = elegir ? null : await IDB.get('kv', 'xlsBase');
+    if (h && (await h.queryPermission({ mode: 'readwrite' })) !== 'granted' && (await h.requestPermission({ mode: 'readwrite' })) !== 'granted') h = null;
+    if (!h) {
+      avisa('📁 Elige tu archivo Base de Datos Actualizado.xlsx (MANTENIMIENTO 2026 › BASE DE DATOS PLANTA)');
+      [h] = await window.showOpenFilePicker({ types: [{ description: 'Excel', accept: { [XLSX_TIPO]: ['.xlsx'] } }], excludeAcceptAllOption: true });
+      if ((await h.requestPermission({ mode: 'readwrite' })) !== 'granted') throw new Error('Sin permiso para escribir el archivo');
+      await IDB.set('kv', 'xlsBase', h);
+    }
+    avisa('⏳ Actualizando ' + h.name + '…');
+    const r = await rellenarExcel(await (await h.getFile()).arrayBuffer());
+    const w = await h.createWritable(); await w.write(r.blob); await w.close();
+    // respaldo en la nube: es la versión que descargan todos (la anterior queda como respaldo)
+    const b64 = await aBase64(r.blob), meta = Object.assign(sello(), { nombre: h.name, kb: Math.round(r.blob.size / 1024), dia: hoyISO(), filas: r.filas });
+    if (b64.length < 950000) { try { const a = await DB.doc('excel/actual').get(); if (a.exists) await DB.doc('excel/anterior').set(a.data()); } catch (x) {} await DB.doc('excel/actual').set(Object.assign({ b64 }, meta)); }
+    D.excel = meta; await DB.doc('config/ajustes').set(Object.assign({}, D.ajustes, { ultExcel: meta })).catch(() => {});
+    registrarCambio('Excel actualizado', { id: '-', clave: '-', cat: '-' }, h.name + ': ' + r.filas + ' equipos, ' + r.nuevos + ' nuevos, ' + r.cambiados + ' celdas cambiadas');
+    avisa('✅ Excel actualizado: ' + r.filas + ' equipos · ' + r.nuevos + ' nuevos · ' + r.cambiados + ' celdas cambiadas');
+    const b = $('#avViernes'); if (b) b.remove();
+  } catch (x) { if (x && x.name === 'AbortError') return avisa('Cancelado'); avisa('⚠ No se pudo actualizar: ' + (x.message || x)); }
+}
+async function descargarExcel() {
+  try {
+    const s = await DB.doc('excel/actual').get();
+    if (!s.exists || !s.data().b64) return toast('Todavía no hay una versión del Excel. Un administrador debe actualizarlo (cada viernes).', 4000);
+    const d = s.data(), bin = atob(d.b64), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([u8], { type: XLSX_TIPO })); a.download = d.nombre || 'Base de Datos Actualizado.xlsx';
+    document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 3000);
+    toast('⬇ Excel actualizado al ' + horaTxt(d.t));
+  } catch (x) { toast('⚠ No se pudo descargar: ' + (x.message || x)); }
+}
+
+// ===================== avisos para administradores =====================
+function avisosArriba() {
+  let h = window.DEMO ? '<div class="aviso ambar">🧪 <b>Versión de PRUEBA en esta PC:</b> puedes buscar, abrir fichas, subir fotos, dar altas, ver el PDF y actualizar el Excel, pero lo que captures en la app se borra al cerrar o recargar. La versión en línea guarda todo en la nube.</div>' : '';
+  if (!esAdmin()) return h;
+  const viernes = new Date().getDay() === 5, hecho = D.ajustes.ultExcel && D.ajustes.ultExcel.dia === hoyISO();
+  if (viernes && !hecho) h += '<div class="aviso verde" id="avViernes">📊 <b>Hoy es viernes:</b> carga el PLAN MAESTRO si cambió y actualiza el Excel de la base de datos. <button class="btn sm ok" id="avX">🔄 Actualizar Excel</button></div>';
+  return h;
+}
+function avisosEnlazar() { const b = $('#avX'); if (b) b.onclick = () => actualizarExcel(false); const d = $('#xBaja'); if (d) d.onclick = descargarExcel; }
+function tareasAdmin() { /* reservado: avisos al abrir */ }
+// instalar como aplicación en la tablet, el celular o la PC
+let pedirInstalar = null;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); pedirInstalar = e; $('#btnInstalar').hidden = false; });
+window.addEventListener('appinstalled', () => { pedirInstalar = null; $('#btnInstalar').hidden = true; toast('Listo: "Base de Datos LI" quedó instalada con su ícono.'); });
+$('#btnInstalar').onclick = async () => { if (!pedirInstalar) return; pedirInstalar.prompt(); try { await pedirInstalar.userChoice; } catch (e) {} pedirInstalar = null; $('#btnInstalar').hidden = true; };
+</script>
+<script>if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});</script>
+</body></html>
