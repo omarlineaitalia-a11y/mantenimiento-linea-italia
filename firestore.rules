@@ -40,9 +40,13 @@ service cloud.firestore {
     function esAdmin(app) {
       return enPersonal(app) && persona(app).r in ['admin', 'general'];
     }
+    // Compras de Mantenimiento: los costos solo los leen y escriben administradores (admin/general) de 'compras'
+    function soloAdmin(app, col) {
+      return app == 'compras' && col == 'costos';
+    }
     match /apps/{app}/{col}/{rest=**} {
-      allow read: if enPersonal(app);
-      allow write: if (enPersonal(app) && (col != 'config' || esAdmin(app)))
+      allow read: if enPersonal(app) && (!soloAdmin(app, col) || esAdmin(app));
+      allow write: if (enPersonal(app) && (col != 'config' || esAdmin(app)) && (!soloAdmin(app, col) || esAdmin(app)))
                    || (request.auth != null && !hayPersonal(app));
     }
     // versión vigente de cada cuenta: la pública (por huella) sirve para entrar; la privada la revisan estas reglas
