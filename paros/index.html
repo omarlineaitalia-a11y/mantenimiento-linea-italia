@@ -1314,7 +1314,7 @@ function renderCfg(){
   $('cfgLock').hidden = !!S.admin; $('cfgBody').hidden = !S.admin;
   if (!S.admin) return;
   $('cfgQuien').textContent = 'Sesión de configuración: ' + S.admin.n + ' · ' + ROLES[S.admin.r];
-  document.querySelectorAll('.ctabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.ct === S.ct));
+  document.querySelectorAll('#v-cfg .ctabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.ct === S.ct));
   ['per','maq','pan','apa'].forEach(x => $('ct-'+x).hidden = x !== S.ct);
   if (S.ct === 'apa' && !S.apaDraft) llenarApa();
   if (S.ct !== 'apa' && S.apaDraft) { S.apaDraft = null; applyApa(S.apa); }
@@ -1349,7 +1349,7 @@ $('fApa').addEventListener('submit', async e => {
   const d = leerApa();
   if (await upd('config/apariencia', d, 'Apariencia y descarga guardadas para todos los equipos')) { S.apa = Object.assign({}, DEF_A, d); S.apaDraft = Object.assign({}, S.apa); applyApa(S.apa); }
 });
-document.querySelector('.ctabs').addEventListener('click', e => { const b = e.target.closest('[data-ct]'); if (b) { S.ct = b.dataset.ct; renderCfg(); } });
+document.querySelector('#v-cfg .ctabs').addEventListener('click', e => { const b = e.target.closest('[data-ct]'); if (b) { S.ct = b.dataset.ct; renderCfg(); } });
 async function upd(path, data, okMsg){
   try { const snap = await db.doc(path).get(); if (snap.exists) await db.doc(path).update(data); else await db.doc(path).set(data); if (okMsg) toast(okMsg); return true; }
   catch(e) { toast('No se pudo guardar ('+(e.code||'error')+').'); return false; }
