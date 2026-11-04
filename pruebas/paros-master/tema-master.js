@@ -215,21 +215,13 @@
   }
 
 
-  // ---------- paleta: azul fuerte como Base de Datos (elegida por Ing. Omar). Si Apariencia trae colores de fábrica
-  // de versiones anteriores (verdes, azul marino anterior o petróleo), se usan los nuevos; si alguien escogió otros colores en ⚙ Apariencia, se respetan.
+  // ---------- paleta fija: azul fuerte como Base de Datos (elegida por Ing. Omar)
   if (typeof applyApa === 'function') {
-    const VIEJAS = [
-      { bg:'#c9cdcb', acc:'#2e7d32', hero:'#1e4a2a', ok:'#2e7d32', bad:'#c62828', warn:'#c99700' },
-      { bg:'#eef2f6', acc:'#1f6fd1', hero:'#0e2a47', ok:'#1e8e5a', bad:'#d32f2f', warn:'#e09b00' },
-      { bg:'#f2f7f8', acc:'#12a4a8', hero:'#0b3c49', ok:'#1e8e5a', bad:'#d32f2f', warn:'#e0a100' }
-    ];
     const NUEVA = { bg:'#EEF2F6', acc:'#1F6FD1', hero:'#0E2A47', ok:'#1E8E5A', bad:'#D32F2F', warn:'#E0A100' };
     const _aa = applyApa;
-    applyApa = function (c) {
-      const x = Object.assign({}, c);
-      Object.keys(NUEVA).forEach(k => { if (VIEJAS.some(v => String(x[k] || '').toLowerCase() === v[k])) x[k] = NUEVA[k]; });
-      return _aa.call(this, x);
-    };
+    // Ing. Omar quiere el azul de Base de Datos SIEMPRE: los colores guardados en ⚙ Apariencia (copiados de la oficial)
+    // ya no lo tapan; se respeta solo lo de "descarga" (nombre y carpeta del Excel).
+    applyApa = function (c) { return _aa.call(this, Object.assign({}, c, NUEVA)); };
     try { applyApa(S.apaDraft || S.apa); } catch (e) {}
   }
 
