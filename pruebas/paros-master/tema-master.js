@@ -132,11 +132,20 @@
     opCard.parentNode.insertBefore(chips, opCard); chips.after(grid);
     izq.appendChild(opCard); der.appendChild(opBtns); grid.append(izq, der);
     chips.addEventListener('click', e => {
+      if (e.target.closest('#mSelBtn')) { abrirLista(!chips.classList.contains('abierta')); return; }
       const c = e.target.closest('[data-mchip]'); if (!c) return;
       const s = document.getElementById('opMaq'); s.value = c.dataset.mchip; s.dispatchEvent(new Event('change'));
-      const g = document.getElementById('mOpGrid'); if (g && g.scrollIntoView) g.scrollIntoView({ behavior:'smooth', block:'start' });
+      abrirLista(false);
     });
+    // la casilla "Selecciona tu máquina" sustituye al menú desplegable original
+    const cajaSel = document.getElementById('opMaq').closest('.box'); if (cajaSel) cajaSel.classList.add('mOculta');
   }
+  function abrirLista(si) {
+    const C = document.getElementById('mOpChips'); if (!C) return;
+    C.classList.toggle('abierta', si);
+    if (si) { const b = document.getElementById('mOpBus'); if (b) { b.value = ''; filtra(); setTimeout(() => b.focus(), 50); } }
+  }
+  document.addEventListener('click', e => { const C = document.getElementById('mOpChips'); if (C && C.classList.contains('abierta') && !C.contains(e.target)) abrirLista(false); });
   // qué hacer ahora, según el estado (texto grande y claro dentro de la tarjeta)
   function guiaOp(st, ev) {
     if (st === 'falla' && ev) return ev.estado === 'espera' ? ['📣', 'Mantenimiento ya fue avisado. Cuando llegue el técnico, toca <b>🧰 TÉCNICO EN SITIO</b>.']
@@ -146,16 +155,20 @@
     if (st === 'sinprod') return ['⏸', 'Cuando la máquina vuelva a trabajar toca <b>🟢 EN FUNCIÓN</b>.'];
     return ['👍', 'Todo bien. Si la máquina falla toca <b>🔴 MÁQUINA EN FALLA</b> y mantenimiento recibe la alarma.'];
   }
-  // tira de máquinas con buscador: el operador escribe parte del nombre o la clave y toca su máquina
+  // casilla "Selecciona tu máquina": muestra la elegida; al tocarla se despliega la lista con buscador
   function pintaChips() {
     const C = document.getElementById('mOpChips'); if (!C) return;
     const sel = document.getElementById('opMaq'), ks = lista();
     if (sel.disabled || ks.length < 2) { C.hidden = true; return; }
     C.hidden = false;
     if (!C.querySelector('#mOpBus')) {
-      C.innerHTML = '<div class="mBusca"><span>🔎</span><input id="mOpBus" type="search" placeholder="Busca tu máquina: escribe su nombre o clave (ej. selexx, prensa, MTA-01)" autocomplete="off"></div><div class="mChipL" id="mOpLista"></div>';
+      C.innerHTML = '<button type="button" class="mSelBtn" id="mSelBtn"></button>' +
+        '<div class="mSelPanel"><div class="mBusca"><span>🔎</span><input id="mOpBus" type="search" placeholder="Escribe el nombre o la clave (ej. selexx, prensa, MTA-01)" autocomplete="off"></div><div class="mChipL" id="mOpLista"></div></div>';
       C.querySelector('#mOpBus').addEventListener('input', filtra);
     }
+    const k0 = S.opMaq, st0 = (S.est[k0] || {}).st || 'ok';
+    document.getElementById('mSelBtn').innerHTML = (k0 ? svgIc(icDe(k0), '') : '') + '<span class="mSelT"><small>MÁQUINA · toca para cambiar</small><b>' + esc(k0 ? maqName(k0) : 'Selecciona tu máquina') + '</b></span>' +
+      '<span class="mSelE m-' + st0 + '">' + ({ ok:'🟢 En función', sinprod:'🟡 Sin producción', falla:'🔴 En falla' }[st0] || '') + '</span><span class="mSelF">▾</span>';
     document.getElementById('mOpLista').innerHTML = ks.map(k => { const st = (S.est[k] || {}).st || 'ok', cod = S.maq[k].cod || k; return '<button type="button" class="mChip m-' + st + (k === S.opMaq ? ' on' : '') + '" data-mchip="' + esc(k) + '" data-q="' + esc(norm(maqName(k) + ' ' + cod)) + '" style="--c:' + colorDe(k) + '">' + svgIc(icDe(k), '') + '<span>' + esc(maqName(k)) + '<small>' + esc(cod) + '</small></span><i></i></button>'; }).join('') + '<p class="foot" id="mOpNada" hidden>No hay máquinas con ese nombre.</p>';
     filtra();
   }

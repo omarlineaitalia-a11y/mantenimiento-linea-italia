@@ -44,7 +44,8 @@ const agUbicaciones = () => {
 const agPrioTag = p => p === 'urgente' ? ' · <span class="tag bad">URGENTE</span>' : p === 'alta' ? ' · <span class="tag bad">prioridad alta</span>' : '';
 const esGral = p => !!p && p.r === 'general';   // administrador general: puede liberar y cerrar cualquier solicitud
 const esMttoAdm = p =>!!p && (esAdm(p) || p.r === 'mtto' || depDe(p) === 'mtto');
-const agEsp = () => S.agReq.filter(r => r.estado === 'espera').sort((a, b) => (a.t0 || '').localeCompare(b.t0 || ''));
+// los requerimientos (proyectos con compra de material) no son urgentes: no lanzan la alarma rosa
+const agEsp = () => S.agReq.filter(r => r.estado === 'espera' && !r.req).sort((a, b) => (a.t0 || '').localeCompare(b.t0 || ''));
 const agMin = r => r.tAcept && r.tFin ? ms(r.tAcept, r.tFin) : null;   // tiempo real de reparación
 const agFmtEst = m => m == null ? '—' : m >= 60 ? (Math.round(m / 6) / 10) + ' h' : m + ' min';
 const agEstrellas = n => n ? '★'.repeat(n) + '☆'.repeat(5 - n) : '—';
@@ -134,21 +135,83 @@ function renderAG(){
   ({ usr:agUsuario, tab:agTablero, nueva:agNueva, pend:agPendientes, hist:agHistorial, graf:agGraficas, eq:agEquipos })[S.agt]();
 }
 
-// ---------- 👤 TABLERO DE USUARIO: reportar (qué falla, dónde, nota rápida) y liberar con su nómina
+// ---------- 👤 TABLERO DE USUARIO · PRUEBA MASTER
+// dos recuadros: 🔧 Reportar una falla (rápido, avisa al momento) y 📐 Requerimiento (proyecto o mejora que necesita
+// comprar material: croquis en foto, qué se tiene que realizar y fecha más amplia). Abajo: por confirmar y mis solicitudes con su avance.
+const agIlu = k => '<svg viewBox="0 0 120 100" aria-hidden="true">' + ((window.ICON_R && ICON_R[k]) || '') + '</svg>';
+// avance de una solicitud en 4 pasos (Enviada → Atendiendo → Terminada → Liberada)
+function agAvance(r){
+  const n = { espera:0, proceso:1, pendiente:1, terminada:2, cerrada:3 }[r.estado] || 0;
+  const P = r.req ? ['Enviado', r.estado === 'pendiente' ? 'Comprando material' : 'En proyecto', 'Terminado', 'Liberado'] : ['Enviada', r.estado === 'pendiente' ? 'Pendiente' : 'Atendiendo', 'Terminada', 'Liberada'];
+  return '<div class="agAv">' + P.map((t, i) => '<span class="' + (i < n ? 'ok' : i === n ? 'now' : '') + '"><i>' + (i < n ? '✓' : i + 1) + '</i>' + t + '</span>').join('') + '</div>';
+}
 function agUsuario(){
   const p = S.sesion, adm = !!p && esAdm(p);
   const mias = !p ? [] : S.agReq.filter(r => adm || r.sol?.nom === p.nomina);
   const abiertas = mias.filter(r => r.estado !== 'cerrada'), porLiberar = mias.filter(r => r.estado === 'terminada');
-  const chip = r => '<span class="tag ' + ({ espera:'bad', proceso:'', pendiente:'warn', terminada:'ok', cerrada:'' }[r.estado]) + '">' + esc(AG_EST[r.estado] || r.estado) + '</span>';
-  $('agBody').innerHTML = '<div id="agFormU"></div>' +
-    (porLiberar.length ? '<div class="box" style="border:2px solid var(--ok)"><h3>✅ Trabajos terminados · confírmalos con tu nómina</h3>' + porLiberar.map(r => '<div class="kbi" style="border-left-color:var(--ok)"><div class="h"><span><b style="color:var(--fg)">' + esc(r.eqN) + '</b> · 📍 ' + esc(r.ubic || '') + '</span><span>' + chip(r) + '</span></div><div>📝 ' + esc(r.desc || '') + '</div><div><b>Solución:</b> ' + esc(r.solucion || '') + ' <span class="foot">· 🧰 ' + esc((r.tecFin || r.tec)?.n || '') + '</span></div>' + (p && esMttoAdm(p) && !esGral(p) ? '<p class="foot">Lo libera quien solicitó (' + esc(r.sol?.n || '') + ') con su nómina.</p>' : '<div><button type="button" class="ok" data-agacc="calificar" data-id="' + r.id + '" style="font-size:17px;padding:12px 20px">✅ Liberar trabajo realizado</button> <button type="button" class="danger" data-agacc="continua" data-id="' + r.id + '" style="font-size:17px;padding:12px 20px">🔁 Continúa la falla</button></div>') + '</div>').join('') + '</div>' : '') +
+  S.agModo = S.agModo || 'falla';
+  const tarj = r => '<button type="button" class="agMia' + (r.req ? ' req' : '') + '" data-agver="' + r.id + '">' +
+    '<div class="agMiaI">' + agIlu(r.req ? 'ag' : (AG_GRUPOS.find(g => g.k === r.cat) || AG_GRUPOS.find(g => r.cat === 'MTA' || r.cat === 'MTB' ? g.k === 'maq' : g.k === 'AG') || {}).ic || 'ag') + '</div>' +
+    '<div class="agMiaT"><span class="agMiaK">' + (r.req ? '📐 Requerimiento' : '🔧 Falla') + '</span><b>' + esc(r.eqN) + '</b><small>📍 ' + esc(r.ubic || '') + ' · ' + fdt(r.t0) + (adm ? ' · 👤 ' + esc(r.sol?.n || '') : '') + (r.req && r.fechaReq ? ' · 📅 para el ' + esc(r.fechaReq) : '') + (r.tec ? ' · 🧰 ' + esc(r.tec.n) : '') + '</small>' + agAvance(r) + '</div></button>';
+  $('agBody').innerHTML =
+    '<div class="agElige">' +
+      '<button type="button" class="agOp falla' + (S.agModo === 'falla' ? ' on' : '') + '" data-agmodo="falla"><div class="agOpI">' + agIlu('mtc') + '</div><div><b>🔧 Reportar una falla</b><span>Algo se descompuso y hay que arreglarlo. <b>Mantenimiento recibe el aviso al momento.</b></span><small>4 pasos · 1 minuto</small></div></button>' +
+      '<button type="button" class="agOp req' + (S.agModo === 'req' ? ' on' : '') + '" data-agmodo="req"><div class="agOpI">' + agIlu('ag') + '</div><div><b>📐 Pedir un requerimiento</b><span>Proyecto, mejora o algo nuevo que <b>necesita comprar material</b>. Lleva croquis en foto y fecha.</span><small>se planea con más tiempo</small></div></button>' +
+    '</div>' +
+    '<div id="agFormU"></div>' +
+    (porLiberar.length ? '<div class="box agConf"><h3>✅ Trabajos terminados · confírmalos con tu nómina · ' + porLiberar.length + '</h3>' + porLiberar.map(r => '<div class="kbi" style="border-left-color:var(--ok)"><div class="h"><span><b style="color:var(--fg)">' + esc(r.eqN) + '</b> · 📍 ' + esc(r.ubic || '') + '</span></div><div>📝 ' + esc(r.desc || '') + '</div><div><b>Solución:</b> ' + esc(r.solucion || '') + ' <span class="foot">· 🧰 ' + esc((r.tecFin || r.tec)?.n || '') + '</span></div>' + (p && esMttoAdm(p) && !esGral(p) ? '<p class="foot">Lo libera quien solicitó (' + esc(r.sol?.n || '') + ') con su nómina.</p>' : '<div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="ok" data-agacc="calificar" data-id="' + r.id + '" style="font-size:17px;padding:12px 20px">✅ Quedó bien · liberar</button><button type="button" class="danger" data-agacc="continua" data-id="' + r.id + '" style="font-size:17px;padding:12px 20px">🔁 Sigue fallando</button></div>') + '</div>').join('') + '</div>' : '') +
     '<div class="box"><h3>' + (adm ? '📋 Todas las solicitudes abiertas (administrador)' : '📋 Mis solicitudes') + ' · ' + abiertas.length + '</h3>' +
-    (!p ? '<p class="foot">Entra con tu nómina (👤 Entrar) para ver tus solicitudes y liberar trabajos.</p>' : abiertas.length ? '<div class="kb">' + abiertas.map(r => '<button type="button" class="kbi" data-agver="' + r.id + '" style="text-align:left;cursor:pointer;font-weight:400;width:100%;align-items:stretch;border-left-color:#AD1457"><div class="h"><span><b style="color:var(--fg)">' + esc(r.eqN) + '</b> · 📍 ' + esc(r.ubic || '') + '</span><span>' + chip(r) + '</span></div><div>📝 ' + esc(r.desc || '') + '</div><div class="foot">' + fdt(r.t0) + (adm ? ' · 👤 ' + esc(r.sol?.n || '') : '') + (r.tec ? ' · 🧰 ' + esc(r.tec.n) : '') + (r.est ? ' · estimado ' + agFmtEst(r.est) : '') + (r.estado === 'pendiente' && r.pend ? ' · compromiso ' + esc(r.pend.fecha || 'sin fecha') + ' · ' + esc(r.pend.coment || '') : '') + '</div></button>').join('') + '</div>' : '<p class="foot">No tienes solicitudes abiertas.</p>') + '</div>';
-  agFormulario($('agFormU'));
+    (!p ? '<p class="foot">Entra con tu nómina (👤 Entrar) para ver tus solicitudes y liberar trabajos.</p>' : abiertas.length ? '<div class="agMias">' + abiertas.map(tarj).join('') + '</div>' : '<p class="foot">No tienes solicitudes abiertas. 👍</p>') + '</div>';
+  (S.agModo === 'req' ? agFormReq : agFormulario)($('agFormU'));
+}
+document.addEventListener('click', e => { const b = e.target.closest('[data-agmodo]'); if (b) { S.agModo = b.dataset.agmodo; agUsuario(); const f = $('agFormU'); if (f) f.scrollIntoView({ behavior:'smooth', block:'start' }); } });
+
+// ---------- 📐 REQUERIMIENTO: proyecto o mejora con compra de material (no lanza alarma; entra al tablero de mantenimiento y al historial)
+const AG_PLAZOS = [['1 semana', 7], ['2 semanas', 14], ['1 mes', 30], ['2 meses', 60], ['3 meses', 90]];
+function agFormReq(cont){
+  const F = { ub:'', fotos:[] }, hoy = new Date(), iso = d => d.toISOString().slice(0, 10), en = n => { const d = new Date(hoy); d.setDate(d.getDate() + n); return iso(d); };
+  cont.innerHTML = '<form class="box agW req" id="fAgReq"><div class="agWt"><span>📐</span><div><h2>Pedir un requerimiento</h2><p class="foot">Para proyectos y mejoras que necesitan material. Mantenimiento lo revisa, cotiza y te da fecha.</p></div></div>' +
+    '<div class="agP"><p class="agPn"><b>1</b> ¿Qué proyecto o mejora necesitas?</p><input id="agRqT" placeholder="ej. instalar repisa en almacén, cambiar puerta del baño, nueva toma de aire en ensamble"></div>' +
+    '<div class="agP"><p class="agPn"><b>2</b> ¿Dónde?</p><div class="agCh">' + AG_UBIC.map(u => '<button type="button" class="agC" data-rqu="' + u + '">' + (AG_UBIC_IC[u] || '📍') + ' ' + u + '</button>').join('') + '<button type="button" class="agC" data-rqu="otro">✏️ Otro lugar</button></div><input id="agRqU" placeholder="Escribe el lugar" hidden></div>' +
+    '<div class="agP"><p class="agPn"><b>3</b> ¿Qué se tiene que realizar?</p><textarea id="agRqD" placeholder="Explica el trabajo: medidas, cómo lo imaginas, para qué se necesita"></textarea>' +
+      '<label class="f">Material que crees que se necesita (uno por renglón, opcional)<textarea id="agRqM" style="min-height:70px" placeholder="ej.&#10;4 · tubo PTR 2 pulgadas&#10;1 · galón de pintura gris"></textarea></label></div>' +
+    '<div class="agP"><p class="agPn"><b>4</b> 📷 Foto del croquis a mano o del lugar <small class="foot">(opcional, hasta 3)</small></p>' +
+      '<label class="agFoto"><input type="file" id="agRqF" accept="image/*" multiple hidden><span>📷 Tomar o elegir foto</span></label><div class="agFotos" id="agRqFs"></div></div>' +
+    '<div class="agP"><p class="agPn"><b>5</b> 📅 ¿Para cuándo lo necesitas?</p><div class="agCh">' + AG_PLAZOS.map(([t, n]) => '<button type="button" class="agC" data-rqp="' + n + '">' + t + '</button>').join('') + '</div>' +
+      '<label class="f" style="max-width:260px">o elige la fecha<input type="date" id="agRqFe" min="' + en(3) + '" value="' + en(30) + '"></label></div>' +
+    '<p class="msg" id="agRqMsg"></p><button class="primary agEnv" type="submit">📐 Enviar requerimiento a mantenimiento</button></form>';
+  const $c = s => cont.querySelector(s);
+  cont.querySelector('[data-rqp="30"]').classList.add('on');
+  cont.addEventListener('click', e => {
+    const u = e.target.closest('[data-rqu]'); if (u) { cont.querySelectorAll('[data-rqu]').forEach(b => b.classList.toggle('on', b === u)); $c('#agRqU').hidden = u.dataset.rqu !== 'otro'; F.ub = u.dataset.rqu === 'otro' ? '' : u.dataset.rqu; if (!$c('#agRqU').hidden) $c('#agRqU').focus(); return; }
+    const pl = e.target.closest('[data-rqp]'); if (pl) { cont.querySelectorAll('[data-rqp]').forEach(b => b.classList.toggle('on', b === pl)); $c('#agRqFe').value = en(+pl.dataset.rqp); return; }
+    const qx = e.target.closest('[data-rqfx]'); if (qx) { F.fotos.splice(+qx.dataset.rqfx, 1); pintaFotos(); }
+  });
+  $c('#agRqFe').addEventListener('change', () => cont.querySelectorAll('[data-rqp]').forEach(b => b.classList.remove('on')));
+  const pintaFotos = () => { $c('#agRqFs').innerHTML = F.fotos.map((f, i) => '<span><img src="' + URL.createObjectURL(f) + '" alt="foto ' + (i + 1) + '"><button type="button" data-rqfx="' + i + '" title="Quitar">✕</button></span>').join(''); };
+  $c('#agRqF').addEventListener('change', ev => { F.fotos = F.fotos.concat([...ev.target.files]).slice(0, 3); ev.target.value = ''; pintaFotos(); });
+  $c('#fAgReq').addEventListener('submit', async e => {
+    e.preventDefault();
+    if (!S.sesion) { toast('🔒 Primero entra con tu nómina (botón 👤 Entrar).'); entrar(); return; }
+    const t = $c('#agRqT').value.trim(), ub = F.ub || $c('#agRqU').value.trim(), desc = $c('#agRqD').value.trim(), fecha = $c('#agRqFe').value, m = $c('#agRqMsg');
+    if (!t || !ub || !desc || !fecha) { m.className = 'msg err'; m.textContent = 'Falta: ' + [!t && 'qué proyecto', !ub && 'dónde', !desc && 'qué se tiene que realizar', !fecha && 'la fecha'].filter(Boolean).join(', ') + '.'; return; }
+    const p = await pedirNomina('Requerimiento · ' + t, 'agsol', 'Nómina de quien solicita'); if (!p) return; cerrarModal();
+    const btn = $c('.agEnv'); btn.disabled = true; m.className = 'msg'; m.textContent = F.fotos.length ? 'Subiendo fotos…' : 'Enviando…';
+    try {
+      const fotos = [];
+      if (F.fotos.length) { const as = await window.claude.use('assets'); for (const f of F.fotos) { const r = await as.upload(f); fotos.push(r.id); } }
+      const mats = $c('#agRqM').value.split('\n').map(x => x.trim()).filter(Boolean).map(x => { const mm = x.match(/^(\d+(?:[.,]\d+)?)\s*[·xX\-*:]\s*(.+)$/); return { c: mm ? mm[1] : '', d: mm ? mm[2].trim() : x, est:'solicitado', t:nowIso(), por:p.n, eq:t }; });
+      const nuevo = await db.collection('ag').add({ req:true, cat:'AG', eq:'req', eqN:t, ubic:ub, tipo:'Requerimiento / proyecto', prio:'baja', desc, fechaReq:fecha, fotos, mats, t0:nowIso(), estado:'espera', sol:{ n:p.n, nom:p.nomina }, log:[{ t:nowIso(), por:p.n, txt:'Requerimiento creado · para el ' + fecha }] });
+      agEvento({ id:nuevo.id, eqN:t, ubic:ub, cat:'AG', estado:'' }, p.n, 'Requerimiento creado · para el ' + fecha + ' · ' + desc);
+      if (S.ntfy) fetch('https://ntfy.sh/', { method:'POST', body: JSON.stringify({ topic:S.ntfy, title:'📐 REQUERIMIENTO · ' + t + ' · ' + ub, message: ('Para el ' + fecha + ' · ' + desc).slice(0, 300), priority:3, tags:['triangular_ruler'] }) }).catch(() => {});
+      toast('✅ Requerimiento enviado. Lo verás en "Mis solicitudes".'); S.agModo = 'falla'; renderAG();
+    } catch (er) { btn.disabled = false; m.className = 'msg err'; m.textContent = 'No se pudo enviar (' + (er.code || er.message) + ').'; }
+  });
 }
 const agTarjeta = r => {
   const col = { espera:'#D81B60', proceso:'#1565C0', pendiente:'#C99700', terminada:'#2E7D32', cerrada:'#607D8B' }[r.estado];
   return '<button type="button" class="kbi" data-agver="' + r.id + '" style="border-left-color:' + col + ';text-align:left;cursor:pointer;font-weight:400;width:100%;align-items:stretch">' +
+    (r.req ? '<div class="agRqTag">📐 REQUERIMIENTO · para el <b>' + esc(r.fechaReq || 'sin fecha') + '</b>' + ((r.fotos || []).length ? ' · 📷 ' + r.fotos.length + ' foto' + (r.fotos.length > 1 ? 's' : '') : '') + ((r.mats || []).length ? ' · 🧾 ' + r.mats.length + ' material' + (r.mats.length > 1 ? 'es' : '') : '') + '</div>' : '') +
     '<div class="h"><span><b style="color:var(--fg);font-size:15px">' + esc(r.eqN) + '</b>' + (r.reab ? ' <span class="tag bad">🔁 la falla continúa · ' + (r.reab + 1) + 'ª atención</span>' : '') + '</span><span class="tag">' + esc(r.tipo || '') + '</span></div>' +
     (r.reab && r.reabNota ? '<div>🔁 <b>Sigue fallando:</b> ' + esc(r.reabNota) + '</div>' : '') +
     '<div>📍 <b>' + esc(r.ubic || 'sin ubicación') + '</b> · 👤 solicita <b>' + esc(r.sol?.n || '') + '</b></div>' +
@@ -159,12 +222,16 @@ const agTarjeta = r => {
 };
 function agTablero(){
   const R = S.agReq, h0 = new Date(); h0.setHours(0, 0, 0, 0);
-  const n = k => R.filter(r => r.estado === k).length;
-  const col = (k, t) => { const L = R.filter(r => r.estado === k); return '<div class="box" style="min-width:0"><h3>' + t + ' · ' + L.length + '</h3>' + (L.length ? '<div class="kb">' + L.slice(0, 40).map(agTarjeta).join('') + '</div>' : '<p class="foot">Sin solicitudes.</p>') + '</div>'; };
+  // las fallas van en sus 4 columnas; los requerimientos (proyectos) en su propio recuadro, ordenados por fecha
+  const F = R.filter(r => !r.req), Q = R.filter(r => r.req && r.estado !== 'cerrada').sort((a, b) => (a.fechaReq || '9').localeCompare(b.fechaReq || '9'));
+  const n = k => F.filter(r => r.estado === k).length;
+  const col = (k, t) => { const L = F.filter(r => r.estado === k); return '<div class="box" style="min-width:0"><h3>' + t + ' · ' + L.length + '</h3>' + (L.length ? '<div class="kb">' + L.slice(0, 40).map(agTarjeta).join('') + '</div>' : '<p class="foot">Sin solicitudes.</p>') + '</div>'; };
   $('agBody').innerHTML =
     '<div class="kpis"><div class="kpi bad"><b>' + n('espera') + '</b><span>esperando técnico</span></div><div class="kpi"><b>' + n('proceso') + '</b><span>en proceso</span></div><div class="kpi warn"><b>' + n('pendiente') + '</b><span>pendientes</span></div><div class="kpi ok"><b>' + n('terminada') + '</b><span>por calificar</span></div><div class="kpi"><b>' + R.filter(r => new Date(r.t0) >= h0).length + '</b><span>solicitudes hoy</span></div></div>' +
     '<div style="display:flex;gap:10px;flex-wrap:wrap"><p class="foot" style="align-self:center">Para mejoras, modificaciones o reparaciones que NO son paro de máquina. Los paros de máquina van en "🛠 Paros de máquina".</p></div>' +
-    '<div class="charts">' + col('espera', '🔴 Esperando técnico') + col('proceso', '🧰 En proceso') + col('pendiente', '⏳ Pendientes') + col('terminada', '✅ Terminadas · falta que el usuario libere') + '</div>';
+    '<div class="charts">' + col('espera', '🔴 Esperando técnico') + col('proceso', '🧰 En proceso') + col('pendiente', '⏳ Pendientes') + col('terminada', '✅ Terminadas · falta que el usuario libere') + '</div>' +
+    '<div class="box agRqBox"><h3>📐 Requerimientos y proyectos · ' + Q.length + '</h3><p class="foot">Trabajos que necesitan comprar material. No suenan como alarma; se planean por fecha.</p>' +
+    (Q.length ? '<div class="agRqGrid">' + Q.map(agTarjeta).join('') + '</div>' : '<p class="foot">Sin requerimientos abiertos.</p>') + '</div>';
 }
 
 
@@ -286,6 +353,8 @@ function agDetalle(r){
   abrirModal('<div class="mhead" style="background:#AD1457;color:#fff"><div><h2>🏢 ' + esc(r.eqN) + '</h2><p style="color:#fff;opacity:.85">' + esc(AG_EST[r.estado] || r.estado) + ' · ' + esc(r.tipo || '') + ' · ' + esc(agCats()[r.cat] || '') + ' · ' + esc(r.ubic || '') + '</p></div><button type="button" data-close>✕</button></div>' +
     '<div class="box"><p style="margin:0"><b>' + esc(r.desc || '') + '</b></p><p class="foot">Solicitó: ' + esc(r.sol?.n || '') + ' · ' + fdt(r.t0) + (r.prio ? ' · prioridad ' + esc(r.prio) : '') + '</p>' +
     '<div class="times"><div><b>' + agFmtEst(r.est) + '</b><span>tiempo estimado</span></div><div><b>' + (agMin(r) != null ? dur(agMin(r)) : r.tAcept ? '<span data-since="' + esc(r.tAcept) + '">' + hms(ms(r.tAcept)) + '</span>' : '—') + '</b><span>tiempo real</span></div><div><b>' + esc(r.tec?.n?.split(' ').slice(0, 2).join(' ') || '—') + '</b><span>técnico</span></div><div><b>' + (r.enc ? agEstrellas(r.enc.cal) : '—') + '</b><span>calidad</span></div></div>' +
+    (r.req ? '<div class="agRqTag">📐 REQUERIMIENTO · lo necesitan para el <b>' + esc(r.fechaReq || 'sin fecha') + '</b></div>' +
+      ((r.fotos || []).length ? '<div class="agFotos grande">' + r.fotos.map(id => '<a href="/_blob/' + id + '" target="_blank" rel="noopener"><img src="/_blob/' + id + '" alt="croquis"></a>').join('') + '</div>' : '') : '') +
     (r.pend && r.estado === 'pendiente' ? '<div class="banner"><b>Pendiente:</b> ' + esc(r.pend.motivo || '') + ' · fecha compromiso <b>' + esc(r.pend.fecha || 'sin fecha') + '</b><br>' + esc(r.pend.coment || '') + '</div>' : '') +
     (r.solucion ? '<p style="margin:0"><b>Solución:</b> ' + esc(r.solucion) + (r.usados ? '<br><b>Materiales usados:</b> ' + esc(r.usados) : '') + '</p>' : '') +
     (r.cierreAdm ? '<p style="margin:0">🔒 <b>Cerrada por administrador general:</b> ' + esc(r.cierreAdm.n) + ' · ' + esc(r.cierreAdm.motivo) + (r.cierreAdm.com ? ' · ' + esc(r.cierreAdm.com) : '') + ' · ' + fdt(r.cierreAdm.t) + '</p>' : r.lib ? '<p style="margin:0">✅ <b>Liberó:</b> ' + esc(r.lib.n) + ' · nómina ' + esc(r.lib.nom) + ' · ' + fdt(r.lib.t) + '</p>' : '') +
