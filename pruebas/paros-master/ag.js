@@ -209,7 +209,7 @@ function agFormReq(cont){
   });
 }
 const agTarjeta = r => {
-  const col = { espera:'#D81B60', proceso:'#1565C0', pendiente:'#C99700', terminada:'#2E7D32', cerrada:'#607D8B' }[r.estado];
+  const col = { espera:'#D32F2F', proceso:'#1F6FD1', pendiente:'#C99700', terminada:'#2E7D32', cerrada:'#607D8B' }[r.estado];
   return '<button type="button" class="kbi" data-agver="' + r.id + '" style="border-left-color:' + col + ';text-align:left;cursor:pointer;font-weight:400;width:100%;align-items:stretch">' +
     (r.req ? '<div class="agRqTag">📐 REQUERIMIENTO · para el <b>' + esc(r.fechaReq || 'sin fecha') + '</b>' + ((r.fotos || []).length ? ' · 📷 ' + r.fotos.length + ' foto' + (r.fotos.length > 1 ? 's' : '') : '') + ((r.mats || []).length ? ' · 🧾 ' + r.mats.length + ' material' + (r.mats.length > 1 ? 'es' : '') : '') + '</div>' : '') +
     '<div class="h"><span><b style="color:var(--fg);font-size:15px">' + esc(r.eqN) + '</b>' + (r.reab ? ' <span class="tag bad">🔁 la falla continúa · ' + (r.reab + 1) + 'ª atención</span>' : '') + '</span><span class="tag">' + esc(r.tipo || '') + '</span></div>' +
@@ -350,7 +350,7 @@ function agDetalle(r){
   // el administrador general puede cerrar cualquier solicitud abierta (con motivo)
   if (esGral(S.sesion) && r.estado !== 'cerrada') b.push('<button type="button" data-agacc="cerrar" data-id="' + r.id + '" style="background:#37474F;border-color:#37474F;color:#fff">🔒 Cerrar solicitud (admin. general)</button>');
   const mats = (r.mats || []);
-  abrirModal('<div class="mhead" style="background:#AD1457;color:#fff"><div><h2>🏢 ' + esc(r.eqN) + '</h2><p style="color:#fff;opacity:.85">' + esc(AG_EST[r.estado] || r.estado) + ' · ' + esc(r.tipo || '') + ' · ' + esc(agCats()[r.cat] || '') + ' · ' + esc(r.ubic || '') + '</p></div><button type="button" data-close>✕</button></div>' +
+  abrirModal('<div class="mhead"><div><h2>🏢 ' + esc(r.eqN) + '</h2><p>' + esc(AG_EST[r.estado] || r.estado) + ' · ' + esc(r.tipo || '') + ' · ' + esc(agCats()[r.cat] || '') + ' · ' + esc(r.ubic || '') + '</p></div><button type="button" data-close>✕</button></div>' +
     '<div class="box"><p style="margin:0"><b>' + esc(r.desc || '') + '</b></p><p class="foot">Solicitó: ' + esc(r.sol?.n || '') + ' · ' + fdt(r.t0) + (r.prio ? ' · prioridad ' + esc(r.prio) : '') + '</p>' +
     '<div class="times"><div><b>' + agFmtEst(r.est) + '</b><span>tiempo estimado</span></div><div><b>' + (agMin(r) != null ? dur(agMin(r)) : r.tAcept ? '<span data-since="' + esc(r.tAcept) + '">' + hms(ms(r.tAcept)) + '</span>' : '—') + '</b><span>tiempo real</span></div><div><b>' + esc(r.tec?.n?.split(' ').slice(0, 2).join(' ') || '—') + '</b><span>técnico</span></div><div><b>' + (r.enc ? agEstrellas(r.enc.cal) : '—') + '</b><span>calidad</span></div></div>' +
     (r.req ? '<div class="agRqTag">📐 REQUERIMIENTO · lo necesitan para el <b>' + esc(r.fechaReq || 'sin fecha') + '</b></div>' +
@@ -365,7 +365,7 @@ function agDetalle(r){
 }
 async function agAtender(r){
   const p = await pedirNomina('Atender · ' + r.eqN, 'agtec', 'Nómina del técnico'); if (!p) return;
-  abrirModal('<div class="mhead" style="background:#AD1457;color:#fff"><div><h2>🧰 Atender · ' + esc(r.eqN) + '</h2><p style="color:#fff;opacity:.85">' + esc(p.n) + ' · ' + esc(r.desc || '') + '</p></div><button type="button" data-close>✕</button></div>' +
+  abrirModal('<div class="mhead"><div><h2>🧰 Atender · ' + esc(r.eqN) + '</h2><p>' + esc(p.n) + ' · ' + esc(r.desc || '') + '</p></div><button type="button" data-close>✕</button></div>' +
     '<form id="fAgAt" class="box"><div class="g2"><label class="f">Tiempo estimado de reparación *<input id="agEstN" type="number" min="1" step="1" required placeholder="ej. 2"></label><label class="f">Unidad<select id="agEstU"><option value="60">horas</option><option value="1">minutos</option><option value="480">días (8 h)</option></select></label></div>' +
     '<label class="f">Comentario (opcional)<input id="agAtCom" placeholder="ej. voy después de la ronda de preventivo"></label><p class="msg" id="agAtMsg"></p><button class="primary" type="submit">Confirmar · empiezo a atender</button></form>');
   $('fAgAt').addEventListener('submit', async e => {
@@ -401,7 +401,7 @@ async function agReanudar(r){
 }
 async function agTerminar(r){
   const p = await pedirNomina('Terminada · ' + r.eqN, 'agtec', 'Nómina del técnico'); if (!p) return;
-  abrirModal('<div class="mhead" style="background:#2E7D32;color:#fff"><div><h2>✅ Terminada · ' + esc(r.eqN) + '</h2><p style="color:#fff;opacity:.85">' + esc(p.n) + ' · ' + esc(r.desc || '') + '</p></div><button type="button" data-close>✕</button></div>' +
+  abrirModal('<div class="mhead" style="background:#2E7D32;color:#fff"><div><h2>✅ Terminada · ' + esc(r.eqN) + '</h2><p>' + esc(p.n) + ' · ' + esc(r.desc || '') + '</p></div><button type="button" data-close>✕</button></div>' +
     '<form id="fAgTe" class="box"><label class="f">Solución / qué se hizo *<textarea id="agTeSol" required placeholder="ej. se cambiaron 4 lámparas por LED 18 W y se limpió el difusor"></textarea></label>' +
     '<label class="f">Materiales usados<input id="agTeUs" placeholder="ej. 4 lámparas LED 18 W"></label><p class="msg" id="agTeMsg"></p><button class="ok" type="submit">Terminada · avisar a quien solicitó</button></form>');
   $('fAgTe').addEventListener('submit', async e => {
@@ -416,7 +416,7 @@ async function agTerminar(r){
 async function agCerrarAdm(r){
   const p = await pedirNomina('Cerrar solicitud · ' + r.eqN, 'config', 'Nómina del administrador general'); if (!p) return;
   if (p.r !== 'general') { cerrarModal(); toast('Solo el administrador general puede cerrar solicitudes.'); return; }
-  abrirModal('<div class="mhead" style="background:#37474F;color:#fff"><div><h2>🔒 Cerrar solicitud · ' + esc(r.eqN) + '</h2><p style="color:#fff;opacity:.85">' + esc(p.n) + ' · estatus actual: ' + esc(AG_EST[r.estado] || r.estado) + ' · solicitó ' + esc(r.sol?.n || '') + '</p></div><button type="button" data-close>✕</button></div>' +
+  abrirModal('<div class="mhead" style="background:#37474F;color:#fff"><div><h2>🔒 Cerrar solicitud · ' + esc(r.eqN) + '</h2><p>' + esc(p.n) + ' · estatus actual: ' + esc(AG_EST[r.estado] || r.estado) + ' · solicitó ' + esc(r.sol?.n || '') + '</p></div><button type="button" data-close>✕</button></div>' +
     '<form id="fAgCe" class="box"><label class="f">Motivo del cierre *<select id="agCeMot"><option>Trabajo terminado y revisado</option><option>Quien solicitó no está disponible</option><option>Solicitud duplicada</option><option>Ya no aplica / cancelada</option><option>Otro</option></select></label>' +
     '<label class="f">Comentario<input id="agCeCom" placeholder="opcional"></label><p class="msg" id="agCeMsg"></p><button type="submit" style="padding:14px;background:#37474F;border-color:#37474F;color:#fff">🔒 Cerrar solicitud</button></form>');
   $('fAgCe').addEventListener('submit', async e => {
@@ -446,7 +446,7 @@ async function agCalificar(r){
   const p = await pedirNomina('Liberar trabajo · ' + r.eqN, 'agcal', 'Escribe TU nómina (quien solicitó: ' + (r.sol?.n || '') + ', o administrador general)'); if (!p) return;
   if (p.nomina !== r.sol?.nom && p.r !== 'general') { cerrarModal(); toast('Solo quien solicitó (' + (r.sol?.n || '') + ') o el administrador general puede liberar este trabajo.'); return; }
   let cal = 0;
-  abrirModal('<div class="mhead" style="background:#AD1457;color:#fff"><div><h2>✅ Liberar trabajo · ' + esc(r.eqN) + '</h2><p style="color:#fff;opacity:.85">' + esc(p.n) + ' · solución: ' + esc(r.solucion || '') + '</p></div><button type="button" data-close>✕</button></div>' +
+  abrirModal('<div class="mhead"><div><h2>✅ Liberar trabajo · ' + esc(r.eqN) + '</h2><p>' + esc(p.n) + ' · solución: ' + esc(r.solucion || '') + '</p></div><button type="button" data-close>✕</button></div>' +
     '<form id="fAgCa" class="box"><label class="f">¿Cuánto tardó la reparación?<select id="agCaDur"><option>Menos de lo estimado</option><option selected>Lo estimado</option><option>Más de lo estimado</option><option>Mucho más de lo estimado</option></select></label>' +
     '<label class="f">¿Se dejó limpia el área?<select id="agCaLim"><option value="1">Sí, quedó limpia</option><option value="0">No, quedó sucia</option></select></label>' +
     '<div class="f"><span style="font-size:13px;color:var(--muted)">Calidad del trabajo *</span><div id="agCaEst" style="font-size:34px;cursor:pointer;color:#C99700">' + [1, 2, 3, 4, 5].map(i => '<span data-cal="' + i + '">☆</span>').join('') + '</div></div>' +

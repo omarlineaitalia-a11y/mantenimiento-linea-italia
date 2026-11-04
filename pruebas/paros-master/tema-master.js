@@ -8,11 +8,19 @@
   const COL = { MTA:'#1F4FBF', MTB:'#E07B1A', MTC:'#7B4BC4', EA:'#0E9F96', AA:'#1597D3', EBT:'#D2453C', EMT:'#8E2A2A', EM:'#8A5A2B', IL:'#D9A400', AG:'#2E9E5B' };
   const svgIc = (k, cls) => '<svg class="' + cls + '" viewBox="0 0 120 100" aria-hidden="true">' + (ICON_R[k] || ICON_R.mta) + '</svg>';
   // ilustración según el nombre de la máquina y, si no, según su categoría
+  // dibujo según el NOMBRE de la máquina (iconos-maquinas.js) y, si no coincide, según su categoría
   function icDe(k) {
     const m = S.maq[k] || {}, n = (m.n || k).toLowerCase(), c = (m.cat || '').toUpperCase();
     if (/compresor|extractor|secador|vaporizador/.test(n)) return 'ea';
-    if (/prensa|troquel|dobladora|cizalla/.test(n)) return 'mtb';
-    if (/taladro|pulidora|sierra|soldar|esmeril|caladora/.test(n)) return 'mtc';
+    if (/l[aá]ser|gweike|g-weike|bimex/.test(n)) return 'laser';
+    if (/dobladora|plegadora/.test(n)) return 'dobladora';
+    if (/soldar|soldadora/.test(n)) return 'soldadora';
+    if (/enchapadora|canteadora|homag|stefani/.test(n)) return 'enchapadora';
+    if (/horno|t[uú]nel/.test(n)) return 'horno';
+    if (/prensa|troquel|cizalla/.test(n)) return 'mtb';
+    // taladro de banco / pedestal (tipo B) = industrial de columna; los de mano (tipo C) = inalámbrico
+    if (/taladro/.test(n)) return (c === 'MTB' || /banco|pedestal|columna/.test(n)) ? 'taladroBanco' : 'mtc';
+    if (/pulidora|sierra|esmeril|caladora/.test(n)) return 'mtc';
     if (/montacargas|patin/.test(n)) return 'em';
     return ({ MTA:'mta', MTB:'mtb', MTC:'mtc', EA:'ea', AA:'aa', EBT:'ebt', EMT:'emt', EM:'em', IL:'il', AG:'ag' })[c] || 'mta';
   }
@@ -186,9 +194,24 @@
         const c = document.querySelector('#opCard .opcard'), k = S.opMaq; if (!c || !k) return;
         const { e, ev } = estadoDe(k), g = guiaOp(e.st || 'ok', ev);
         if (g && !c.querySelector('.mGuia')) c.insertAdjacentHTML('beforeend', '<div class="mGuia"><span>' + g[0] + '</span><span>' + g[1] + '</span></div>');
-        pintaChips();
+        pintaChips(); botonesModernos(document.getElementById('opBtns'));
       } catch (er) { console.warn('tema-master', er); }
     };
+  }
+  // ---------- botones modernos: el emoji pasa a una ficha de ícono, el texto a título + subtítulo y una flecha a la derecha
+  function botonesModernos(cont) {
+    if (!cont) return;
+    cont.querySelectorAll('button').forEach(b => {
+      if (b.classList.contains('mBtn')) return;
+      const sm = b.querySelector('small'); if (sm) sm.remove();
+      const t = b.textContent.trim(), m = t.match(/^(\p{Extended_Pictographic}️?)\s*(.*)$/u);
+      b.classList.add('mBtn');
+      if (b.dataset.tpm) b.classList.add('mTpm');
+      if (b.dataset.a === 'prueba' || b.dataset.a === 'sitioPrueba') b.classList.add('mPru');
+      b.innerHTML = '<span class="mBi">' + (m ? m[1] : '▶') + '</span><span class="mBt"><b></b></span><span class="mBa" aria-hidden="true">›</span>';
+      b.querySelector('.mBt b').textContent = m ? m[2] : t;
+      if (sm) b.querySelector('.mBt').appendChild(sm);
+    });
   }
 
 
@@ -228,5 +251,71 @@
   }
   const _ro3 = renderOp;
   renderOp = function () { if (!S.opMaq && !fija()) { const r = recordada(); if (r) S.opMaq = r; } return _ro3.apply(this, arguments); };
+  // ---------- 📚 FALLAS Y SOLUCIONES: búsqueda sencilla, agrupada por máquina y con consejos para el técnico
+  const TIPO_IC = { 'Mecánica':'⚙️', 'Eléctrica':'⚡', 'Neumática':'💨', 'Hidráulica':'💧', 'Electrónica / control':'🖥️', 'Seguridad':'🦺', 'Herramental / ajuste':'🔧', 'Otra':'❔' };
+  // medidas de seguridad por tipo de falla (normas IMSS / NOM-004 y NOM-029-STPS: bloqueo y etiquetado, EPP)
+  const SEGURIDAD = {
+    'Eléctrica':'⚡ Bloquea y etiqueta (LOTO) el interruptor, <b>verifica ausencia de tensión</b> con multímetro y usa EPP dieléctrico (guantes clase 0, careta).',
+    'Mecánica':'⚙️ LOTO antes de meter manos: espera a que <b>paren todas las partes en movimiento</b> y vuelve a poner las guardas al terminar.',
+    'Neumática':'💨 Cierra la válvula, <b>purga el aire</b> de la línea antes de desconectar y usa lentes de seguridad.',
+    'Hidráulica':'💧 <b>Libera la presión</b> y baja o calza cargas antes de aflojar mangueras; cuidado con el aceite caliente.',
+    'Electrónica / control':'🖥️ Respalda parámetros antes de cambiar tarjetas, desenergiza y usa pulsera antiestática.',
+    'Seguridad':'🦺 Nunca puentees guardas, sensores ni paros de emergencia: deja la máquina bloqueada hasta corregir.',
+    'Herramental / ajuste':'🔧 Asegura y calza el herramental, usa guantes anticorte y prueba en vacío antes de liberar.',
+    'Otra':'🦺 LOTO y EPP según el riesgo de la máquina antes de intervenir.'
+  };
+  const KB = { q:'', tipo:'', abierta:{} };
+  const marca = (txt, ws) => { let h = esc(txt || ''); ws.forEach(w => { if (w.length > 1) h = h.replace(new RegExp('(' + w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi'), '<mark>$1</mark>'); }); return h; };
+  const normF = t => norm(String(t || '')).replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+  function consejos(L) {
+    const C = [], tipos = {}, fallas = {}, refs = {};
+    L.forEach(e => { tipos[e.tipo || 'Otra'] = (tipos[e.tipo || 'Otra'] || 0) + 1; const f = normF(e.falla).split(' ').slice(0, 4).join(' '); if (f) (fallas[f] = fallas[f] || []).push(e); String(e.refac || '').split(/[,;\n]/).map(x => x.trim()).filter(Boolean).forEach(r => { refs[r] = (refs[r] || 0) + 1; }); });
+    const tTop = Object.entries(tipos).sort((a, b) => b[1] - a[1])[0];
+    if (tTop) C.push('Lo que más falla aquí es <b>' + esc(tTop[0]) + '</b> (' + tTop[1] + ' de ' + L.length + '). ' + (SEGURIDAD[tTop[0]] || SEGURIDAD.Otra));
+    Object.values(fallas).filter(x => x.length > 1).sort((a, b) => b.length - a.length).slice(0, 2).forEach(x => C.push('🔁 <b>“' + esc(x[0].falla) + '”</b> ya se repitió <b>' + x.length + ' veces</b>: no solo repares; busca la causa raíz (5 porqués) y deja la solución bien escrita.'));
+    const rTop = Object.entries(refs).sort((a, b) => b[1] - a[1]).slice(0, 3).map(x => x[0]);
+    if (rTop.length) C.push('🧰 Ten a la mano: <b>' + rTop.map(esc).join(', ') + '</b>.');
+    const tr = L.map(e => tiempos(e).rep).filter(x => x > 0);
+    if (tr.length) C.push('⏱ Reparación promedio: <b>' + dur(tr.reduce((s, x) => s + x, 0) / tr.length) + '</b>.');
+    return C;
+  }
+  function kbUI() {
+    const sec = document.getElementById('v-kb'); if (!sec || document.getElementById('mKb')) return;
+    const caja = document.getElementById('kbQ').closest('.box'); if (caja) caja.classList.add('mOculta');
+    ['kbCuenta', 'kbList'].forEach(id => document.getElementById(id).classList.add('mOculta'));
+    const d = document.createElement('div'); d.id = 'mKb'; d.className = 'mKb';
+    d.innerHTML = '<div class="mKbBus"><span>🔎</span><input id="mKbQ" type="search" placeholder="¿Qué le pasa a la máquina? ej. no succiona, banda, sensor, no prende" autocomplete="off"></div>' +
+      '<div class="mKbTipos"><button type="button" class="mKbT on" data-kbt="">Todas</button>' + TIPOS.map(t => '<button type="button" class="mKbT" data-kbt="' + esc(t) + '">' + (TIPO_IC[t] || '') + ' ' + esc(t) + '</button>').join('') + '</div>' +
+      '<p class="mKbCta" id="mKbCta"></p><div id="mKbRes" class="mKbRes"></div>';
+    document.getElementById('kbList').before(d);
+    d.querySelector('#mKbQ').addEventListener('input', ev => { KB.q = ev.target.value; renderKb(); });
+    d.addEventListener('click', ev => {
+      const t = ev.target.closest('[data-kbt]'); if (t) { KB.tipo = t.dataset.kbt; d.querySelectorAll('[data-kbt]').forEach(b => b.classList.toggle('on', b === t)); renderKb(); return; }
+      const h = ev.target.closest('[data-kbm]'); if (h) { const k = h.dataset.kbm; KB.abierta[k] = !h.parentNode.classList.contains('abierta'); h.parentNode.classList.toggle('abierta', KB.abierta[k]); }
+    });
+  }
+  renderKb = function () {
+    kbUI();
+    const ws = normF(KB.q).split(' ').filter(Boolean);
+    const L = S.evs.filter(e => e.solucion && (!KB.tipo || e.tipo === KB.tipo) && ws.every(w => normF(e.maqN + ' ' + e.falla + ' ' + e.causa + ' ' + e.solucion + ' ' + (e.refac || '') + ' ' + (e.tec?.n || '')).includes(w)));
+    const G = {}; L.forEach(e => { (G[e.maq || e.maqN] = G[e.maq || e.maqN] || []).push(e); });
+    const gs = Object.entries(G).sort((a, b) => b[1].length - a[1].length);
+    document.getElementById('mKbCta').innerHTML = L.length ? '<b>' + L.length + '</b> soluciones en <b>' + gs.length + '</b> máquina' + (gs.length > 1 ? 's' : '') + (ws.length || KB.tipo ? ' · toca una máquina para ver sus soluciones' : '') : '';
+    const busca = ws.length > 0 || !!KB.tipo;
+    document.getElementById('mKbRes').innerHTML = gs.length ? gs.map(([k, E]) => {
+      const nom = E[0].maqN || maqName(k), ic = S.maq[k] ? icDe(k) : 'mta', ab = KB.abierta[k] != null ? KB.abierta[k] : (busca || gs.length === 1);
+      const rep = {}; E.forEach(e => { const f = normF(e.falla); rep[f] = (rep[f] || 0) + 1; });
+      return '<div class="mKbM' + (ab ? ' abierta' : '') + '"><button type="button" class="mKbH" data-kbm="' + esc(k) + '" style="--c:' + (S.maq[k] ? colorDe(k) : COL.MTA) + '">' + svgIc(ic, '') +
+          '<span class="mKbHt"><b>' + esc(nom) + '</b><small>' + E.length + ' solucion' + (E.length > 1 ? 'es' : '') + ' registrada' + (E.length > 1 ? 's' : '') + ' · última ' + fdt(E[0].t0) + '</small></span><span class="mKbF">▾</span></button>' +
+        '<div class="mKbB"><div class="mKbTip"><b>💡 Consejos para el técnico</b><ul>' + consejos(E).map(c => '<li>' + c + '</li>').join('') + '</ul></div>' +
+        E.map(e => { const n = rep[normF(e.falla)], t = tiempos(e); return '<div class="mKbS"><div class="mKbSh"><span class="mKbChip">' + (TIPO_IC[e.tipo] || '❔') + ' ' + esc(e.tipo || 'Otra') + '</span>' + (n > 1 ? '<span class="mKbChip warn">🔁 se repitió ' + n + ' veces</span>' : '') + '<span class="foot">' + fdt(e.t0) + '</span></div>' +
+          '<div class="mKbP"><span>❗ Falla</span><p>' + marca(e.falla, ws) + '</p></div>' +
+          '<div class="mKbP"><span>🔍 Causa</span><p>' + marca(e.causa || '—', ws) + '</p></div>' +
+          '<div class="mKbP ok"><span>✅ Solución</span><p>' + marca(e.solucion, ws) + '</p></div>' +
+          (e.refac ? '<div class="mKbP"><span>🧰 Refacciones</span><p>' + marca(e.refac, ws) + '</p></div>' : '') +
+          '<div class="foot">👷 ' + esc((e.tecRep || e.tec)?.n || '—') + ' · llegó en ' + dur(t.lleg) + ' · reparó en ' + dur(t.rep) + ' · paro total ' + dur(t.total) + '</div></div>'; }).join('') + '</div></div>';
+    }).join('') : '<div class="mKbVacio">' + svgIc('mta', '') + '<b>' + (busca ? 'No encontré soluciones con esa búsqueda' : 'Todavía no hay soluciones registradas') + '</b><p class="foot">' + (busca ? 'Prueba con otra palabra (ej. “banda”, “sensor”, “aire”) o quita el filtro de tipo.' : 'Cada vez que un técnico marque “máquina reparada” con su causa y solución, aparece aquí agrupada por máquina.') + '</p></div>';
+  };
+
   if (typeof render === 'function') try { render(); } catch (e) {}
 })();
