@@ -499,7 +499,7 @@ function ejemploX(){ $('aXEj').textContent = ($('aXNom').value.trim() || DEF_A.x
 // ---------- pantallas
 // permisos por pantalla
 const VIS = { tab:'Tablero mantenimiento', ag:'Áreas generales · reportar fallas (tablero de usuario)', agmt:'Áreas generales · tablero de mantenimiento', agmat:'Áreas generales · lista de materiales (compras)', graf:'Gráficas', op:'Tablero producción (pantalla de máquina)', kb:'Fallas y soluciones', rep:'Reportes y Excel', cfg:'Configuración' };
-const VIS_DEF = { general:Object.keys(VIS), admin:Object.keys(VIS), mtto:['tab','graf','kb','ag'], procesos:['op','graf'], operador:['op','graf'], oficina:['ag'] };
+const VIS_DEF = { general:Object.keys(VIS), admin:Object.keys(VIS), mtto:['tab','graf','kb','agmt'], procesos:['op','graf'], operador:['op','graf'], oficina:['ag'] };
 const DEPS = { mtto:'Mantenimiento', prod:'Producción' };
 const esAdm = p => !!p && ['admin','general'].includes(p.r);
 // departamento: si no se capturó, se deduce del rol (operadores y procesos = producción)

@@ -123,7 +123,9 @@ function agPestanas(){
   const v = p ? vistasDe(p) : [];
   const mt = p ? (esMttoAdm(p) || v.includes('agmt')) : devArea() === 'mtto';
   const mat = mt || v.includes('agmat');
-  return { usr: adm || !mt || v.includes('ag'), tab: mt, pend: mat, hist: mt, graf: mt, eq: adm };
+  // mantenimiento ve SOLO su tablero; el de usuario únicamente si un administrador se lo marcó en ⚙ Configuración → Personal
+  const usrOk = !!p && Array.isArray(p.vis) && p.vis.includes('ag');
+  return { usr: adm || !mt || usrOk, tab: mt, pend: mat, hist: mt, graf: mt, eq: adm };
 }
 function renderAG(){
   const ok = agPestanas();
