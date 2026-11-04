@@ -77,6 +77,12 @@
     _rt.apply(this, arguments);
     try {
       decorarTiles(); hero();
+      // 📐 requerimientos de máquinas (pedidos desde producción) debajo del tablero
+      if (typeof agReqMaqHTML === 'function' && S.agReq) {
+        let rq = document.getElementById('mReqMaqBox');
+        if (!rq) { rq = document.createElement('div'); rq.id = 'mReqMaqBox'; const b = document.querySelector('#v-tab .board'); if (b) b.after(rq); }
+        rq.innerHTML = agReqMaqHTML();
+      }
       ['kOk', 'kFalla', 'kSin', 'kParos'].forEach(id => cuenta(document.getElementById(id)));
       const kf = document.getElementById('kFalla'); if (kf) kf.parentNode.classList.toggle('hay', +kf.dataset.mAnt > 0);
     } catch (e) { console.warn('tema-master', e); }
@@ -139,6 +145,18 @@
     izq.innerHTML = '<p class="mPaso">Estado de la máquina</p>'; der.innerHTML = '<p class="mPaso">¿Qué está pasando? Toca un botón</p>';
     opCard.parentNode.insertBefore(chips, opCard); chips.after(grid);
     izq.appendChild(opCard); der.appendChild(opBtns); grid.append(izq, der);
+    // 📐 requerimiento para la máquina elegida (va al tablero de mantenimiento de máquinas)
+    const bReq = document.createElement('button'); bReq.type = 'button'; bReq.className = 'mReqBtn';
+    bReq.innerHTML = '<span class="mBi">📐</span><span class="mBt"><b>PEDIR UN REQUERIMIENTO</b><small>mejora o trabajo en esta máquina que necesita material</small></span><span class="mBa">›</span>';
+    der.appendChild(bReq);
+    const cajaReq = document.createElement('div'); cajaReq.id = 'mOpReq'; cajaReq.hidden = true; grid.after(cajaReq);
+    bReq.addEventListener('click', () => {
+      if (!cajaReq.hidden && cajaReq.dataset.maq === S.opMaq) { cajaReq.hidden = true; return; }
+      if (typeof agFormReq !== 'function' || !S.opMaq) return;
+      cajaReq.hidden = false; cajaReq.dataset.maq = S.opMaq;
+      agFormReq(cajaReq, { maq:S.opMaq, onOk:() => { cajaReq.hidden = true; cajaReq.innerHTML = ''; } });
+      cajaReq.scrollIntoView({ behavior:'smooth', block:'start' });
+    });
     chips.addEventListener('click', e => {
       if (e.target.closest('#mSelBtn')) { abrirLista(!chips.classList.contains('abierta')); return; }
       const c = e.target.closest('[data-mchip]'); if (!c) return;
@@ -308,6 +326,15 @@
           '<div class="foot">👷 ' + esc((e.tecRep || e.tec)?.n || '—') + ' · llegó en ' + dur(t.lleg) + ' · reparó en ' + dur(t.rep) + ' · paro total ' + dur(t.total) + '</div></div>'; }).join('') + '</div></div>';
     }).join('') : '<div class="mKbVacio">' + svgIc('mta', '') + '<b>' + (busca ? 'No encontré soluciones con esa búsqueda' : 'Todavía no hay soluciones registradas') + '</b><p class="foot">' + (busca ? 'Prueba con otra palabra (ej. “banda”, “sensor”, “aire”) o quita el filtro de tipo.' : 'Cada vez que un técnico marque “máquina reparada” con su causa y solución, aparece aquí agrupada por máquina.') + '</p></div>';
   };
+
+  // ---------- Reportes: un solo Excel de respaldo de requerimientos (concentrado por mes; producción y Áreas generales en hojas separadas; cerrados)
+  const bX = document.getElementById('btnXlsx');
+  if (bX && typeof agExcelReq === 'function') {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'primary'; b.id = 'btnXlsxReq';
+    b.textContent = '📐 Excel de requerimientos (respaldo por mes)';
+    b.addEventListener('click', () => agExcelReq(''));
+    bX.after(b);
+  }
 
   if (typeof render === 'function') try { render(); } catch (e) {}
 })();
