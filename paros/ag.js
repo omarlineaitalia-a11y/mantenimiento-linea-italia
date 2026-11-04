@@ -1,6 +1,6 @@
-/* Áreas generales · PRUEBA "Paros con áreas generales" · Mantenimiento Línea Italia
+/* Áreas generales · Control de Paros · Mantenimiento Línea Italia
  * Solicitudes que NO son paro de máquina: mejoras, modificaciones, acondicionamientos y reparaciones
- * de equipos de áreas generales, oficinas y edificio. Datos en apps/parosag/ag (solicitudes) y apps/parosag/config/ag (equipos).
+ * de equipos de áreas generales, oficinas y edificio. Datos en apps/paros/ag (solicitudes) y apps/paros/config/ag (equipos).
  * Flujo: espera (alarma rosa a mantenimiento) → proceso (técnico pone tiempo estimado) → [pendiente con fecha compromiso
  * y materiales] → terminada (solución) → cerrada (encuesta de quien solicitó: duración, área limpia, calidad).
  */
@@ -409,7 +409,7 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-agpe
 function agEquipos(){
   const C = agCats(), E = agEq();
   const usos = {}; S.agReq.forEach(r => { usos[r.eq] = (usos[r.eq] || 0) + 1; });
-  $('agBody').innerHTML = '<div class="box" id="agBd"></div><form class="box" id="fAgEq"><h3>Agregar o actualizar equipo / área</h3><p class="foot">Nombre corto y su ubicación en planta u oficina. Para cambiar uno existente, toca "Editar".</p>' +
+  $('agBody').innerHTML = '<div class="box" id="agImp" hidden></div><div class="box" id="agBd"></div><form class="box" id="fAgEq"><h3>Agregar o actualizar equipo / área</h3><p class="foot">Nombre corto y su ubicación en planta u oficina. Para cambiar uno existente, toca "Editar".</p>' +
     '<div class="g3"><label class="f">Nombre corto *<input id="agEqN" required placeholder="ej. Aire acondicionado compras"></label><label class="f">Categoría<select id="agEqC">' + Object.keys(C).map(k => '<option value="' + k + '">' + esc(C[k]) + '</option>').join('') + '</select></label><label class="f">Ubicación<input id="agEqU" list="agUbicList2" placeholder="ej. Oficina · 2º piso"><datalist id="agUbicList2">' + agUbicaciones().map(u => '<option value="' + esc(u) + '">').join('') + '</datalist></label></div>' +
     '<input type="hidden" id="agEqId"><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="primary" type="submit">Guardar equipo</button><p class="msg" id="agEqMsg"></p></div></form>' +
     '<div class="box"><h3>Equipos y áreas · ' + Object.values(E).filter(v => v.a !== false).length + ' activos</h3><div class="scroll"><table class="tbl"><tr><th>Equipo</th><th>Categoría</th><th>Ubicación</th><th>Trabajos en historial</th><th>Estado</th><th></th></tr>' +
@@ -420,8 +420,26 @@ function agEquipos(){
     const eq = Object.assign({}, agEq()); eq[id] = Object.assign({}, eq[id] || {}, { n, cat:$('agEqC').value, ubic:$('agEqU').value.trim(), a: eq[id] ? eq[id].a !== false : true });
     if (await agGuardarCfg({ cats:agCats(), eq })) { $('agEqMsg').className = 'msg okm'; $('agEqMsg').textContent = 'Guardado: ' + n; }
   });
-  agBdCaja();
+  agBdCaja(); agImpCaja();
 }
+// ---------- 📦 una sola vez: traer los equipos y categorías que se configuraron en la PRUEBA (apps/parosag/config/ag).
+// Solo aparece mientras la página oficial no tiene equipos guardados y solo para administradores. Las solicitudes de prueba NO se pasan.
+function agImpCaja(){
+  const el = $('agImp'); if (!el) return;
+  if (S.agCfg || !(S.sesion && esAdm(S.sesion))) { el.hidden = true; return; }
+  el.hidden = false;
+  el.innerHTML = '<h3>📦 Traer los equipos de la prueba</h3><p class="foot">Copia los equipos, áreas y categorías que configuraste en la prueba "Paros con áreas generales". Las solicitudes de prueba no se pasan.</p>' +
+    '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button type="button" class="primary" id="agImpOk">📦 Traer equipos de la prueba</button><p class="msg" id="agImpMsg"></p></div>';
+}
+document.addEventListener('click', async e => {
+  if (e.target.id !== 'agImpOk') return;
+  e.target.disabled = true; const m = $('agImpMsg');
+  try {
+    const s = await firebase.firestore().doc('apps/parosag/config/ag').get();
+    if (!s.exists || !s.data().eq) { m.textContent = 'La prueba no tiene equipos guardados. Usa la lista de la base de datos de abajo.'; e.target.disabled = false; return; }
+    if (await agGuardarCfg(s.data())) { m.className = 'msg okm'; m.textContent = 'Listo: ' + Object.keys(s.data().eq).length + ' equipos copiados.'; }
+  } catch (er) { m.textContent = 'No se pudo leer la prueba (' + (er.code || er.message) + ').'; e.target.disabled = false; }
+});
 // ---------- 📥 equipos de la Base de Datos de Planta (equipos-bd.js): da de alta los que falten.
 // Máquinas tipo A y B → Paros de máquina (config/maquinas); lo demás → Áreas generales (config/ag)
 const AG_BD_PAROS = ['MTA', 'MTB'];

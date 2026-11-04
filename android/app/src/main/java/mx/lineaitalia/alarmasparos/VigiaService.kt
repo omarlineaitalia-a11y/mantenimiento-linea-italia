@@ -51,7 +51,7 @@ class VigiaService : Service() {
         return START_STICKY
     }
 
-    override fun onDestroy() { reg?.remove(); reg = null; regSinProd?.remove(); regSinProd = null; super.onDestroy() }
+    override fun onDestroy() { reg?.remove(); reg = null; regAG?.remove(); regAG = null; regSinProd?.remove(); regSinProd = null; super.onDestroy() }
 
     private fun escuchar() {
         if (reg != null) return
@@ -59,6 +59,7 @@ class VigiaService : Service() {
         if (u == null) { estado("Sin cuenta: abre la aplicación y entra con tu nómina"); return }
         estado("Vigilando alarmas · nómina " + (u.email ?: "").substringBefore("@").substringBefore("."))
         escucharSinProd()
+        escucharAG()
         reg = Cfg.db(this).collection("apps/paros/eventos").whereEqualTo("estado", "espera")
             .addSnapshotListener { snap, err ->
                 if (err != null) {
@@ -77,7 +78,7 @@ class VigiaService : Service() {
                     if (clave !in vistos) { vistos.add(clave); nueva = d }
                 }
                 prefs.edit().putStringSet("vistos", vistos.toList().takeLast(300).toSet()).apply()
-                if (docs.isEmpty()) sendBroadcast(Intent(Cfg.ACCION_FIN).setPackage(packageName))
+                nEv = docs.size; if (nEv == 0 && nAG == 0) sendBroadcast(Intent(Cfg.ACCION_FIN).setPackage(packageName))
                 nueva?.let { d ->
                     val prueba = d.getBoolean("prueba") == true
                     val reab = (d.getLong("reab") ?: 0L) > 0
@@ -86,6 +87,37 @@ class VigiaService : Service() {
                         if (reab) "La falla continúa: " + (d.getString("reabNota") ?: "") else (d.getString("falla") ?: ""),
                         prueba
                     )
+                }
+            }
+    }
+
+    // ---- Áreas generales: alarma ROSA a mantenimiento cuando hay una solicitud esperando técnico (apps/paros/ag, estado espera)
+    private var regAG: ListenerRegistration? = null
+    private var nEv = 0
+    private var nAG = 0
+
+    private fun escucharAG() {
+        if (regAG != null) return
+        regAG = Cfg.db(this).collection("apps/paros/ag").whereEqualTo("estado", "espera")
+            .addSnapshotListener { snap, err ->
+                if (err != null) { regAG?.remove(); regAG = null; h.postDelayed({ escucharAG() }, 30_000); return@addSnapshotListener }
+                val docs = snap?.documents ?: emptyList()
+                nAG = docs.size
+                val prefs = getSharedPreferences("vigia", MODE_PRIVATE)
+                val vistos = (prefs.getStringSet("vistosAG", emptySet()) ?: emptySet()).toMutableSet()
+                var nueva: com.google.firebase.firestore.DocumentSnapshot? = null
+                for (d in docs) {
+                    val clave = d.id + "|" + (d.getString("tAlerta") ?: d.getString("t0") ?: "")
+                    if (clave !in vistos) { vistos.add(clave); nueva = d }
+                }
+                prefs.edit().putStringSet("vistosAG", vistos.toList().takeLast(300).toSet()).apply()
+                if (nEv == 0 && nAG == 0) sendBroadcast(Intent(Cfg.ACCION_FIN).setPackage(packageName))
+                nueva?.let { d ->
+                    val reab = (d.getLong("reab") ?: 0L) > 0
+                    val donde = listOfNotNull(d.getString("ubic")?.takeIf { it.isNotBlank() }, d.getString("prio")?.takeIf { it.isNotBlank() }?.let { "prioridad " + it }).joinToString(" · ")
+                    alarmar("ag-" + d.id, d.getString("eqN") ?: "Área general",
+                        (if (reab) "Continúa la falla: " + (d.getString("reabNota") ?: "") else (d.getString("desc") ?: "")) + (if (donde.isNotEmpty()) "\n" + donde else ""),
+                        false, true)
                 }
             }
     }
@@ -127,15 +159,15 @@ class VigiaService : Service() {
         }
     }
 
-    private fun alarmar(id: String, maquina: String, falla: String, prueba: Boolean) {
+    private fun alarmar(id: String, maquina: String, falla: String, prueba: Boolean, ag: Boolean = false) {
         val i = Intent(this, AlarmaActivity::class.java)
-            .putExtra("id", id).putExtra("maq", maquina).putExtra("falla", falla).putExtra("prueba", prueba)
+            .putExtra("id", id).putExtra("maq", maquina).putExtra("falla", falla).putExtra("prueba", prueba).putExtra("ag", ag)
             .putExtra("t0", System.currentTimeMillis())
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
         val pi = PendingIntent.getActivity(this, id.hashCode(), i, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val n = NotificationCompat.Builder(this, "alarmas")
             .setSmallIcon(android.R.drawable.ic_dialog_alert)
-            .setContentTitle((if (prueba) "🧪 PRUEBA · " else "⚠ FALLA · ") + maquina)
+            .setContentTitle((if (ag) "🏢 ÁREAS GENERALES · " else if (prueba) "🧪 PRUEBA · " else "⚠ FALLA · ") + maquina)
             .setContentText(falla)
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_ALARM)

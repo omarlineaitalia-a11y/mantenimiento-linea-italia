@@ -25,7 +25,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 
-/** Alarma a pantalla completa: enciende la pantalla, suena como despertador y parpadea en rojo (morado si es prueba). */
+/** Alarma a pantalla completa: enciende la pantalla, suena como despertador y parpadea en rojo (morado si es prueba, rosa si es de áreas generales). */
 class AlarmaActivity : Activity() {
     private var tono: Ringtone? = null
     private val h = Handler(Looper.getMainLooper())
@@ -33,6 +33,7 @@ class AlarmaActivity : Activity() {
     private lateinit var reloj: TextView
     private var t0 = 0L
     private var prueba = false
+    private var ag = false
     private var on = true
 
     private val fin = object : BroadcastReceiver() {
@@ -58,7 +59,7 @@ class AlarmaActivity : Activity() {
         h.post(object : Runnable {
             override fun run() {
                 on = !on
-                raiz.setBackgroundColor(if (prueba) (if (on) Color.rgb(91, 44, 131) else Color.rgb(46, 20, 70)) else (if (on) Color.rgb(198, 40, 40) else Color.rgb(122, 18, 18)))
+                raiz.setBackgroundColor(if (ag) (if (on) Color.rgb(216, 27, 96) else Color.rgb(136, 14, 79)) else if (prueba) (if (on) Color.rgb(91, 44, 131) else Color.rgb(46, 20, 70)) else (if (on) Color.rgb(198, 40, 40) else Color.rgb(122, 18, 18)))
                 val s = (System.currentTimeMillis() - t0) / 1000
                 reloj.text = "%d:%02d".format(s / 60, s % 60)
                 h.postDelayed(this, 600)
@@ -70,17 +71,18 @@ class AlarmaActivity : Activity() {
 
     private fun mostrar(i: Intent) {
         prueba = i.getBooleanExtra("prueba", false)
+        ag = i.getBooleanExtra("ag", false)
         t0 = i.getLongExtra("t0", System.currentTimeMillis())
         raiz.removeAllViews()
         fun texto(t: String, sp: Float, negrita: Boolean = true) = TextView(this).apply {
             text = t; textSize = sp; setTextColor(Color.WHITE); gravity = Gravity.CENTER
             if (negrita) setTypeface(typeface, Typeface.BOLD); setPadding(0, 12, 0, 12)
         }
-        raiz.addView(texto(if (prueba) "🧪 PRUEBA DE ALARMA" else "⚠ FALLA EN MÁQUINA", 34f))
+        raiz.addView(texto(if (ag) "🏢 ÁREAS GENERALES" else if (prueba) "🧪 PRUEBA DE ALARMA" else "⚠ FALLA EN MÁQUINA", 34f))
         raiz.addView(texto(i.getStringExtra("maq") ?: "", 44f))
         reloj = texto("0:00", 64f); raiz.addView(reloj)
         raiz.addView(texto(i.getStringExtra("falla") ?: "", 22f, false))
-        raiz.addView(texto("El técnico registra \"Técnico en sitio\" con su nómina en la pantalla de la máquina.", 17f, false))
+        raiz.addView(texto(if (ag) "El técnico acepta la solicitud en Paros LI → Áreas generales y pone su tiempo estimado." else "El técnico registra \"Técnico en sitio\" con su nómina en la pantalla de la máquina.", 17f, false))
         val abrir = Button(this).apply {
             text = "ABRIR PAROS LI"; textSize = 20f
             // abre la pantalla de Control de Paros dentro de la app
