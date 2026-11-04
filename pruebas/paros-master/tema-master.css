@@ -132,3 +132,124 @@ input,select,textarea{border-radius:10px}
 .kbi:hover{transform:translateY(-2px)}
 
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+
+/* =====================================================================
+   v2 · tablero de producción con mejor acomodo + menús ilustrados y fáciles de entender
+   ===================================================================== */
+/* menú principal: ícono grande arriba del texto */
+nav.nav button{flex-direction:column;gap:1px;padding:6px 12px;font-size:12.5px;line-height:1.15;min-width:74px}
+nav.nav .mNi{font-size:22px;line-height:1;transition:transform .2s}
+nav.nav button:hover .mNi{transform:translateY(-2px) scale(1.12)}
+nav.nav button[aria-current="true"] .mNi{animation:mBrinca .5s}
+@keyframes mBrinca{40%{transform:translateY(-5px) scale(1.15)}}
+
+/* cintillo ilustrado de cada pantalla */
+.mGuiaV{position:relative;overflow:hidden;border-radius:20px;padding:16px 20px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:18px;align-items:center;color:#EAF2FB;box-shadow:0 10px 26px rgba(14,42,71,.22);
+  background:radial-gradient(500px 200px at 90% 0%,color-mix(in srgb,var(--glow1) 26%,transparent),transparent 60%),linear-gradient(125deg,color-mix(in srgb,var(--hero) 65%,#000),var(--hero) 60%,color-mix(in srgb,var(--hero) 70%,#4a8fd8))}
+.mGuiaV::after{content:"";position:absolute;top:0;bottom:0;width:30%;left:-40%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.08),transparent);animation:mBrillo 6s ease-in-out infinite;pointer-events:none}
+@keyframes mBrillo{0%,55%{left:-40%}100%{left:120%}}
+.mGuiaV .ilu{width:104px;height:86px;display:grid;place-items:center;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:18px;animation:mFlota 5s ease-in-out infinite}
+.mGuiaV .ilu svg{width:96px;height:80px;color:#9FE3E7}
+.mGuiaV .ilu .emo{font-size:52px;line-height:1}
+.mGuiaV h2{margin:0;font-size:clamp(19px,2.4vw,24px);color:#fff}
+.mGuiaV p{margin:3px 0 0;color:#C9D8E8;font-size:14.5px}
+.mGuiaV ol{list-style:none;margin:10px 0 0;padding:0;display:flex;gap:8px;flex-wrap:wrap}
+.mGuiaV li{display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);border-radius:99px;padding:4px 12px 4px 4px;font-size:13.5px;font-weight:600;animation:mSube .4s both}
+.mGuiaV li:nth-child(2){animation-delay:.08s}.mGuiaV li:nth-child(3){animation-delay:.16s}.mGuiaV li:nth-child(4){animation-delay:.24s}
+.mGuiaV li b{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:var(--glow2);color:#1a1400;font-size:12.5px;flex:none}
+.mGuiaV .x{position:absolute;right:10px;top:8px;background:rgba(255,255,255,.12);border:0;color:#fff;border-radius:50%;width:30px;height:30px;padding:0;font-size:15px}
+.mGuiaV.mini{padding:10px 16px}.mGuiaV.mini .ilu{width:60px;height:50px}.mGuiaV.mini .ilu svg{width:54px;height:46px}.mGuiaV.mini .ilu .emo{font-size:30px}.mGuiaV.mini ol,.mGuiaV.mini p{display:none}
+@media (max-width:640px){.mGuiaV{grid-template-columns:minmax(0,1fr)}.mGuiaV .ilu{display:none}}
+
+/* pestañas internas (Configuración, Áreas generales) como tarjetitas */
+.ctabs{border-bottom:0;gap:8px;padding:2px}
+.ctabs button{border:1px solid var(--line)!important;border-radius:12px!important;margin:0!important;background:var(--panel)!important;padding:9px 14px;box-shadow:var(--sombra2);font-size:14px}
+.ctabs button[aria-selected="true"]{background:var(--accent)!important;color:var(--accent-fg)!important;border-color:var(--accent)!important;transform:translateY(-2px)}
+
+/* ---------- tablero de producción: mejor acomodo ---------- */
+.mChips{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 8px;scrollbar-width:thin}
+.mChip{flex:none;display:flex;align-items:center;gap:8px;border-radius:14px;padding:5px 12px 5px 5px;background:var(--panel);border:2px solid var(--line);color:var(--fg);font-weight:700;font-size:13.5px;box-shadow:var(--sombra2)}
+.mChip svg{width:46px;height:38px;color:var(--c,var(--accent));background:var(--panel2);border-radius:10px}
+.mChip i{width:10px;height:10px;border-radius:50%;background:var(--ok);flex:none}
+.mChip.m-falla i{background:var(--bad);animation:mLatidoP 1.2s infinite;color:var(--bad)}.mChip.m-sinprod i{background:var(--warn)}
+.mChip.m-falla{border-color:var(--bad)}
+.mChip.on{border-color:var(--accent);background:var(--accent-soft);transform:translateY(-2px)}
+#mOpGrid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(280px,1fr);gap:16px;align-items:start}
+#mOpGrid .bigbtns{grid-template-columns:minmax(0,1fr);gap:10px}
+#mOpGrid .bigbtns button{flex-direction:row;justify-content:flex-start;text-align:left;gap:4px 12px;flex-wrap:wrap;padding:18px 18px;font-size:clamp(17px,1.8vw,21px)}
+#mOpGrid .bigbtns button small{flex-basis:100%;font-size:13px}
+.mPaso{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 -4px 4px}
+@media (max-width:900px){#mOpGrid{grid-template-columns:minmax(0,1fr)}}
+.opcard{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:22px;row-gap:6px;align-items:center;text-align:left;padding:22px 24px;border-width:0;border-top:8px solid}
+.opcard>*:not(.mIcG){grid-column:2;justify-self:start}
+.opcard .mIcG{grid-column:1;grid-row:1 / span 8;width:min(210px,32vw);filter:drop-shadow(0 8px 12px rgba(0,0,0,.2))}
+.opcard.ok{background:linear-gradient(150deg,var(--panel),var(--ok-bg))}
+.opcard.falla{background:linear-gradient(150deg,var(--bad),var(--bad-ink))}
+.opcard.sinprod{background:linear-gradient(150deg,var(--panel),var(--warn-bg))}
+.opcard .os{display:inline-flex;align-items:center;gap:8px;border-radius:99px;padding:4px 14px;background:rgba(255,255,255,.6)}
+.opcard.falla .os{background:rgba(0,0,0,.2)}
+.mGuia{grid-column:1 / -1!important;justify-self:stretch!important;margin-top:8px;border-radius:14px;padding:12px 16px;font-weight:600;font-size:clamp(15px,1.7vw,19px);background:rgba(255,255,255,.65);display:flex;gap:10px;align-items:center}
+.opcard.falla .mGuia{background:rgba(0,0,0,.22)}
+.mGuia span:first-child{font-size:26px;animation:mBrinca 1.6s infinite}
+@media (max-width:640px){.opcard{grid-template-columns:minmax(0,1fr);text-align:center}.opcard>*:not(.mIcG){grid-column:1;justify-self:center}.opcard .mIcG{grid-row:auto;justify-self:center;width:150px}}
+.steps .step{position:relative;border-radius:14px}
+.steps .step.now{animation:mLatidoT 1.6s infinite}
+
+/* =====================================================================
+   v3 · animaciones SOLO en lo principal (pedido de Ing. Omar):
+   se quedan → máquina en falla (latido rojo y dibujo que se sacude), letrero de falla en la portada,
+   contador de fallas, punto de falla en la lista de máquinas y el paso actual de la reparación.
+   todo lo demás queda quieto.
+   ===================================================================== */
+.top::after,.mHero::after,.mGuiaV::after{display:none}
+.mHero .maqs div,.mGuiaV .ilu,#v-home .mIcs svg{animation:none}
+.mHero .eti:not(.mal) i{animation:none}
+.box h3::before{animation:none}
+.wrap>section:not([hidden]),.toast,.mcard,.modal{animation:none}
+.tiles.mEntra .tile,.mGuiaV li{animation:none}
+nav.nav button[aria-current="true"] .mNi,.mGuia span:first-child{animation:none}
+.tile .ts .dot{animation:none}
+.vcol i,.hbar .tr i{animation:none}
+.tile:hover,.kpi:hover,.kbi:hover,.bitem:hover,.bigbtns button:hover:not(:disabled),nav.nav button:hover .mNi,.tile:hover .mIc,.brand img:hover{transform:none}
+
+/* =====================================================================
+   v4 · fondos y espacios de app profesional
+   fondo claro y limpio (toma un toque del color de Apariencia), más aire entre bloques,
+   bordes finos, sombras suaves y una sola medida de esquinas.
+   ===================================================================== */
+:root{--mFondo:color-mix(in srgb,var(--bg) 18%,#F4F6F9);--mPanel:#FFFFFF;--mLinea:#E3E8EE;--mSombra:0 1px 2px rgba(16,24,40,.04),0 4px 14px rgba(16,24,40,.06)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--mFondo:color-mix(in srgb,var(--bg) 55%,#0E1116);--mPanel:var(--panel);--mLinea:var(--line);--mSombra:none}}
+:root[data-theme="dark"]{--mFondo:color-mix(in srgb,var(--bg) 55%,#0E1116);--mPanel:var(--panel);--mLinea:var(--line);--mSombra:none}
+body{background:var(--mFondo)}
+.wrap{max-width:1440px;padding-inline:clamp(16px,3vw,32px);padding-block:22px 64px;gap:22px}
+.wrap>section{gap:20px!important}
+.top{padding-inline:clamp(16px,3vw,32px);padding-block:12px}
+.box,.kpi,.tile,.buzon,.kbi,.opcard,.mChip,.bigbtns button{border-color:var(--mLinea)}
+.box{background:var(--mPanel);border:1px solid var(--mLinea);border-radius:18px;padding:20px 22px;gap:14px;box-shadow:var(--mSombra)}
+.box h3{font-size:12.5px;letter-spacing:.1em;color:var(--muted)}
+.box h3::before{width:6px;height:6px}
+.kpis,.rep-kpis{gap:14px}
+.kpi{background:var(--mPanel);padding:14px 18px;border-radius:16px;box-shadow:var(--mSombra);border-top-width:4px}
+.kpi span{font-size:12.5px;font-weight:600;letter-spacing:.02em}
+.board{gap:22px}
+.tiles{gap:14px}
+.tile{box-shadow:var(--mSombra);border-top-width:4px}
+.tile.ok{background:var(--mPanel)}
+.tile.ok .ts{background:var(--ok-bg);border-radius:99px;padding:2px 9px;align-self:flex-start}
+.charts{gap:20px}
+.legend{gap:18px;padding:0 4px}
+.mHero,.mGuiaV{border-radius:22px}
+.mHero{padding:26px 28px}
+.mGuiaV{padding:18px 22px}
+.tbl{font-size:13.5px}.tbl th{padding:10px 12px}.tbl td{padding:10px 12px;border-top-color:var(--mLinea)}
+.tbl tr:nth-child(even) td{background:transparent}
+input,select,textarea{border-color:var(--mLinea);background:var(--mPanel);padding:10px 12px}
+label.f{font-weight:600;font-size:12.5px}
+button,.btn{border-color:var(--mLinea)}
+.buzon{background:var(--mPanel);padding:18px}
+.opcard{box-shadow:var(--mSombra)}
+.bigbtns button{box-shadow:var(--mSombra)}
+.ctabs button{background:var(--mPanel)!important;border-color:var(--mLinea)!important}
+.mcard{background:var(--mFondo);border-radius:22px;padding:20px;gap:14px}
+@media (max-width:640px){.box{padding:16px}.wrap{gap:16px}}
+.opcard .ot{font-size:clamp(40px,6vw,86px);max-width:100%}.opcard .on{font-size:clamp(22px,3vw,38px)}
