@@ -220,19 +220,69 @@ const agTarjeta = r => {
     (r.estado === 'espera' ? ' · <b data-since="' + esc(r.t0) + '">' + hms(ms(r.t0)) + '</b>' : '') +
     (r.estado === 'pendiente' && r.pend ? ' · compromiso <b>' + esc(r.pend.fecha || 'sin fecha') + '</b>' : '') + agPrioTag(r.prio) + '</div></button>';
 };
-function agTablero(){
-  const R = S.agReq, h0 = new Date(); h0.setHours(0, 0, 0, 0);
-  // las fallas van en sus 4 columnas; los requerimientos (proyectos) en su propio recuadro, ordenados por fecha
-  const F = R.filter(r => !r.req), Q = R.filter(r => r.req && r.estado !== 'cerrada').sort((a, b) => (a.fechaReq || '9').localeCompare(b.fechaReq || '9'));
-  const n = k => F.filter(r => r.estado === k).length;
-  const col = (k, t) => { const L = F.filter(r => r.estado === k); return '<div class="box" style="min-width:0"><h3>' + t + ' · ' + L.length + '</h3>' + (L.length ? '<div class="kb">' + L.slice(0, 40).map(agTarjeta).join('') + '</div>' : '<p class="foot">Sin solicitudes.</p>') + '</div>'; };
-  $('agBody').innerHTML =
-    '<div class="kpis"><div class="kpi bad"><b>' + n('espera') + '</b><span>esperando técnico</span></div><div class="kpi"><b>' + n('proceso') + '</b><span>en proceso</span></div><div class="kpi warn"><b>' + n('pendiente') + '</b><span>pendientes</span></div><div class="kpi ok"><b>' + n('terminada') + '</b><span>por calificar</span></div><div class="kpi"><b>' + R.filter(r => new Date(r.t0) >= h0).length + '</b><span>solicitudes hoy</span></div></div>' +
-    '<div style="display:flex;gap:10px;flex-wrap:wrap"><p class="foot" style="align-self:center">Para mejoras, modificaciones o reparaciones que NO son paro de máquina. Los paros de máquina van en "🛠 Paros de máquina".</p></div>' +
-    '<div class="charts">' + col('espera', '🔴 Esperando técnico') + col('proceso', '🧰 En proceso') + col('pendiente', '⏳ Pendientes') + col('terminada', '✅ Terminadas · falta que el usuario libere') + '</div>' +
-    '<div class="box agRqBox"><h3>📐 Requerimientos y proyectos · ' + Q.length + '</h3><p class="foot">Trabajos que necesitan comprar material. No suenan como alarma; se planean por fecha.</p>' +
-    (Q.length ? '<div class="agRqGrid">' + Q.map(agTarjeta).join('') + '</div>' : '<p class="foot">Sin requerimientos abiertos.</p>') + '</div>';
+// ---------- 🧰 TABLERO DE MANTENIMIENTO · ÁREAS GENERALES (PRUEBA MASTER)
+// portada en vivo + contadores ilustrados que filtran + buscador y categorías + columnas tipo tablero con tarjetas ilustradas
+// y botones de acción directos (Atender / Terminar / Reanudar) + requerimientos con cuenta regresiva.
+const AG_TCAT = { AA:['aa', 'Aires', '#1597D3'], IL:['il', 'Iluminación', '#D9A400'], EBT:['ebt', 'Eléctrico', '#D2453C'], EMT:['emt', 'Subestación', '#8E2A2A'], AG:['ag', 'Edificio', '#2E9E5B'], MTC:['mtc', 'Herramienta', '#7B4BC4'], EA:['ea', 'Auxiliar', '#0E9F96'], EM:['em', 'Móvil', '#8A5A2B'], MTA:['mta', 'Máquinas', '#1F4FBF'], MTB:['mtb', 'Máquinas', '#E07B1A'] };
+const AG_TCOL = [
+  { k:'espera', t:'Esperando técnico', d:'Nadie la ha tomado', ic:'🚨', c:'#D32F2F' },
+  { k:'proceso', t:'En proceso', d:'Un técnico ya está trabajando', ic:'🧰', c:'#1F6FD1' },
+  { k:'pendiente', t:'Pendientes', d:'Falta material, contratista o autorización', ic:'⏳', c:'#E0A100' },
+  { k:'terminada', t:'Terminadas', d:'Falta que quien pidió libere', ic:'✅', c:'#1E8E5A' }
+];
+const AG_PRIO_C = { urgente:['#D32F2F', '🔴 Urgente'], alta:['#EF6C00', '🟠 Alta'], media:['#E0A100', '🟡 Media'], baja:['#1E8E5A', '🟢 Baja'] };
+const agCatDe = r => r.req ? ['ag', 'Requerimiento', '#1F6FD1'] : (AG_TCAT[r.cat] || AG_TCAT.AG);
+const agIni = n => String(n || '?').split(/\s+/).filter(Boolean).slice(0, 2).map(x => x[0]).join('').toUpperCase();
+function agTarjetaM(r, i){
+  const [ic, cn, cc] = agCatDe(r), pr = AG_PRIO_C[r.prio] || AG_PRIO_C.media;
+  const dias = r.req && r.fechaReq ? Math.ceil((new Date(r.fechaReq + 'T12:00') - Date.now()) / 86400000) : null;
+  const mats = r.mats || [], mOk = mats.filter(m => /recib/i.test(m.est || '')).length;
+  let pie = '';
+  if (r.estado === 'espera') pie = '<span class="agTm vivo">⏱ <b data-since="' + esc(r.tAlerta || r.t0) + '">' + hms(ms(r.tAlerta || r.t0)) + '</b> esperando</span>';
+  else if (r.estado === 'proceso') pie = '<span class="agAva" title="' + esc(r.tec?.n || '') + '">' + esc(agIni(r.tec?.n)) + '</span><span class="agTm">' + esc(r.tec?.n || '') + (r.est ? ' · estimado ' + agFmtEst(r.est) : '') + '</span>';
+  else if (r.estado === 'pendiente') pie = '<span class="agTm">📅 compromiso <b>' + esc(r.pend?.fecha || 'sin fecha') + '</b>' + (r.pend?.motivo ? ' · ' + esc(r.pend.motivo) : '') + '</span>';
+  else if (r.estado === 'terminada') pie = '<span class="agTm">👤 falta que <b>' + esc(r.sol?.n || 'quien pidió') + '</b> libere</span>';
+  const acc = { espera:['atender', '🧰', 'Atender'], proceso:['terminar', '✅', 'Terminar'], pendiente:['reanudar', '▶', 'Reanudar'] }[r.estado];
+  return '<div class="agK e-' + r.estado + (r.prio === 'urgente' ? ' urg' : '') + (r.req ? ' req' : '') + '" style="--c:' + cc + ';--i:' + (i || 0) + '">' +
+    '<div class="agKc" data-agver="' + r.id + '"><div class="agKi"><svg viewBox="0 0 120 100" aria-hidden="true">' + ((window.ICON_R && ICON_R[ic]) || '') + '</svg></div>' +
+      '<div class="agKt"><div class="agKch"><span class="agCh2" style="--c:' + cc + '">' + esc(r.req ? '📐 Requerimiento' : cn) + '</span><span class="agCh2 pr" style="--c:' + pr[0] + '">' + pr[1] + '</span>' + (r.reab ? '<span class="agCh2" style="--c:#D32F2F">🔁 ' + (r.reab + 1) + 'ª vez</span>' : '') + '</div>' +
+        '<b>' + esc(r.eqN) + '</b><small>📍 ' + esc(r.ubic || 'sin ubicación') + ' · ' + fdt(r.t0) + '</small>' +
+        '<p>' + esc(r.desc || '') + '</p>' +
+        (r.req ? '<div class="agKreq">📅 para el <b>' + esc(r.fechaReq || '—') + '</b>' + (dias != null ? ' · <span class="' + (dias < 0 ? 'mal' : dias <= 7 ? 'pronto' : '') + '">' + (dias < 0 ? 'vencido hace ' + (-dias) + ' d' : dias === 0 ? 'es hoy' : 'faltan ' + dias + ' d') + '</span>' : '') + ((r.fotos || []).length ? ' · 📷 ' + r.fotos.length : '') + '</div>' : '') +
+        (mats.length ? '<div class="agKmat"><span style="width:' + Math.round(mOk / mats.length * 100) + '%"></span></div><small>🧾 material ' + mOk + ' de ' + mats.length + ' recibido</small>' : '') +
+      '</div></div>' +
+    '<div class="agKf">' + pie + '<span class="agKsp"></span>' + (acc ? '<button type="button" class="agBt" data-agacc="' + acc[0] + '" data-id="' + r.id + '"><span>' + acc[1] + '</span>' + acc[2] + '</button>' : '') + '<button type="button" class="agBt ver" data-agver="' + r.id + '">Ver ›</button></div></div>';
 }
+function agTablero(){
+  S.agF = S.agF || { cat:'', q:'', est:'' };
+  const R = S.agReq, h0 = new Date(), q = norm(S.agF.q || ''); h0.setHours(0, 0, 0, 0);
+  const pasa = r => (!S.agF.cat || (S.agF.cat === 'req' ? r.req : !r.req && (AG_TCAT[r.cat] || AG_TCAT.AG)[1] === S.agF.cat)) && (!q || norm(r.eqN + ' ' + r.ubic + ' ' + r.desc + ' ' + (r.sol?.n || '') + ' ' + (r.tec?.n || '')).includes(q));
+  const A = R.filter(r => r.estado !== 'cerrada'), F = A.filter(r => !r.req && pasa(r)), Q = A.filter(r => r.req && pasa(r)).sort((a, b) => (a.fechaReq || '9').localeCompare(b.fechaReq || '9'));
+  const n = k => A.filter(r => !r.req && r.estado === k).length, nE = n('espera'), tot = A.filter(r => !r.req).length || 1;
+  const hoyN = R.filter(r => new Date(r.t0) >= h0).length, cerrHoy = R.filter(r => r.lib && new Date(r.lib.t || 0) >= h0).length;
+  const cats = [...new Set(A.filter(r => !r.req).map(r => (AG_TCAT[r.cat] || AG_TCAT.AG)[1]))];
+  const colsV = S.agF.est ? AG_TCOL.filter(c => c.k === S.agF.est) : AG_TCOL;
+  $('agBody').innerHTML =
+    '<section class="agHero"><div class="agHc"><span class="eti' + (nE ? ' mal' : '') + '"><i></i>' + (nE ? nE + ' esperando técnico' : 'Todo atendido') + '</span>' +
+      '<h2>' + (nE ? '¡Hay <span>' + nE + ' solicitud' + (nE > 1 ? 'es' : '') + '</span> por atender!' : 'Áreas generales <span>al día</span> 👌') + '</h2>' +
+      '<p class="sub">Hoy: ' + hoyN + ' solicitud' + (hoyN === 1 ? '' : 'es') + ' nuevas · ' + cerrHoy + ' liberadas · ' + Q.length + ' requerimiento' + (Q.length === 1 ? '' : 's') + ' en planeación</p>' +
+      '<div class="barra">' + AG_TCOL.map(c => '<i style="width:' + (n(c.k) / tot * 100) + '%;background:' + c.c + '"></i>').join('') + '</div></div>' +
+      '<div class="agHm" aria-hidden="true">' + ['aa', 'il', 'ebt', 'ag', 'ea', 'em'].map(k => '<div><svg viewBox="0 0 120 100">' + ((window.ICON_R && ICON_R[k]) || '') + '</svg></div>').join('') + '</div></section>' +
+    '<div class="agKp">' + AG_TCOL.map(c => '<button type="button" class="agKpi' + (S.agF.est === c.k ? ' on' : '') + (c.k === 'espera' && nE ? ' hay' : '') + '" data-agfe="' + c.k + '" style="--c:' + c.c + '"><span class="ico">' + c.ic + '</span><b>' + n(c.k) + '</b><span>' + c.t + '</span></button>').join('') +
+      '<button type="button" class="agKpi' + (S.agF.cat === 'req' ? ' on' : '') + '" data-agfc="req" style="--c:#0E2A47"><span class="ico">📐</span><b>' + A.filter(r => r.req).length + '</b><span>Requerimientos</span></button></div>' +
+    '<div class="agFil"><div class="agBus"><span>🔎</span><input id="agTq" type="search" placeholder="Buscar por equipo, lugar, quién pidió o técnico" value="' + esc(S.agF.q || '') + '"></div>' +
+      '<div class="agCats"><button type="button" class="agCf' + (!S.agF.cat ? ' on' : '') + '" data-agfc="">Todas</button>' + cats.map(c => { const d = Object.values(AG_TCAT).find(x => x[1] === c); return '<button type="button" class="agCf' + (S.agF.cat === c ? ' on' : '') + '" data-agfc="' + esc(c) + '" style="--c:' + d[2] + '"><svg viewBox="0 0 120 100">' + ((window.ICON_R && ICON_R[d[0]]) || '') + '</svg>' + esc(c) + '</button>'; }).join('') + '</div></div>' +
+    (S.agF.cat === 'req' ? '' : '<div class="agCols">' + colsV.map(c => { const L = F.filter(r => r.estado === c.k).sort((a, b) => ({ urgente:0, alta:1, media:2, baja:3 }[a.prio] ?? 2) - ({ urgente:0, alta:1, media:2, baja:3 }[b.prio] ?? 2) || (a.t0 || '').localeCompare(b.t0 || ''));
+      return '<div class="agCol" style="--c:' + c.c + '"><div class="agColH"><span class="ico">' + c.ic + '</span><div><b>' + c.t + '</b><small>' + c.d + '</small></div><span class="n">' + L.length + '</span></div>' +
+        (L.length ? L.slice(0, 40).map(agTarjetaM).join('') : '<div class="agVacio">' + (c.k === 'espera' ? '🎉 Nada esperando' : 'Sin solicitudes') + '</div>') + '</div>'; }).join('') + '</div>') +
+    ((S.agF.est && S.agF.cat !== 'req') ? '' : '<div class="agCol agColR" style="--c:#0E2A47"><div class="agColH"><span class="ico">📐</span><div><b>Requerimientos y proyectos</b><small>Necesitan comprar material · se planean por fecha · no suenan como alarma</small></div><span class="n">' + Q.length + '</span></div>' +
+      (Q.length ? '<div class="agRqGrid">' + Q.map(agTarjetaM).join('') + '</div>' : '<div class="agVacio">Sin requerimientos abiertos</div>') + '</div>');
+  const tq = $('agTq'); if (tq) tq.addEventListener('input', () => { S.agF.q = tq.value; const p = tq.selectionStart; agTablero(); const t2 = $('agTq'); t2.focus(); try { t2.setSelectionRange(p, p); } catch (e) {} });
+}
+document.addEventListener('click', e => {
+  const fe = e.target.closest('[data-agfe]'); if (fe) { S.agF.est = S.agF.est === fe.dataset.agfe ? '' : fe.dataset.agfe; if (S.agF.cat === 'req') S.agF.cat = ''; agTablero(); return; }
+  const fc = e.target.closest('[data-agfc]'); if (fc) { S.agF.cat = S.agF.cat === fc.dataset.agfc && fc.dataset.agfc ? '' : fc.dataset.agfc; if (S.agF.cat === 'req') S.agF.est = ''; agTablero(); }
+});
 
 
 // ---------- formulario de reporte (tablero de usuario) · PRUEBA MASTER: asistente ilustrado paso a paso
