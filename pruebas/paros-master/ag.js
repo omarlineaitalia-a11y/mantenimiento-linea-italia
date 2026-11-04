@@ -168,36 +168,95 @@ function agTablero(){
 }
 
 
-// ---------- formulario de reporte (tablero de usuario): qué equipo falla, dónde está y una nota rápida
+// ---------- formulario de reporte (tablero de usuario) · PRUEBA MASTER: asistente ilustrado paso a paso
+// 1 ¿qué falla? (tarjetas con dibujo; máquinas A y B salen en vivo de Paros; "Otro" para escribir) → 2 ¿cuál? → 3 ¿dónde? → 4 ¿qué pasa?
+const AG_GRUPOS = [
+  { k:'maq', n:'Máquinas de producción', d:'Tipo A y B (las de Paros)', ic:'mta', c:'#1F4FBF' },
+  { k:'AA', n:'Aire acondicionado', d:'No enfría, gotea, hace ruido', ic:'aa', c:'#1597D3' },
+  { k:'IL', n:'Iluminación', d:'Lámparas fundidas o parpadeando', ic:'il', c:'#D9A400' },
+  { k:'EBT', n:'Eléctrico', d:'Contactos, tableros, apagadores', ic:'ebt', c:'#D2453C' },
+  { k:'AG', n:'Edificio y áreas', d:'Baños, puertas, techos, pintura', ic:'ag', c:'#2E9E5B' },
+  { k:'MTC', n:'Herramienta', d:'Taladros, pulidoras, sierras', ic:'mtc', c:'#7B4BC4' },
+  { k:'EA', n:'Equipo auxiliar', d:'Compresores, extractores, gas', ic:'ea', c:'#0E9F96' },
+  { k:'EM', n:'Equipo móvil', d:'Montacargas y patines', ic:'em', c:'#8A5A2B' },
+  { k:'EMT', n:'Subestación', d:'Media tensión', ic:'emt', c:'#8E2A2A' },
+  { k:'otro', n:'Otro', d:'No está en la lista: escríbelo', emo:'✏️', c:'#546E7A' }
+];
+const AG_UBIC_IC = { Planta:'🏭', Edificio:'🏢', Comedor:'🍽️', 'Baños':'🚻', Oficina:'💼', Escaleras:'🪜', 'Jardín':'🌳', Estacionamiento:'🅿️' };
+const AG_EJEMPLOS = ['No enciende', 'Hace ruido raro', 'Gotea / fuga de agua', 'No enfría', 'Se fundió', 'Está roto', 'Huele a quemado'];
 function agNueva(){ $('agBody').innerHTML = '<div id="agFormU"></div>'; agFormulario($('agFormU')); }
 function agFormulario(cont){
-  const C = agCats(), E = agEq();
-  const grupos = Object.keys(C).map(c => { const L = Object.entries(E).filter(([k, v]) => v.cat === c && v.a !== false).sort((a, b) => a[1].n.localeCompare(b[1].n, 'es')); return L.length ? '<optgroup label="' + esc(C[c]) + '">' + L.map(([k, v]) => '<option value="' + k + '">' + esc(v.n) + '</option>').join('') + '</optgroup>' : ''; }).join('');
-  cont.innerHTML = '<form class="box" id="fAgNueva" style="border:2px solid #AD1457"><h3 style="color:#AD1457">➕ Reportar una falla o pedir un trabajo a mantenimiento</h3>' +
-    '<div class="g3"><label class="f">1 · ¿Qué equipo o área está fallando? *<select id="agEq"><option value="">— elige —</option>' + grupos + '<option value="otro">Otro (escribir)</option></select></label>' +
-    '<label class="f" id="agOtroL" hidden>Nombre del equipo o área *<input id="agOtro" placeholder="ej. bodega de cartón"></label>' +
-    '<label class="f">2 · ¿Dónde se ubica la falla? *<select id="agUbicSel"><option value="">— elige —</option>' + AG_UBIC.map(u => '<option>' + u + '</option>').join('') + '<option value="otro">Otro (escribir)</option></select></label>' +
-    '<label class="f" id="agUbicL" hidden>Escribe la ubicación *<input id="agUbic" placeholder="ej. bodega de cartón"></label>' +
-    '<label class="f">Tipo de trabajo<select id="agTipo">' + AG_TIPOS.map(t => '<option>' + t + '</option>').join('') + '</select></label>' +
-    '<label class="f">Prioridad<select id="agPrio">' + Object.keys(AG_PRIO).map(k => '<option value="' + k + '"' + (k === 'media' ? ' selected' : '') + '>' + AG_PRIO[k] + '</option>').join('') + '</select></label></div>' +
-    '<label class="f">3 · Notas: explica rápido qué está pasando *<textarea id="agDesc" required placeholder="ej. fuga de agua en el lavabo del baño de hombres; se fundieron 2 lámparas del pasillo; el aire no enfría"></textarea></label>' +
-    '<p class="msg" id="agMsg"></p><button class="primary" type="submit" style="padding:14px;font-size:17px;background:#AD1457;border-color:#AD1457">🏢 Enviar a mantenimiento</button></form>';
-  const ubic = () => { const k = $('agEq').value; $('agOtroL').hidden = k !== 'otro'; const u = k && k !== 'otro' && E[k] ? AG_UBIC.find(x => norm(x) === norm(E[k].ubic || '')) : ''; if (u && !$('agUbicSel').value) $('agUbicSel').value = u; };
-  $('agUbicSel').addEventListener('change', () => { $('agUbicL').hidden = $('agUbicSel').value !== 'otro'; });
-  $('agEq').addEventListener('change', ubic);
-  $('fAgNueva').addEventListener('submit', async e => {
+  const E = agEq(), F = { g:'', k:'', eqN:'', cat:'', ub:'', prio:'media' };
+  const ilu = (g, cls) => g.emo ? '<span class="emo">' + g.emo + '</span>' : '<svg class="' + (cls || '') + '" viewBox="0 0 120 100" aria-hidden="true">' + ((window.ICON_R && ICON_R[g.ic]) || '') + '</svg>';
+  // máquinas A y B: salen en vivo de Paros (config/maquinas), así siempre están actualizadas
+  const equiposDe = g => g === 'maq'
+    ? lista().filter(k => ['MTA', 'MTB', ''].includes((S.maq[k].cat || '').toUpperCase())).map(k => ({ k:'maq:' + k, n:maqName(k), cat:S.maq[k].cat || 'MTA', ubic:S.maq[k].area || 'Planta' }))
+    : Object.entries(E).filter(([k, v]) => v.a !== false && v.cat === g).map(([k, v]) => ({ k, n:v.n, cat:v.cat, ubic:v.ubic || '' })).sort((a, b) => a.n.localeCompare(b.n, 'es'));
+  const grupos = AG_GRUPOS.filter(g => g.k === 'otro' || equiposDe(g.k).length);
+  cont.innerHTML = '<form class="box agW" id="fAgNueva"><div class="agWt"><span>🛠️</span><div><h2>Reportar una falla a mantenimiento</h2><p class="foot">4 pasos rápidos: toca las opciones y solo escribe lo que está pasando.</p></div></div>' +
+    '<div class="agP" id="agP1"><p class="agPn"><b>1</b> ¿Qué está fallando?</p><div class="agGr">' +
+      grupos.map(g => '<button type="button" class="agG" data-agg="' + g.k + '" style="--c:' + g.c + '">' + ilu(g, 'agGi') + '<b>' + g.n + '</b><small>' + g.d + '</small></button>').join('') + '</div></div>' +
+    '<div class="agP" id="agP2" hidden><p class="agPn"><b>2</b> <span id="agP2t">¿Cuál?</span></p><div id="agP2c"></div></div>' +
+    '<div class="agP" id="agP3" hidden><p class="agPn"><b>3</b> ¿Dónde está?</p><div class="agCh">' +
+      AG_UBIC.map(u => '<button type="button" class="agC" data-agu="' + u + '">' + (AG_UBIC_IC[u] || '📍') + ' ' + u + '</button>').join('') + '<button type="button" class="agC" data-agu="otro">✏️ Otro lugar</button></div>' +
+      '<label class="f" id="agUbicL" hidden style="margin-top:8px">Escribe el lugar *<input id="agUbic" placeholder="ej. bodega de cartón"></label></div>' +
+    '<div class="agP" id="agP4" hidden><p class="agPn"><b>4</b> ¿Qué está pasando?</p>' +
+      '<div class="agCh" style="margin-bottom:8px">' + AG_EJEMPLOS.map(x => '<button type="button" class="agC sm" data-agej="' + x + '">' + x + '</button>').join('') + '</div>' +
+      '<textarea id="agDesc" placeholder="Explica rápido: ej. el lavabo del baño de hombres gotea; se fundieron 2 lámparas del pasillo"></textarea>' +
+      '<p class="agPn" style="margin-top:12px">¿Qué tan urgente es?</p><div class="agCh">' +
+      [['urgente', '🔴', 'Urgente', 'ya'], ['alta', '🟠', 'Alta', 'hoy'], ['media', '🟡', 'Media', 'esta semana'], ['baja', '🟢', 'Baja', 'este mes']].map(([k, ic, n, d]) => '<button type="button" class="agC agPr' + (k === 'media' ? ' on' : '') + '" data-agpr="' + k + '">' + ic + ' <b>' + n + '</b> <small>' + d + '</small></button>').join('') + '</div>' +
+      '<details class="agMas"><summary>Más detalles (opcional)</summary><label class="f">Tipo de trabajo<select id="agTipo">' + AG_TIPOS.map(t => '<option>' + t + '</option>').join('') + '</select></label></details>' +
+      '<div id="agRes" class="agRes"></div>' +
+      '<p class="msg" id="agMsg"></p><button class="primary agEnv" type="submit">🏢 Enviar a mantenimiento</button></div></form>';
+  const $c = s => cont.querySelector(s);
+  const resumen = () => { $c('#agRes').innerHTML = '🧾 <b>' + esc(F.eqN || '…') + '</b> · 📍 ' + esc(F.ub || '…') + ' · prioridad <b>' + esc(AG_PRIO[F.prio]) + '</b>'; };
+  const mostrar = n => { for (let i = 2; i <= n; i++) $c('#agP' + i).hidden = false; $c('#agP' + n).scrollIntoView({ behavior:'smooth', block:'nearest' }); resumen(); };
+  const elegirEq = (k, n, cat, ubic) => {
+    F.k = k; F.eqN = n; F.cat = cat;
+    cont.querySelectorAll('[data-age]').forEach(b => b.classList.toggle('on', b.dataset.age === k));
+    const u = AG_UBIC.find(x => norm(x) === norm(ubic || '')) || (k.startsWith('maq:') ? 'Planta' : '');
+    if (u && !F.ub) { F.ub = u; cont.querySelectorAll('[data-agu]').forEach(b => b.classList.toggle('on', b.dataset.agu === u)); }
+    mostrar(F.ub ? 4 : 3);
+  };
+  cont.addEventListener('click', e => {
+    const g = e.target.closest('[data-agg]');
+    if (g) {
+      F.g = g.dataset.agg; F.k = F.eqN = '';
+      cont.querySelectorAll('.agG').forEach(b => b.classList.toggle('on', b.dataset.agg === F.g));
+      const def = AG_GRUPOS.find(x => x.k === F.g);
+      if (F.g === 'otro') {
+        $c('#agP2t').textContent = 'Escribe qué equipo o área está fallando';
+        $c('#agP2c').innerHTML = '<input id="agOtro" placeholder="ej. portón de embarques, bebedero, cortina del comedor">';
+        $c('#agOtro').addEventListener('input', ev => { F.k = 'otro'; F.eqN = ev.target.value.trim(); F.cat = 'AG'; resumen(); if (F.eqN) $c('#agP3').hidden = false; });
+        mostrar(2); $c('#agOtro').focus(); return;
+      }
+      const L = equiposDe(F.g);
+      $c('#agP2t').textContent = '¿Cuál ' + (F.g === 'maq' ? 'máquina' : 'equipo') + '? · ' + def.n;
+      $c('#agP2c').innerHTML = (L.length > 8 ? '<input id="agBus" type="search" placeholder="🔎 Escribe para buscar…" style="margin-bottom:8px">' : '') +
+        '<div class="agCh" id="agEqs">' + L.map(x => '<button type="button" class="agC agEqB" data-age="' + esc(x.k) + '" data-n="' + esc(x.n) + '" data-cat="' + esc(x.cat) + '" data-ub="' + esc(x.ubic) + '" style="--c:' + def.c + '">' + ilu(def, 'agCi') + esc(x.n) + '</button>').join('') +
+        '<button type="button" class="agC" data-agg="otro">✏️ No está aquí · escribirlo</button></div>';
+      const bus = $c('#agBus'); if (bus) bus.addEventListener('input', () => { const q = norm(bus.value); cont.querySelectorAll('.agEqB').forEach(b => { b.hidden = !!q && !norm(b.dataset.n).includes(q); }); });
+      mostrar(2); return;
+    }
+    const q = e.target.closest('[data-age]'); if (q) { elegirEq(q.dataset.age, q.dataset.n, q.dataset.cat, q.dataset.ub); return; }
+    const u = e.target.closest('[data-agu]');
+    if (u) { cont.querySelectorAll('[data-agu]').forEach(b => b.classList.toggle('on', b === u)); $c('#agUbicL').hidden = u.dataset.agu !== 'otro'; F.ub = u.dataset.agu === 'otro' ? $c('#agUbic').value.trim() : u.dataset.agu; if (u.dataset.agu === 'otro') $c('#agUbic').focus(); mostrar(4); return; }
+    const ej = e.target.closest('[data-agej]'); if (ej) { const t = $c('#agDesc'); t.value = (t.value ? t.value.replace(/\s*$/, '. ') : '') + ej.dataset.agej; t.focus(); return; }
+    const pr = e.target.closest('[data-agpr]'); if (pr) { F.prio = pr.dataset.agpr; cont.querySelectorAll('[data-agpr]').forEach(b => b.classList.toggle('on', b === pr)); resumen(); }
+  });
+  $c('#agUbic').addEventListener('input', ev => { F.ub = ev.target.value.trim(); resumen(); });
+  $c('#fAgNueva').addEventListener('submit', async e => {
     e.preventDefault();
     if (!S.sesion) { toast('🔒 Primero entra con tu nómina (botón 👤 Entrar).'); entrar(); return; }
-    const k = $('agEq').value, desc = $('agDesc').value.trim(), m = $('agMsg');
-    const ub = $('agUbicSel').value === 'otro' ? $('agUbic').value.trim() : $('agUbicSel').value;
-    const eqN = k === 'otro' ? $('agOtro').value.trim() : (E[k] && E[k].n);
-    if (!eqN || !ub || !desc) { m.className = 'msg err'; m.textContent = 'Falta qué equipo falla, dónde está o la nota.'; return; }
+    const desc = $c('#agDesc').value.trim(), m = $c('#agMsg'), eqN = F.eqN, ub = F.ub, k = F.k;
+    if (!eqN || !ub || !desc) { m.className = 'msg err'; m.textContent = 'Falta: ' + [!eqN && 'qué está fallando', !ub && 'dónde está', !desc && 'qué está pasando'].filter(Boolean).join(', ') + '.'; return; }
     const p = await pedirNomina('Reporte · ' + eqN, 'agsol', 'Nómina de quien solicita'); if (!p) return; cerrarModal();
+    const cat = F.cat || 'AG', tipo = $c('#agTipo').value;
     try {
-      const nuevo = await db.collection('ag').add({ cat: k !== 'otro' && E[k] ? E[k].cat : 'AG', eq:k, eqN, ubic:ub, tipo:$('agTipo').value, prio:$('agPrio').value, desc, t0:nowIso(), estado:'espera', sol:{ n:p.n, nom:p.nomina }, log:[{ t:nowIso(), por:p.n, txt:'Solicitud creada' }] });
-      agEvento({ id:nuevo.id, eqN, ubic:ub, cat:(k !== 'otro' && E[k] ? E[k].cat : 'AG'), estado:'' }, p.n, 'Solicitud creada · ' + $('agPrio').value + ' · ' + desc);
+      const nuevo = await db.collection('ag').add({ cat, eq:k, eqN, ubic:ub, tipo, prio:F.prio, desc, t0:nowIso(), estado:'espera', sol:{ n:p.n, nom:p.nomina }, log:[{ t:nowIso(), por:p.n, txt:'Solicitud creada' }] });
+      agEvento({ id:nuevo.id, eqN, ubic:ub, cat, estado:'' }, p.n, 'Solicitud creada · ' + F.prio + ' · ' + desc);
       if (S.ntfy) fetch('https://ntfy.sh/', { method:'POST', body: JSON.stringify({ topic:S.ntfy, title:'🏢 ÁREAS GENERALES · ' + eqN + ' · ' + ub, message: desc.slice(0, 300), priority:4, tags:['office'] }) }).catch(() => {});
-      toast('Enviado a mantenimiento. Lo verás en "Mis solicitudes".'); renderAG();
+      toast('✅ Enviado a mantenimiento. Lo verás en "Mis solicitudes".'); renderAG();
     } catch (er) { m.className = 'msg err'; m.textContent = 'No se pudo enviar (' + (er.code || er.message) + ').'; }
   });
 }

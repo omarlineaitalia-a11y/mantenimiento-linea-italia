@@ -134,6 +134,7 @@
     chips.addEventListener('click', e => {
       const c = e.target.closest('[data-mchip]'); if (!c) return;
       const s = document.getElementById('opMaq'); s.value = c.dataset.mchip; s.dispatchEvent(new Event('change'));
+      const g = document.getElementById('mOpGrid'); if (g && g.scrollIntoView) g.scrollIntoView({ behavior:'smooth', block:'start' });
     });
   }
   // qué hacer ahora, según el estado (texto grande y claro dentro de la tarjeta)
@@ -145,13 +146,24 @@
     if (st === 'sinprod') return ['⏸', 'Cuando la máquina vuelva a trabajar toca <b>🟢 EN FUNCIÓN</b>.'];
     return ['👍', 'Todo bien. Si la máquina falla toca <b>🔴 MÁQUINA EN FALLA</b> y mantenimiento recibe la alarma.'];
   }
+  // tira de máquinas con buscador: el operador escribe parte del nombre o la clave y toca su máquina
   function pintaChips() {
     const C = document.getElementById('mOpChips'); if (!C) return;
     const sel = document.getElementById('opMaq'), ks = lista();
     if (sel.disabled || ks.length < 2) { C.hidden = true; return; }
     C.hidden = false;
-    C.innerHTML = ks.map(k => { const st = (S.est[k] || {}).st || 'ok'; return '<button type="button" class="mChip m-' + st + (k === S.opMaq ? ' on' : '') + '" data-mchip="' + esc(k) + '" style="--c:' + colorDe(k) + '">' + svgIc(icDe(k), '') + '<span>' + esc(maqName(k)) + '</span><i></i></button>'; }).join('');
-    const on = C.querySelector('.on'); if (on && on.scrollIntoView && !C.dataset.mVisto) { C.dataset.mVisto = 1; on.scrollIntoView({ block:'nearest', inline:'center' }); }
+    if (!C.querySelector('#mOpBus')) {
+      C.innerHTML = '<div class="mBusca"><span>🔎</span><input id="mOpBus" type="search" placeholder="Busca tu máquina: escribe su nombre o clave (ej. selexx, prensa, MTA-01)" autocomplete="off"></div><div class="mChipL" id="mOpLista"></div>';
+      C.querySelector('#mOpBus').addEventListener('input', filtra);
+    }
+    document.getElementById('mOpLista').innerHTML = ks.map(k => { const st = (S.est[k] || {}).st || 'ok', cod = S.maq[k].cod || k; return '<button type="button" class="mChip m-' + st + (k === S.opMaq ? ' on' : '') + '" data-mchip="' + esc(k) + '" data-q="' + esc(norm(maqName(k) + ' ' + cod)) + '" style="--c:' + colorDe(k) + '">' + svgIc(icDe(k), '') + '<span>' + esc(maqName(k)) + '<small>' + esc(cod) + '</small></span><i></i></button>'; }).join('') + '<p class="foot" id="mOpNada" hidden>No hay máquinas con ese nombre.</p>';
+    filtra();
+  }
+  function filtra() {
+    const b = document.getElementById('mOpBus'); if (!b) return;
+    const q = norm(b.value.trim()); let n = 0;
+    document.querySelectorAll('#mOpLista .mChip').forEach(c => { const v = !q || c.dataset.q.includes(q); c.hidden = !v; if (v) n++; });
+    const nada = document.getElementById('mOpNada'); if (nada) nada.hidden = n > 0;
   }
   if (typeof renderOp === 'function') {
     const _ro2 = renderOp;
@@ -167,18 +179,40 @@
   }
 
 
-  // ---------- paleta profesional (azul marino como Base de Datos). Si Apariencia trae los colores de fábrica
-  // de la versión anterior (verdes), se usan los nuevos; si alguien escogió otros colores en ⚙ Apariencia, se respetan.
+  // ---------- paleta: azul petróleo + turquesa (elegida por Ing. Omar). Si Apariencia trae colores de fábrica
+  // de versiones anteriores (verdes o azul marino), se usan los nuevos; si alguien escogió otros colores en ⚙ Apariencia, se respetan.
   if (typeof applyApa === 'function') {
-    const VIEJA = { bg:'#c9cdcb', acc:'#2e7d32', hero:'#1e4a2a', ok:'#2e7d32', bad:'#c62828', warn:'#c99700' };
-    const NUEVA = { bg:'#EEF2F6', acc:'#1F6FD1', hero:'#0E2A47', ok:'#1E8E5A', bad:'#D32F2F', warn:'#E09B00' };
+    const VIEJAS = [
+      { bg:'#c9cdcb', acc:'#2e7d32', hero:'#1e4a2a', ok:'#2e7d32', bad:'#c62828', warn:'#c99700' },
+      { bg:'#eef2f6', acc:'#1f6fd1', hero:'#0e2a47', ok:'#1e8e5a', bad:'#d32f2f', warn:'#e09b00' }
+    ];
+    const NUEVA = { bg:'#F2F7F8', acc:'#12A4A8', hero:'#0B3C49', ok:'#1E8E5A', bad:'#D32F2F', warn:'#E0A100' };
     const _aa = applyApa;
     applyApa = function (c) {
       const x = Object.assign({}, c);
-      Object.keys(VIEJA).forEach(k => { if (String(x[k] || '').toLowerCase() === VIEJA[k]) x[k] = NUEVA[k]; });
+      Object.keys(NUEVA).forEach(k => { if (VIEJAS.some(v => String(x[k] || '').toLowerCase() === v[k])) x[k] = NUEVA[k]; });
       return _aa.call(this, x);
     };
     try { applyApa(S.apaDraft || S.apa); } catch (e) {}
   }
+
+  // ---------- producción: la máquina que elige el operador se queda en esa pantalla (también al recargar o tras inactividad),
+  // salvo en tabletas fijas a una máquina (⚙ Pantallas), que siguen mandando.
+  const MAQ_LS = 'm_op_maq';
+  const fija = () => { const d = devScreen(); return !!(d && d.v === 'op' && d.maq); };
+  const recordada = () => { try { const k = localStorage.getItem(MAQ_LS); return k && S.maq[k] ? k : ''; } catch (e) { return ''; } };
+  const recordar = k => { try { if (k && !fija()) localStorage.setItem(MAQ_LS, k); } catch (e) {} };
+  const selOp = document.getElementById('opMaq');
+  if (selOp) selOp.addEventListener('change', () => recordar(selOp.value));
+  if (typeof pantallaDestino === 'function') {
+    const _pd = pantallaDestino;
+    pantallaDestino = function () {
+      const d = _pd.apply(this, arguments);
+      const r = recordada(); if (d && d.v === 'op' && r && !fija()) d.maq = r;
+      return d;
+    };
+  }
+  const _ro3 = renderOp;
+  renderOp = function () { if (!S.opMaq && !fija()) { const r = recordada(); if (r) S.opMaq = r; } return _ro3.apply(this, arguments); };
   if (typeof render === 'function') try { render(); } catch (e) {}
 })();

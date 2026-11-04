@@ -458,7 +458,7 @@ const evById = id => S.evs.find(e => e.id === id) || S.pru.find(e => e.id === id
 const enEspera = () => S.evs.concat(S.pru).filter(e => e.estado === 'espera').sort((a,b) => (a.prueba ? 1 : 0) - (b.prueba ? 1 : 0) || (a.t0||'').localeCompare(b.t0||''));
 const minPrueba = e => ms(e.t0, e.tLleg || e.tLib);
 $('logo').src = LOGO;
-const DEF_A = { bg:'#EEF2F6', acc:'#1F6FD1', hero:'#0E2A47', ok:'#1E8E5A', bad:'#D32F2F', warn:'#E09B00', xnom:'Control de paros', xdir:'' };
+const DEF_A = { bg:'#F2F7F8', acc:'#12A4A8', hero:'#0B3C49', ok:'#1E8E5A', bad:'#D32F2F', warn:'#E0A100', xnom:'Control de paros', xdir:'' };
 S.apa = Object.assign({}, DEF_A); S.apaDraft = null;
 function hexRgb(h){ h = String(h||'').replace('#',''); if (h.length===3) h = h.split('').map(c=>c+c).join(''); const n = parseInt(h,16); return isNaN(n) ? [0,0,0] : [(n>>16)&255,(n>>8)&255,n&255]; }
 function lum(h){ const [r,g,b] = hexRgb(h).map(v => { v/=255; return v<=.03928 ? v/12.92 : Math.pow((v+.055)/1.055,2.4); }); return .2126*r+.7152*g+.0722*b; }
