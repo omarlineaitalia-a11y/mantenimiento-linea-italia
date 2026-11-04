@@ -32,6 +32,8 @@ const AG_MOTIVOS = ['Falta refacción / material', 'Esperando compra', 'Requiere
 S.agReq = S.agReq || []; S.agCfg = S.agCfg || null; S.agt = S.agt || 'tab'; S.agQ = ''; S.agPer = S.agPer || 'dia';
 const agCats = () => Object.assign({}, AG_CATS_DEF, (S.agCfg && S.agCfg.cats) || {});
 const agEq = () => (S.agCfg && S.agCfg.eq && Object.keys(S.agCfg.eq).length) ? S.agCfg.eq : AG_EQ_DEF;
+// dibujo QUIETO (sin animación) para listas y tarjetas: en tabletas sencillas muchas animaciones juntas saturan la pantalla
+const agQ = k => ((window.ICON_R && ICON_R[k]) || '').replace(/<animate(Transform)?\b[^>]*\/>/g, '');
 const agById = id => S.agReq.find(r => r.id === id);
 // sugerencias de ubicación: áreas de la categoría "Áreas generales", ubicaciones de los equipos y las ya usadas
 const agUbicaciones = () => {
@@ -138,7 +140,7 @@ function renderAG(){
 // ---------- 👤 TABLERO DE USUARIO · PRUEBA MASTER
 // dos recuadros: 🔧 Reportar una falla (rápido, avisa al momento) y 📐 Requerimiento (proyecto o mejora que necesita
 // comprar material: croquis en foto, qué se tiene que realizar y fecha más amplia). Abajo: por confirmar y mis solicitudes con su avance.
-const agIlu = k => '<svg viewBox="0 0 120 100" aria-hidden="true">' + ((window.ICON_R && ICON_R[k]) || '') + '</svg>';
+const agIlu = k => '<svg viewBox="0 0 120 100" aria-hidden="true">' + agQ(k) + '</svg>';
 // avance de una solicitud en 4 pasos (Enviada → Atendiendo → Terminada → Liberada)
 function agAvance(r){
   const n = { espera:0, proceso:1, pendiente:1, terminada:2, cerrada:3 }[r.estado] || 0;
@@ -251,7 +253,7 @@ function agTarjetaM(r, i){
   else if (r.estado === 'terminada') pie = '<span class="agTm">👤 falta que <b>' + esc(r.sol?.n || 'quien pidió') + '</b> libere</span>';
   const acc = { espera:['atender', '🧰', 'Atender'], proceso:['terminar', '✅', 'Terminar'], pendiente:['reanudar', '▶', 'Reanudar'] }[r.estado];
   return '<div class="agK e-' + r.estado + (r.prio === 'urgente' ? ' urg' : '') + (r.req ? ' req' : '') + '" style="--c:' + cc + ';--i:' + (i || 0) + '">' +
-    '<div class="agKc" data-agver="' + r.id + '"><div class="agKi"><svg viewBox="0 0 120 100" aria-hidden="true">' + ((window.ICON_R && ICON_R[ic]) || '') + '</svg></div>' +
+    '<div class="agKc" data-agver="' + r.id + '"><div class="agKi"><svg viewBox="0 0 120 100" aria-hidden="true">' + agQ(ic) + '</svg></div>' +
       '<div class="agKt"><div class="agKch"><span class="agCh2" style="--c:' + cc + '">' + esc(r.req ? '📐 Requerimiento' : cn) + '</span><span class="agCh2 pr" style="--c:' + pr[0] + '">' + pr[1] + '</span>' + (r.reab ? '<span class="agCh2" style="--c:#D32F2F">🔁 ' + (r.reab + 1) + 'ª vez</span>' : '') + '</div>' +
         '<b>' + esc(r.eqN) + '</b><small>📍 ' + esc(r.ubic || 'sin ubicación') + ' · ' + fdt(r.t0) + '</small>' +
         '<p>' + esc(r.desc || '') + '</p>' +
@@ -274,11 +276,11 @@ function agTablero(){
       '<h2>' + (nE ? '¡Hay <span>' + nE + ' solicitud' + (nE > 1 ? 'es' : '') + '</span> por atender!' : 'Áreas generales <span>al día</span> 👌') + '</h2>' +
       '<p class="sub">Hoy: ' + hoyN + ' solicitud' + (hoyN === 1 ? '' : 'es') + ' nuevas · ' + cerrHoy + ' liberadas · ' + Q.length + ' requerimiento' + (Q.length === 1 ? '' : 's') + ' en planeación</p>' +
       '<div class="barra">' + AG_TCOL.map(c => '<i style="width:' + (n(c.k) / tot * 100) + '%;background:' + c.c + '"></i>').join('') + '</div></div>' +
-      '<div class="agHm" aria-hidden="true">' + ['aa', 'il', 'ebt', 'ag', 'ea', 'em'].map(k => '<div><svg viewBox="0 0 120 100">' + ((window.ICON_R && ICON_R[k]) || '') + '</svg></div>').join('') + '</div></section>' +
+      '<div class="agHm" aria-hidden="true">' + ['aa', 'il', 'ebt', 'ag', 'ea', 'em'].map(k => '<div><svg viewBox="0 0 120 100">' + agQ(k) + '</svg></div>').join('') + '</div></section>' +
     '<div class="agKp">' + AG_TCOL.map(c => '<button type="button" class="agKpi' + (S.agF.est === c.k ? ' on' : '') + (c.k === 'espera' && nE ? ' hay' : '') + '" data-agfe="' + c.k + '" style="--c:' + c.c + '"><span class="ico">' + c.ic + '</span><b>' + n(c.k) + '</b><span>' + c.t + '</span></button>').join('') +
       '<button type="button" class="agKpi' + (S.agF.cat === 'req' ? ' on' : '') + '" data-agfc="req" style="--c:#0E2A47"><span class="ico">📐</span><b>' + A.filter(r => r.req && !r.maq).length + '</b><span>Requerimientos</span></button></div>' +
     '<div class="agFil"><div class="agBus"><span>🔎</span><input id="agTq" type="search" placeholder="Buscar por equipo, lugar, quién pidió o técnico" value="' + esc(S.agF.q || '') + '"></div>' +
-      '<div class="agCats"><button type="button" class="agCf' + (!S.agF.cat ? ' on' : '') + '" data-agfc="">Todas</button>' + cats.map(c => { const d = Object.values(AG_TCAT).find(x => x[1] === c); return '<button type="button" class="agCf' + (S.agF.cat === c ? ' on' : '') + '" data-agfc="' + esc(c) + '" style="--c:' + d[2] + '"><svg viewBox="0 0 120 100">' + ((window.ICON_R && ICON_R[d[0]]) || '') + '</svg>' + esc(c) + '</button>'; }).join('') + '</div></div>' +
+      '<div class="agCats"><button type="button" class="agCf' + (!S.agF.cat ? ' on' : '') + '" data-agfc="">Todas</button>' + cats.map(c => { const d = Object.values(AG_TCAT).find(x => x[1] === c); return '<button type="button" class="agCf' + (S.agF.cat === c ? ' on' : '') + '" data-agfc="' + esc(c) + '" style="--c:' + d[2] + '"><svg viewBox="0 0 120 100">' + agQ(d[0]) + '</svg>' + esc(c) + '</button>'; }).join('') + '</div></div>' +
     (S.agF.cat === 'req' ? '' : '<div class="agCols">' + colsV.map(c => { const L = F.filter(r => r.estado === c.k).sort((a, b) => ({ urgente:0, alta:1, media:2, baja:3 }[a.prio] ?? 2) - ({ urgente:0, alta:1, media:2, baja:3 }[b.prio] ?? 2) || (a.t0 || '').localeCompare(b.t0 || ''));
       return '<div class="agCol" style="--c:' + c.c + '"><div class="agColH"><span class="ico">' + c.ic + '</span><div><b>' + c.t + '</b><small>' + c.d + '</small></div><span class="n">' + L.length + '</span></div>' +
         (L.length ? L.slice(0, 40).map(agTarjetaM).join('') : '<div class="agVacio">' + (c.k === 'espera' ? '🎉 Nada esperando' : 'Sin solicitudes') + '</div>') + '</div>'; }).join('') + '</div>') +
@@ -311,7 +313,7 @@ const AG_EJEMPLOS = ['No enciende', 'Hace ruido raro', 'Gotea / fuga de agua', '
 function agNueva(){ $('agBody').innerHTML = '<div id="agFormU"></div>'; agFormulario($('agFormU')); }
 function agFormulario(cont){
   const E = agEq(), F = { g:'', k:'', eqN:'', cat:'', ub:'', prio:'media' };
-  const ilu = (g, cls) => g.emo ? '<span class="emo">' + g.emo + '</span>' : '<svg class="' + (cls || '') + '" viewBox="0 0 120 100" aria-hidden="true">' + ((window.ICON_R && ICON_R[g.ic]) || '') + '</svg>';
+  const ilu = (g, cls) => g.emo ? '<span class="emo">' + g.emo + '</span>' : '<svg class="' + (cls || '') + '" viewBox="0 0 120 100" aria-hidden="true">' + agQ(g.ic) + '</svg>';
   // máquinas A y B: salen en vivo de Paros (config/maquinas), así siempre están actualizadas
   const equiposDe = g => g === 'maq'
     ? lista().filter(k => ['MTA', 'MTB', ''].includes((S.maq[k].cat || '').toUpperCase())).map(k => ({ k:'maq:' + k, n:maqName(k), cat:S.maq[k].cat || 'MTA', ubic:S.maq[k].area || 'Planta' }))
@@ -839,7 +841,7 @@ function agRequerimientos(){
   $('agBody').innerHTML =
     '<section class="agHero"><div class="agHc"><span class="eti' + (cnt.atrasados ? ' mal' : '') + '"><i></i>' + (cnt.atrasados ? cnt.atrasados + ' atrasado' + (cnt.atrasados > 1 ? 's' : '') : 'Sin atrasos') + '</span>' +
       '<h2>Historial de <span>requerimientos</span></h2><p class="sub">' + (F.mes ? agNomMes(F.mes) : 'Todos los meses') + ' · ' + hechos.length + ' realizados · ' + (hechos.length ? Math.round(aTiempo / hechos.length * 100) + ' % a tiempo' : 'sin realizados aún') + '</p></div>' +
-      '<div class="agHm" aria-hidden="true">' + ['mta', 'ag', 'mtb', 'ebt', 'ea', 'il'].map(k => '<div><svg viewBox="0 0 120 100">' + ((window.ICON_R && ICON_R[k]) || '') + '</svg></div>').join('') + '</div></section>' +
+      '<div class="agHm" aria-hidden="true">' + ['mta', 'ag', 'mtb', 'ebt', 'ea', 'il'].map(k => '<div><svg viewBox="0 0 120 100">' + agQ(k) + '</svg></div>').join('') + '</div></section>' +
     '<div class="agKp">' + KP.map(([k, ic, t, c]) => '<button type="button" class="agKpi' + (F.f === k ? ' on' : '') + (k === 'atrasados' && cnt.atrasados ? ' hay' : '') + '" data-rqf="' + k + '" style="--c:' + c + '"><span class="ico">' + ic + '</span><b>' + cnt[k] + '</b><span>' + t + '</span></button>').join('') + '</div>' +
     '<div class="box" style="flex-direction:row;flex-wrap:wrap;gap:12px;align-items:end">' +
       '<label class="f" style="min-width:180px">Mes<select id="rqMes"><option value="">Todos los meses</option>' + meses.map(m => '<option value="' + m + '"' + (F.mes === m ? ' selected' : '') + '>' + agNomMes(m) + '</option>').join('') + '</select></label>' +

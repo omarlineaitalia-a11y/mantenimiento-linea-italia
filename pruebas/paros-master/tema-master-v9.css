@@ -19,4 +19,11 @@
 .rqF{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;color:var(--muted);margin-top:6px;padding-top:6px;border-top:1px dashed var(--mLinea)}
 .rqF b{color:var(--fg)}
 .rqM{font-size:12.5px;background:#FFF2C2;color:#5E4600;border-radius:8px;padding:4px 8px}
+/* tabletas sencillas: el panel de máquinas se veía "rayado" (la pantalla se saturaba).
+   Panel opaco, sombra ligera, sin desenfoque ni movimientos y la lista contenida para que se dibuje rápido */
+.mSelPanel{background:#FFFFFF;box-shadow:0 6px 16px rgba(14,42,71,.18);isolation:isolate}
+.mSelPanel .mChipL{contain:content;overscroll-behavior:contain}
+.mSelPanel .mChip{box-shadow:none;transform:none!important;transition:none}
+.modal{backdrop-filter:none}
+.mSelE.m-falla{animation:none}
 #btnXlsxReq{background:linear-gradient(180deg,#1A4877,#0E2A47)!important;box-shadow:0 4px 0 #071629,0 8px 18px rgba(14,42,71,.3)!important}

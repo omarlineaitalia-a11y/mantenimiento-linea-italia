@@ -7,6 +7,8 @@
 
   const COL = { MTA:'#1F4FBF', MTB:'#E07B1A', MTC:'#7B4BC4', EA:'#0E9F96', AA:'#1597D3', EBT:'#D2453C', EMT:'#8E2A2A', EM:'#8A5A2B', IL:'#D9A400', AG:'#2E9E5B' };
   const svgIc = (k, cls) => '<svg class="' + cls + '" viewBox="0 0 120 100" aria-hidden="true">' + (ICON_R[k] || ICON_R.mta) + '</svg>';
+  // versión QUIETA (sin animación) para listas largas: en tabletas sencillas muchas animaciones juntas saturan la pantalla
+  const svgQuieto = (k, cls) => svgIc(k, cls).replace(/<animate(Transform)?\b[^>]*\/>/g, '').replace(/<animate(Transform)?\b[^>]*>\s*<\/animate(Transform)?>/g, '');
   // ilustración según el nombre de la máquina y, si no, según su categoría
   // dibujo según el NOMBRE de la máquina (iconos-maquinas.js) y, si no coincide, según su categoría
   function icDe(k) {
@@ -67,7 +69,7 @@
       const k = t.dataset.goop || porN[(t.querySelector('.tn') || {}).textContent];
       if (!k || t.querySelector('.mIc')) return;
       t.style.setProperty('--c', colorDe(k)); t.style.setProperty('--i', i);
-      t.insertAdjacentHTML('afterbegin', svgIc(icDe(k), 'mIc') + '<span class="mCat">' + ((S.maq[k] || {}).cat || '') + '</span>');
+      t.insertAdjacentHTML('afterbegin', (t.classList.contains('falla') ? svgIc : svgQuieto)(icDe(k), 'mIc') + '<span class="mCat">' + ((S.maq[k] || {}).cat || '') + '</span>');
     });
     if (primera && T.querySelector('.tile')) { primera = false; T.classList.add('mEntra'); setTimeout(() => T.classList.remove('mEntra'), 2500); }
   }
@@ -195,7 +197,7 @@
     const k0 = S.opMaq, st0 = (S.est[k0] || {}).st || 'ok';
     document.getElementById('mSelBtn').innerHTML = (k0 ? svgIc(icDe(k0), '') : '') + '<span class="mSelT"><small>MÁQUINA · toca para cambiar</small><b>' + esc(k0 ? maqName(k0) : 'Selecciona tu máquina') + '</b></span>' +
       '<span class="mSelE m-' + st0 + '">' + ({ ok:'🟢 En función', sinprod:'🟡 Sin producción', falla:'🔴 En falla' }[st0] || '') + '</span><span class="mSelF">▾</span>';
-    document.getElementById('mOpLista').innerHTML = ks.map(k => { const st = (S.est[k] || {}).st || 'ok', cod = S.maq[k].cod || k; return '<button type="button" class="mChip m-' + st + (k === S.opMaq ? ' on' : '') + '" data-mchip="' + esc(k) + '" data-q="' + esc(norm(maqName(k) + ' ' + cod)) + '" style="--c:' + colorDe(k) + '">' + svgIc(icDe(k), '') + '<span>' + esc(maqName(k)) + '<small>' + esc(cod) + '</small></span><i></i></button>'; }).join('') + '<p class="foot" id="mOpNada" hidden>No hay máquinas con ese nombre.</p>';
+    document.getElementById('mOpLista').innerHTML = ks.map(k => { const st = (S.est[k] || {}).st || 'ok', cod = S.maq[k].cod || k; return '<button type="button" class="mChip m-' + st + (k === S.opMaq ? ' on' : '') + '" data-mchip="' + esc(k) + '" data-q="' + esc(norm(maqName(k) + ' ' + cod)) + '" style="--c:' + colorDe(k) + '">' + svgQuieto(icDe(k), '') + '<span>' + esc(maqName(k)) + '<small>' + esc(cod) + '</small></span><i></i></button>'; }).join('') + '<p class="foot" id="mOpNada" hidden>No hay máquinas con ese nombre.</p>';
     filtra();
   }
   function filtra() {
@@ -315,7 +317,7 @@
     document.getElementById('mKbRes').innerHTML = gs.length ? gs.map(([k, E]) => {
       const nom = E[0].maqN || maqName(k), ic = S.maq[k] ? icDe(k) : 'mta', ab = KB.abierta[k] != null ? KB.abierta[k] : (busca || gs.length === 1);
       const rep = {}; E.forEach(e => { const f = normF(e.falla); rep[f] = (rep[f] || 0) + 1; });
-      return '<div class="mKbM' + (ab ? ' abierta' : '') + '"><button type="button" class="mKbH" data-kbm="' + esc(k) + '" style="--c:' + (S.maq[k] ? colorDe(k) : COL.MTA) + '">' + svgIc(ic, '') +
+      return '<div class="mKbM' + (ab ? ' abierta' : '') + '"><button type="button" class="mKbH" data-kbm="' + esc(k) + '" style="--c:' + (S.maq[k] ? colorDe(k) : COL.MTA) + '">' + svgQuieto(ic, '') +
           '<span class="mKbHt"><b>' + esc(nom) + '</b><small>' + E.length + ' solucion' + (E.length > 1 ? 'es' : '') + ' registrada' + (E.length > 1 ? 's' : '') + ' · última ' + fdt(E[0].t0) + '</small></span><span class="mKbF">▾</span></button>' +
         '<div class="mKbB"><div class="mKbTip"><b>💡 Consejos para el técnico</b><ul>' + consejos(E).map(c => '<li>' + c + '</li>').join('') + '</ul></div>' +
         E.map(e => { const n = rep[normF(e.falla)], t = tiempos(e); return '<div class="mKbS"><div class="mKbSh"><span class="mKbChip">' + (TIPO_IC[e.tipo] || '❔') + ' ' + esc(e.tipo || 'Otra') + '</span>' + (n > 1 ? '<span class="mKbChip warn">🔁 se repitió ' + n + ' veces</span>' : '') + '<span class="foot">' + fdt(e.t0) + '</span></div>' +
