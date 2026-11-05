@@ -314,6 +314,7 @@ if (window.DEMO) {
       <button id="btnLogout" type="button">Salir</button>
       <button id="btnPersonal" type="button">Personal</button>
       <button id="btnCsv" type="button">Exportar CSV</button>
+      <button id="btnImport" type="button">Importar lista</button><input type="file" id="impFile" accept=".xlsx,.xls,.csv" hidden>
       <button id="btnNew" class="primary" type="button">+ Capturar solicitud</button>
     </div>
   </header>
@@ -494,6 +495,36 @@ if (window.DEMO) {
     <div class="plist" id="pList"></div>
     <div class="pdev"><span id="pDevTxt">Sesión de este equipo</span><button type="button" class="danger" id="pOut">Cerrar la sesión de este equipo</button></div>
   </div>
+</aside>
+<style>
+/* importar lista */
+.imp-def{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:480px){.imp-def{grid-template-columns:1fr}}
+.imp-sum{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:14px}
+.imp-box{grid-column:1/-1;border:1px solid var(--line);background:var(--surface);overflow:auto;max-height:46vh}
+.imp-box table{min-width:560px;font-size:13px}
+.imp-box td{padding:6px 8px}
+.imp-box tr.bad td{background:var(--bad-soft)}
+</style>
+<aside class="drawer" id="iDrawer" hidden aria-label="Importar lista">
+  <div class="dhead"><h2>Importar lista</h2><button type="button" id="iClose" aria-label="Cerrar">✕</button></div>
+  <div class="dbody">
+    <p class="note full" style="margin:0" id="iFile"></p>
+    <div class="section">Datos para todos los renglones <small>se usan solo donde el archivo venga vacío</small></div>
+    <div class="imp-def">
+      <label>Solicitante<input id="iSol" list="nombres"></label>
+      <label>Prioridad<select id="iPrio"><option>Normal</option><option>Alta</option><option>Urgente</option></select></label>
+      <label>Área<input id="iArea" list="areas"></label>
+      <label>Equipo / máquina<input id="iEq" list="equipos"></label>
+      <label class="full" style="grid-column:1/-1">¿Para qué se necesita?<input id="iMot"></label>
+      <label>¿Cuándo se necesita?<input id="iFecha" type="date"></label>
+      <label>Entran como<select id="iEst"><option value="Por revisar">Por revisar</option><option value="Por subir">Por subir al portal (ya revisadas)</option></select></label>
+    </div>
+    <div class="section">Vista previa</div>
+    <div class="imp-sum" id="iSum"></div>
+    <div class="imp-box"><table><thead><tr><th>#</th><th>Artículo</th><th>Medida, marca o modelo</th><th class="num">Cant.</th><th>Unidad</th><th>Tipo</th></tr></thead><tbody id="iRows"></tbody></table></div>
+  </div>
+  <div class="dfoot"><span class="note" id="iNote"></span><div class="actions"><button type="button" id="iCancel">Cancelar</button><button type="button" class="primary" id="iGo" disabled>Importar</button></div></div>
 </aside>
 <div class="toast" id="toast" hidden></div>
 
@@ -1094,6 +1125,101 @@ async function cargarPersonal(p){
   if(staff)renderPersonal();fillLists();if(!session&&!$("login").hidden)pintarEquipo();
 }
 
+
+/* ================= importar lista (Excel o CSV) ================= */
+const IMP={rows:[],name:""};
+const normH=s=>String(s??"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[¿?:]/g,"").replace(/\s+/g," ").trim();
+const IMP_COLS={descripcion:["articulo","descripcion","producto","producto o servicio","material","concepto"],
+  codigo:["medida, marca o modelo","medida","marca","modelo","codigo","no. parte","numero de parte"],
+  cantidad:["cantidad","cant","cant."],unidad:["unidad","um","u.m."],tipo:["tipo"],area:["area"],equipo:["equipo","maquina","equipo / maquina","equipo o maquina"],
+  motivo:["para que se necesita","motivo","uso"],prioridad:["prioridad"],solicitante:["solicitante","solicito"],
+  fechaRequerida:["cuando se necesita","se necesita","fecha requerida","fecha"],notas:["revisar","notas","observaciones","comentarios"]};
+function impLoadLib(){
+  if(window.XLSX)return Promise.resolve();
+  return new Promise((ok,ko)=>{const sc=document.createElement("script");sc.src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";sc.onload=ok;sc.onerror=ko;document.head.appendChild(sc)});
+}
+function impDate(v){
+  if(v==null||v==="")return "";
+  if(typeof v==="number"){const d=new Date(Math.round((v-25569)*864e5));return isNaN(d)?"":d.toISOString().slice(0,10)}
+  const s=String(v).trim();let m=s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);
+  if(m){const y=m[3].length===2?"20"+m[3]:m[3];return `${y}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`}
+  m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);return m?m[0]:"";
+}
+function impParse(aoa){
+  let hi=-1,map={};
+  for(let i=0;i<Math.min(aoa.length,8)&&hi<0;i++){
+    const h=(aoa[i]||[]).map(normH);const m={};
+    Object.entries(IMP_COLS).forEach(([k,al])=>{const j=h.findIndex(x=>al.includes(x));if(j>=0)m[k]=j});
+    if(m.descripcion!=null){hi=i;map=m}
+  }
+  if(hi<0)throw new Error("sin encabezado");
+  const out=[];
+  for(const r of aoa.slice(hi+1)){
+    const g=k=>map[k]==null?"":r[map[k]];
+    const desc=String(g("descripcion")??"").trim();
+    if(!desc||/^total/i.test(desc))continue;
+    const cRaw=g("cantidad");const cant=cRaw===""||cRaw==null||isNaN(+cRaw)?null:+cRaw;
+    const unidad=String(g("unidad")||"").trim().toLowerCase();
+    const tipo=/ref/i.test(String(g("tipo")))?"Refacción":"Consumible";
+    const pr=String(g("prioridad")||"").trim();
+    out.push({descripcion:desc,codigo:String(g("codigo")||"").trim(),cantidad:cant,unidad:UNITS.includes(unidad)?unidad:(unidad||"pza"),tipo,
+      area:String(g("area")||"").trim(),equipo:String(g("equipo")||"").trim(),motivo:String(g("motivo")||"").trim(),
+      prioridad:["Normal","Alta","Urgente"].includes(pr)?pr:"",solicitante:String(g("solicitante")||"").trim(),
+      fechaRequerida:impDate(g("fechaRequerida")),notas:String(g("notas")||"").trim()});
+  }
+  return out;
+}
+function impRender(){
+  const L=IMP.rows,falt=L.filter(r=>r.cantidad==null);
+  const one=k=>{const v=[...new Set(L.map(r=>r[k]).filter(Boolean))];return v.length===1?v[0]:""};
+  $("iFile").innerHTML=`Archivo: <b>${esc(IMP.name)}</b>`;
+  $("iSum").innerHTML=`<b>${L.length} artículo${L.length===1?"":"s"}</b> · cada uno será una solicitud con su folio MT`+(falt.length?` · <span class="late">${falt.length} sin cantidad</span>`:"");
+  $("iRows").innerHTML=L.map((r,i)=>`<tr class="${r.cantidad==null?"bad":""}"><td>${i+1}</td><td>${esc(r.descripcion)}</td><td>${esc(r.codigo)}</td><td class="num">${r.cantidad==null?'<span class="late">Falta</span>':esc(r.cantidad)}</td><td>${esc(r.unidad)}</td><td>${esc(r.tipo)}</td></tr>`).join("");
+  $("iNote").textContent=falt.length?"Los que no tienen cantidad entran igual; complétalos antes de aprobarlos.":"";
+  $("iGo").disabled=!L.length;$("iGo").textContent=`Importar ${L.length}`;
+  if(!$("iArea").value)$("iArea").value=one("area");if(!$("iEq").value)$("iEq").value=one("equipo");if(!$("iMot").value)$("iMot").value=one("motivo");if(!$("iSol").value)$("iSol").value=one("solicitante")||session?.nombre||"";
+}
+function impClose(){$("iDrawer").hidden=true;if($("drawer").hidden&&$("pDrawer").hidden)$("scrim").hidden=true;$("impFile").value=""}
+$("btnImport").addEventListener("click",()=>{if(staff)$("impFile").click()});
+$("impFile").addEventListener("change",async e=>{
+  const f=e.target.files[0];if(!f)return;
+  try{
+    await impLoadLib();
+    let data=new Uint8Array(await f.arrayBuffer());
+    // CSV en UTF-8 sin BOM (p. ej. Google Sheets): se le agrega el BOM para que SheetJS lea bien los acentos
+    if(/\.csv$/i.test(f.name)&&!(data[0]===0xEF&&data[1]===0xBB&&data[2]===0xBF)){try{new TextDecoder("utf-8",{fatal:true}).decode(data);const b=new Uint8Array(data.length+3);b.set([0xEF,0xBB,0xBF]);b.set(data,3);data=b}catch(_){}}
+    const wb=XLSX.read(data,{type:"array"});
+    const ws=wb.Sheets[wb.SheetNames[0]];
+    IMP.rows=impParse(XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:""}));IMP.name=f.name;
+    if(!IMP.rows.length){toast("No encontré artículos en el archivo");$("impFile").value="";return}
+    ["iArea","iEq","iMot","iSol","iFecha"].forEach(id=>$(id).value="");$("iPrio").value="Normal";$("iEst").value="Por revisar";
+    impRender();$("scrim").hidden=false;$("iDrawer").hidden=false;
+  }catch(err){toast(err&&err.message==="sin encabezado"?"El archivo necesita una columna llamada Artículo (o Descripción) en los primeros renglones":"No se pudo leer el archivo");$("impFile").value=""}
+});
+$("iClose").addEventListener("click",impClose);$("iCancel").addEventListener("click",impClose);
+$("scrim").addEventListener("click",()=>{if(!$("iDrawer").hidden)impClose()});
+$("iGo").addEventListener("click",async()=>{
+  if(!col||!IMP.rows.length)return;
+  const est=$("iEst").value,now=new Date().toISOString(),pid="L-"+Date.now().toString(36).toUpperCase();
+  const folios=nextFolios(IMP.rows.length),done=[];
+  $("iGo").disabled=true;
+  try{
+    for(let i=0;i<IMP.rows.length;i++){const r=IMP.rows[i];
+      const sol=r.solicitante||$("iSol").value.trim()||session.nombre;const p=personal.find(x=>x.nombre===sol);
+      await col.doc().set({folio:folios[i],pedido:pid,tipo:r.tipo,prioridad:r.prioridad||$("iPrio").value,descripcion:r.descripcion,codigo:r.codigo,
+        equipo:r.equipo||$("iEq").value.trim(),area:r.area||$("iArea").value.trim(),solicitante:sol,solicitanteId:p?.h||"",
+        cantidad:r.cantidad,unidad:r.unidad,fechaSolicitud:today(),fechaRequerida:r.fechaRequerida||$("iFecha").value,
+        motivo:r.motivo||$("iMot").value.trim(),proveedorSug:"",notas:r.notas,estatus:est,creado:now,actualizado:now,
+        hist:[{e:est,f:now,por:session.nombre,n:"Importada de "+IMP.name}]});
+      done.push(folios[i]);
+    }
+    toast(`Importadas ${done.length}: ${done[0]}${done.length>1?" a "+done[done.length-1]:""}`);
+    aTab=est==="Por subir"?"sub":"rev";ls.set("mtto-atab",aTab);impClose();renderAdmin();
+  }catch(err){
+    IMP.rows=IMP.rows.slice(done.length);impRender();
+    toast(done.length?`Se importaron ${done.length}; los demás siguen en la lista. Intenta de nuevo.`:"No se pudo importar. Revisa tu conexión e intenta de nuevo.");
+  }finally{$("iGo").disabled=!IMP.rows.length}
+});
 /* ================= arranque ================= */
 (async()=>{
   try{
