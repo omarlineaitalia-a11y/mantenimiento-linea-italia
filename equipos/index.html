@@ -507,6 +507,9 @@ function identificar() {
   $('#quien').textContent = YO ? '👤 ' + YO.n.split(' ').slice(0, 2).join(' ') + (YO.admin ? ' · admin' : '') : '👤 Entrar';
 }
 function pantallaNomina() {
+  // viene de un QR de etiqueta (…/equipos/#CLAVE) y no se ha identificado nadie: ficha pública de solo consulta.
+  // El personal entra a la app desde la ficha con ?app (ahí sí se pide su nómina).
+  if (location.hash.length > 1 && !/[?&]app\b/.test(location.search)) { location.replace('ficha.html' + location.hash); return; }
   if ($('#nomina')) return;
   const d = document.createElement('div'); d.id = 'nomina';
   d.innerHTML = '<div class="card">' + svg('ag', 'ic') .replace('class="ic"', 'style="width:80px;height:80px;color:#1F6FD1"') +
@@ -520,7 +523,7 @@ function pantallaNomina() {
     d.remove(); pintar(); tareasAdmin(); abrirDesdeHash(); revisarSemilla(); };
   setTimeout(() => $('input', d).focus(), 50);
 }
-$('#quien').onclick = () => { try { sessionStorage.removeItem('eq_nom'); } catch (e) {} YO = null; identificar(); pantallaNomina(); };
+$('#quien').onclick = () => { try { sessionStorage.removeItem('eq_nom'); history.replaceState(null, '', location.pathname + location.search); } catch (e) {} YO = null; identificar(); pantallaNomina(); };
 
 // ===================== arranque =====================
 (async function init() {
