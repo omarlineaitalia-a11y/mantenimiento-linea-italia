@@ -417,6 +417,16 @@ body.kiosk .top nav.nav, body.kiosk .hide-kiosk{display:none}
 <div class="alerta" id="alerta" hidden></div>
 
 <div class="modal" id="modal" hidden><div class="mcard" id="mcard"></div></div>
+<div id="candado" hidden><div class="cCard"><div class="cIc">🔒</div><h2>Entra con tu número de nómina</h2><p>Para usar cualquier botón de Control de Paros primero identifícate. Así queda registrado quién levanta cada falla o requerimiento.</p><button type="button" class="primary" id="candadoBtn">👤 Entrar con mi nómina</button></div></div>
+<style>
+#candado{position:fixed;inset:0;z-index:38;background:rgba(7,22,41,.62);backdrop-filter:blur(2px);display:grid;place-items:center;padding:16px}
+body.candado .top{z-index:1!important}
+#candado .cCard{max-width:440px;width:100%;background:#fff;color:#14212E;border-radius:22px;padding:26px 24px;text-align:center;border-top:6px solid #1F6FD1;box-shadow:0 18px 44px rgba(0,0,0,.35)}
+#candado .cIc{font-size:54px;line-height:1}
+#candado h2{margin:10px 0 6px;color:#0E2A47;font-size:21px}
+#candado p{margin:0 0 18px;color:#5B6B7B;font-size:14.5px}
+#candado button{width:100%;padding:15px;font-size:17px;border-radius:14px}
+</style>
 <div class="toast" id="toast" hidden></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
@@ -536,6 +546,8 @@ function puedeVer(v){
   return !!S.sesion && vistasDe(S.sesion).includes(v);
 }
 function actualizarNav(){
+  // candado: sin nómina no hay ningún botón disponible (así siempre se sabe quién levanta cada falla o requerimiento)
+  document.body.classList.toggle('candado', !S.sesion); $('candado').hidden = !!S.sesion;
   document.querySelectorAll('nav.nav button').forEach(b => { b.hidden = !puedeVer(b.dataset.v); });
   $('btnSesion').textContent = S.sesion ? '👤 ' + S.sesion.n.split(' ').slice(0, 2).join(' ') + ' · Salir' : '👤 Entrar';
   const dv = devScreen(); $('opMaq').disabled = !S.sesion && !!dv && dv.v === 'op' && !!dv.maq;
@@ -1525,6 +1537,7 @@ $('btnProbarAviso').addEventListener('click', async () => {
 // ---------- eventos de UI
 document.querySelector('nav.nav').addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (b) setView(b.dataset.v); });
 $('btnSesion').addEventListener('click', () => { if (S.sesion) salirSesion(); else entrar(); });
+$('candadoBtn').addEventListener('click', entrar);
 $('btnHomeLogin').addEventListener('click', entrar);
 $('grSeg').addEventListener('click', e => { const b = e.target.closest('[data-g]'); if (b) { S.gr.per = b.dataset.g; renderGraf(); } });
 $('grMaq').addEventListener('change', renderGraf);
