@@ -426,6 +426,35 @@ async function verQR(e) {
   catch (x) { v.querySelector('.qrI').innerHTML = '<p>No se pudo generar el QR (revisa la conexión).</p>'; }
   $('#qrPdf', v).onclick = () => pdfEtiquetasQR([e], 'QR ' + e.clave + '.pdf');
 }
+// ---- FICHA PÚBLICA de los QR (solo consulta, sin nómina): copia en la colección 'publico' de Firestore
+// publico/eq_<CLAVE> = { html de la ficha sin botones, fotos[] } · publico/f_<idFoto> = { data }
+// Solo la escriben administradores (regla 'publico'); se actualiza al guardar cambios y una vez al día al entrar un administrador.
+const PUB = () => firebase.firestore().collection('publico');
+const fotosDe = e => [e.fm, e.fp].concat(e.fx || [], (e.refs || []).map(r => r.f)).filter(Boolean);
+function fichaPublicaHTML(e) {
+  const d = document.createElement('div'); d.innerHTML = fichaHTML(e, true);
+  d.querySelectorAll('.acciones, .cab .x, button, input').forEach(x => x.remove());
+  d.querySelectorAll('[data-ed]').forEach(x => x.removeAttribute('data-ed'));
+  const h = d.querySelector('#fHist'); if (h) h.innerHTML = historialHTML(e);
+  return d.innerHTML;
+}
+async function publicarFicha(e) {
+  if (!esAdmin() || !(e.cat === 'MTA' || e.cat === 'MTB')) return;
+  const P = PUB(), ids = fotosDe(e);
+  for (const id of ids) {
+    if ((await P.doc('f_' + id).get()).exists) continue;
+    const s = await firebase.firestore().doc('apps/equipos/fotos/' + id).get();
+    if (s.exists && s.data().data) await P.doc('f_' + id).set({ data: s.data().data });
+  }
+  await P.doc('eq_' + compacto(e.clave)).set({ clave: e.clave, nombre: nombreDe(e), cat: e.cat, html: fichaPublicaHTML(e), fotos: ids, t: new Date().toISOString(), por: YO ? YO.n : '' });
+}
+async function publicarFichasQR(aviso) {
+  const L = maquinasAB(); let ok = 0;
+  for (const e of L) { try { await publicarFicha(e); ok++; } catch (x) { if (aviso) toast('No se pudo publicar ' + e.clave + ' (' + (x.code || x.message) + '). Revisa la regla "publico" en Firebase.', 6000); return ok; } }
+  try { localStorage.setItem('eq_pub_t', String(Date.now())); } catch (x) {}
+  if (aviso) toast('✅ Fichas públicas actualizadas: ' + ok + ' máquinas tipo A y B');
+  return ok;
+}
 // todas las máquinas tipo A y B (administradores)
 const maquinasAB = () => lista().filter(e => e.cat === 'MTA' || e.cat === 'MTB').sort((a, b) => a.cat.localeCompare(b.cat) || String(a.clave).localeCompare(String(b.clave), 'es', { numeric:true }));
 
@@ -646,7 +675,7 @@ function vInicio(m) {
     '<h2>¿Qué <span>equipo</span> buscas?</h2><p class="sub">Escribe la clave, el nombre, la marca, el modelo, el número de serie o el área.</p>' +
     '<div class="buscador"><span class="lupa">🔎</span><input type="search" id="q" placeholder="Ej.: a12, taladro, Selexx, Mirage, Troqueles…" value="' + esc(F.q) + '" autocomplete="off"></div>' +
     '<div class="ejemplos"><span class="lbl">Prueba:</span>' + [['AA-12', 'AA'], ['Taladro', 'MTC'], ['Selexx', 'MTA'], ['Compresor', 'EA'], ['Pulidora', 'MTC'], ['Troqueles', 'MTB'], ['EBT-10', 'EBT'], ['TR-01', 'EMT']].map(([x, c]) => '<button style="--c:' + CAT[c].c + '"><i></i>' + x + '</button>').join('') + '</div>' +
-    '<div class="pie"><button class="btn sm" id="xBaja">📊 Descargar Excel de la base de datos</button>' + (esAdmin() ? '<button class="btn sm" id="xQR">🔳 Etiquetas QR · máquinas tipo A y B (PDF)</button>' : '') + '<span>' + (D.excel ? 'Actualizado al ' + horaTxt(D.excel.t) : 'Se actualiza cada viernes') + '</span></div></div></section>' +
+    '<div class="pie"><button class="btn sm" id="xBaja">📊 Descargar Excel de la base de datos</button>' + (esAdmin() ? '<button class="btn sm" id="xQR">🔳 Etiquetas QR · máquinas tipo A y B (PDF)</button><button class="btn sm" id="xPub">🌐 Publicar fichas de los QR</button>' : '') + '<span>' + (D.excel ? 'Actualizado al ' + horaTxt(D.excel.t) : 'Se actualiza cada viernes') + '</span></div></div></section>' +
     '<div id="res"></div>';
   const pintaRes = () => {
     const r = $('#res');
@@ -836,12 +865,12 @@ function horasDe(e, r) { const m = (window.EQ_MIN || {})[e.no + '|' + r.fr]; ret
 const frNombre = fr => (PER_FR[fr] || [fr || 'Preventivo'])[0];
 const diaDe = f => DIAS[new Date(f + 'T12:00').getDay()];
 const horasTxt = h => h == null ? '—' : (h < 1 ? Math.round(h * 60) + ' min' : (Math.round(h * 10) / 10) + ' h');
-function historialFicha(e) {
-  const h = $('#fHist'); if (!h) return;
+function historialFicha(e) { const h = $('#fHist'); if (h) h.innerHTML = historialHTML(e); }
+function historialHTML(e) {
   const hoy = hoyISO(), mes = hoy.slice(0, 7), R = realizados(e, mes + '-01', mes + '-31').sort((a, b) => b.f.localeCompare(a.f));
   const pend = planDe(e).filter(r => r.f.startsWith(mes) && pctDe(r) < 50);
   const tot = R.reduce((s, r) => s + (horasDe(e, r) || 0), 0);
-  h.innerHTML = (R.length ? '<div class="tabla"><table class="t"><thead><tr><th>Fecha</th><th>Día</th><th>Mantenimiento</th><th>Lo realizó</th><th>OT</th><th>Avance</th><th>Horas</th><th>Bitácora</th></tr></thead><tbody>' +
+  return (R.length ? '<div class="tabla"><table class="t"><thead><tr><th>Fecha</th><th>Día</th><th>Mantenimiento</th><th>Lo realizó</th><th>OT</th><th>Avance</th><th>Horas</th><th>Bitácora</th></tr></thead><tbody>' +
       R.map(r => { const P = PER_FR[r.fr]; return '<tr><td><b>' + fechaTxt(r.f) + '</b></td><td>' + diaDe(r.f) + '</td><td><span class="per" style="background:' + (P ? P[2] : '#5B6B7B') + '">' + esc(r.fr || '') + '</span> ' + esc(frNombre(r.fr)) + '</td><td>' + esc(r.em || '—') + '</td><td>' + esc(r.ot || '—') + '</td>' +
         '<td><b style="color:' + (pctDe(r) >= 100 ? 'var(--verde)' : '#B7791F') + '">' + pctDe(r) + ' %</b></td><td>' + horasTxt(horasDe(e, r)) + '</td><td>' + esc(r.bit || '—') + '</td></tr>'; }).join('') +
       '</tbody></table></div><p class="small muted" style="margin:6px 0 0">' + R.length + ' realizado(s) · ' + horasTxt(tot) + ' en total.' : '<p class="muted small" style="margin:0">Todavía no hay mantenimientos realizados este mes.') +
@@ -850,12 +879,13 @@ function historialFicha(e) {
 }
 
 // ===================== ficha del equipo =====================
-function pintarFicha(e, quieto) {
-  const c = CAT[e.cat] || CATS[0], md = $('#modal'), ed = puede(e.cat), S = salud(e), mesTxt = MESES[new Date().getMonth()].toLowerCase() + ' ' + new Date().getFullYear();
+// arma la ficha completa (HTML). pub = versión pública de solo consulta: sin botones de edición
+function fichaHTML(e, pub) {
+  const c = CAT[e.cat] || CATS[0], ed = !pub && puede(e.cat), S = salud(e), mesTxt = MESES[new Date().getMonth()].toLowerCase() + ' ' + new Date().getFullYear();
   const marco = (tipo, titulo, id) => '<div class="marco"><div class="t">' + titulo + '<span>' +
     ((!id || ed) ? '<button class="btn sm" data-ft="' + tipo + '">📷 ' + (id ? 'Cambiar' : 'Tomar foto') + '</button><button class="btn sm" data-fs="' + tipo + '" title="Elegir de la galería">🖼</button>' : '') + '</span></div>' +
     '<div class="img" data-ver="' + (id || '') + '">' + (id ? '<img data-foto="' + id + '" alt="">' : '<div class="vacio">' + svg(tipo === 'fp' ? 'placa' : 'camara', '').replace('<svg', '<svg style="color:' + c.c + '"') + '<div>' + (tipo === 'fp' ? 'Falta la foto de la placa original' : 'Falta la foto del equipo') + '</div></div>') + '</div></div>';
-  md.innerHTML = '<div class="hoja"><div class="cab" style="--c:' + c.c + '">' + svg(c.ic) + '<div style="flex:1;min-width:0"><span class="clave" data-ed="clave">' + esc(e.clave) + '</span><h2 style="margin-top:6px" data-ed="corto">' + esc(nombreDe(e)) + '</h2><p>' + esc(c.n) + ' · ' + esc(e.nombre || '') + (e.eco && e.eco !== e.clave ? ' · No. económico ' + esc(e.eco) : '') + ' · No. ' + esc(e.no || '—') + '</p></div><button class="x" title="Cerrar">✕</button></div>' +
+  return '<div class="hoja"><div class="cab" style="--c:' + c.c + '">' + svg(c.ic) + '<div style="flex:1;min-width:0"><span class="clave" data-ed="clave">' + esc(e.clave) + '</span><h2 style="margin-top:6px" data-ed="corto">' + esc(nombreDe(e)) + '</h2><p>' + esc(c.n) + ' · ' + esc(e.nombre || '') + (e.eco && e.eco !== e.clave ? ' · No. económico ' + esc(e.eco) : '') + ' · No. ' + esc(e.no || '—') + '</p></div><button class="x" title="Cerrar">✕</button></div>' +
     '<div class="cuerpo">' +
     '<div class="acciones"><button class="btn pri" id="fPdf">📄 Ver PDF del equipo</button><button class="btn pri" id="fQR">🔳 Código QR</button>' + (ed ? '<button class="btn" id="fEd">✏ Modificar datos</button>' : '<span class="pill" title="Pide a Omar permiso para modificar esta categoría">🔒 Solo consulta en ' + c.k + '</span>') +
       (esAdmin() ? '<button class="btn peligro" id="fBaja">🗑 Dar de baja</button>' : '') + '</div>' +
@@ -872,6 +902,10 @@ function pintarFicha(e, quieto) {
     '<div><h3>🛠 Mantenimientos realizados · ' + mesTxt + '</h3><div id="fHist"></div></div>' +
     '<div><h3>🕘 Altas y modificaciones</h3><div class="small muted">' + (e.alta ? 'Alta: ' + horaTxt(e.alta.t) + ' · ' + esc(e.alta.n || e.alta.por || '') + '<br>' : '') + (e.mod ? 'Última modificación: ' + horaTxt(e.mod.t) + ' · ' + esc(e.mod.n || e.mod.por || '') : '') + '</div></div>' +
     '</div></div>';
+}
+function pintarFicha(e, quieto) {
+  const md = $('#modal');
+  md.innerHTML = fichaHTML(e);
   md.classList.add('on'); document.body.style.overflow = 'hidden';
   if (!quieto) md.scrollTop = 0;
   $('.cab .x', md).onclick = cerrarModal;
@@ -1147,6 +1181,7 @@ async function guardarCampos(e, campos, acc) {
   const s = sello(); campos.mod = s;
   await DB.doc('cat/' + e.cat).update({ items: { [e.id]: campos } });
   Object.assign(e, campos);
+  publicarFicha(e).catch(() => {});   // la ficha pública del QR queda al día
   registrarCambio(acc || 'Modificación', e, Object.keys(campos).filter(k => k !== 'mod').map(k => ETQ[k] || k).join(', '));
   toast('✅ Guardado');
 }
@@ -1444,8 +1479,13 @@ function avisosArriba() {
   return h;
 }
 function avisosEnlazar() { const b = $('#avX'); if (b) b.onclick = () => actualizarExcel(false); const d = $('#xBaja'); if (d) d.onclick = descargarExcel;
+  const pb = $('#xPub'); if (pb) pb.onclick = async () => { pb.disabled = true; toast('⏳ Publicando las fichas de las máquinas tipo A y B (con fotos)…', 6000); await publicarFichasQR(true); pb.disabled = false; };
   const q = $('#xQR'); if (q) q.onclick = async () => { const L = maquinasAB(); toast('⏳ Armando ' + L.length + ' etiquetas QR…', 4000); try { await pdfEtiquetasQR(L, 'Etiquetas QR maquinas tipo A y B.pdf'); toast('✅ PDF listo: ' + L.length + ' etiquetas'); } catch (x) { toast('No se pudo armar el PDF: ' + (x.message || x)); } }; }
-function tareasAdmin() { /* reservado: avisos al abrir */ }
+function tareasAdmin() {
+  // fichas públicas de los QR: se refrescan solas una vez al día cuando entra un administrador
+  let t = 0; try { t = +localStorage.getItem('eq_pub_t') || 0; } catch (x) {}
+  if (Date.now() - t > 20 * 3600000 && typeof firebase !== 'undefined') setTimeout(() => publicarFichasQR(false).catch(() => {}), 4000);
+}
 // instalar como aplicación en la tablet, el celular o la PC
 let pedirInstalar = null;
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); pedirInstalar = e; $('#btnInstalar').hidden = false; });

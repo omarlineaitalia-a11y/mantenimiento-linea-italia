@@ -49,6 +49,12 @@ service cloud.firestore {
       allow write: if (enPersonal(app) && (col != 'config' || esAdmin(app)) && (!soloAdmin(app, col) || esAdmin(app)))
                    || (request.auth != null && !hayPersonal(app));
     }
+    // fichas públicas de los QR de las máquinas (Base de Datos): cualquiera las LEE sin sesión (solo consulta);
+    // solo los administradores de Base de Datos las escriben. No da acceso a nada más.
+    match /publico/{doc} {
+      allow read: if true;
+      allow write: if esAdmin('equipos');
+    }
     // versión vigente de cada cuenta: la pública (por huella) sirve para entrar; la privada la revisan estas reglas
     match /acceso/publico {
       allow read: if true;

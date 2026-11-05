@@ -40,7 +40,7 @@ dd{margin:0;font:700 14px Consolas,"Courier New",monospace;text-align:right;word
 .nota a{color:var(--azul);font-weight:700}
 .nada{margin-top:30px;text-align:center;background:#fff;border-radius:20px;padding:30px;box-shadow:var(--sombra)}
 </style>
-<script src="equipos-base.js"></script><script src="iconos.js"></script><script src="iconos-maquinas.js"></script>
+<script src="../firebase-config.js"></script><script src="equipos-base.js"></script><script src="iconos.js"></script><script src="iconos-maquinas.js"></script>
 </head><body>
 <header><div class="wrap"><div><b>Línea Italia · Mantenimiento</b><small>Ficha de máquina</small></div><span class="pub">👁 Solo consulta</span></div></header>
 <main class="wrap" id="main"></main>
@@ -85,6 +85,30 @@ function pintar() {
     (pers.length ? '<h2>🛠 Plan de mantenimiento preventivo</h2><div class="per">' + pers.map(p => '<i style="background:' + p[1] + '">' + p[0] + '</i>').join('') + '</div>' : '') +
     '<div class="nota">👁 <b>Ficha de solo consulta</b> con los datos de la Base de Datos de planta. Para fotos, historial de mantenimiento y cambios, el personal de mantenimiento entra a la <a href="./?app#' + encodeURIComponent(e.clave) + '">app Base de Datos</a>.</div>';
 }
-pintar(); addEventListener('hashchange', pintar);
+// ---- ficha COMPLETA publicada por la app (fotos, salud, mantenimientos, refacciones, manuales):
+// colección pública 'publico' de Firestore, leída por REST sin sesión. Si aún no está publicada, queda la ficha básica.
+const CFG = window.FIREBASE_CONFIG || {};
+const urlDoc = id => 'https://firestore.googleapis.com/v1/projects/' + CFG.projectId + '/databases/(default)/documents/publico/' + encodeURIComponent(id) + '?key=' + CFG.apiKey;
+const leer = id => fetch(urlDoc(id)).then(r => r.ok ? r.json() : null).catch(() => null);
+let estilosApp = null;
+async function cargarEstilos() {   // los mismos estilos de la app Base de Datos, para que la ficha se vea igual
+  if (estilosApp) return;
+  try { const t = await fetch('./index.html').then(r => r.text()); estilosApp = (t.match(/<style>[\s\S]*?<\/style>/g) || []).join('').replace(/<\/?style>/g, '');
+    const s = document.createElement('style'); s.textContent = estilosApp + 'body{background:#EEF2F6}#main .hoja{margin-top:16px;animation:none}.hoja .cab{border-radius:0}'; document.head.appendChild(s); } catch (e) {}
+}
+async function completa() {
+  const k = compacto(decodeURIComponent((location.hash || '').slice(1)) || new URLSearchParams(location.search).get('k') || '');
+  if (!k || !CFG.projectId) return;
+  const d = await leer('eq_' + k); const f = d && d.fields; if (!f || !f.html) return;
+  await cargarEstilos();
+  const m = document.getElementById('main');
+  m.innerHTML = f.html.stringValue + '<div class="nota">👁 <b>Ficha de solo consulta</b> · actualizada ' + new Date(f.t ? f.t.stringValue : Date.now()).toLocaleString('es-MX', { dateStyle:'medium', timeStyle:'short' }) + '. El personal de mantenimiento entra a la <a href="./?app#' + encodeURIComponent(f.clave.stringValue) + '">app Base de Datos</a> para modificar.</div>';
+  m.querySelectorAll('img[data-foto]').forEach(async im => { const x = await leer('f_' + im.dataset.foto); if (x && x.fields && x.fields.data) im.src = x.fields.data.stringValue; });
+  m.querySelectorAll('[data-ver]').forEach(v => v.onclick = () => { const i = v.querySelector('img'); if (!i || !i.src) return;
+    const z = document.createElement('div'); z.style.cssText = 'position:fixed;inset:0;z-index:999;background:rgba(9,20,34,.9);display:grid;place-items:center;padding:10px;cursor:zoom-out';
+    z.innerHTML = '<img src="' + i.src + '" style="max-width:100%;max-height:100%;border-radius:10px">'; z.onclick = () => z.remove(); document.body.appendChild(z); });
+}
+function arrancar() { pintar(); completa(); }
+arrancar(); addEventListener('hashchange', arrancar);
 </script>
 </body></html>
