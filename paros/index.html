@@ -1014,7 +1014,7 @@ function clasificarParos(evs){
   return r;
 }
 function cargarScript(src){ return new Promise((ok, no) => { if (document.querySelector('script[src="'+src+'"]')) return ok(); const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = no; document.head.appendChild(s); }); }
-async function resumenPdf(){
+async function resumenPdfGen(){
   if (!S.admin && !(S.sesion && ['admin','general'].includes(S.sesion.r))) { const p = await pedirNomina('Resumen PDF', 'config', 'Solo administradores · nómina de administrador'); if (!p) return; cerrarModal(); }
   try { await cargarScript('../lib/jspdf.umd.min.js'); await cargarScript('../lib/jspdf.plugin.autotable.min.js'); }
   catch(e) { toast('No se pudo cargar el generador de PDF. Revisa la conexión.'); return; }
@@ -1078,11 +1078,31 @@ async function resumenPdf(){
   const np = d.getNumberOfPages();
   for (let i = 1; i <= np; i++) { d.setPage(i); d.setDrawColor(214,221,228); d.line(M, 268, W - M, 268); d.setFontSize(7); d.setTextColor(...GR); d.text('Control de Paros · Línea Italia · Departamento de Mantenimiento', M, 272); d.text('Hoja ' + i + ' de ' + np, W - M, 272, { align:'right' }); }
   const blob = d.output('blob'), name = 'Resumen de paros ' + fday(A) + ' a ' + fday(B) + (fm ? ' ' + maqName(fm).replace(/[\\/:*?"<>|]/g,' ') : '') + '.pdf';
-  // iPhone / iPad: se abre el menú Compartir (Guardar en Archivos, WhatsApp, correo)
-  const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  if (ios && navigator.canShare) { const f = new File([blob], name, { type:'application/pdf' }); if (navigator.canShare({ files:[f] })) { try { await navigator.share({ files:[f], title:name }); } catch(e) {} return; } }
-  try { const dl = await window.claude.use('downloads'); if (!dl) { toast('La descarga no está disponible en esta vista.'); return; } await dl.save({ filename:name, data:blob }); toast('PDF descargado: ' + name); }
-  catch(e) { if (e && e.code !== 'declined') toast('No se pudo descargar ('+(e.code||e.message)+').'); }
+  entregarPdf(blob, name);
+}
+// El PDF tarda unos segundos en armarse y para entonces el navegador ya "olvidó" el clic y bloquea la descarga sin avisar.
+// Por eso, ya listo, se muestra una ventanita: el clic en "Descargar" es nuevo y la descarga sí pasa (PC, tablet, iPad, dentro del Centro).
+async function resumenPdf(){
+  try { await resumenPdfGen(); }
+  catch(e) { console.error(e); toast('No se pudo generar el PDF: ' + (e && e.message || e)); }
+}
+function entregarPdf(blob, name){
+  const url = URL.createObjectURL(blob); setTimeout(() => URL.revokeObjectURL(url), 15 * 60000);
+  abrirModal('<h3 style="margin:0 0 4px">📄 Resumen PDF listo</h3><p class="foot" style="margin:0 0 14px">' + esc(name) + ' · ' + Math.max(1, Math.round(blob.size / 1024)) + ' KB</p>' +
+    '<div style="display:flex;gap:10px;flex-wrap:wrap"><button type="button" class="primary" id="pdfBaja">⬇ Descargar PDF</button><button type="button" id="pdfVer">👁 Abrir para ver / imprimir</button><button type="button" id="pdfCerrar">Cerrar</button></div>');
+  $('pdfCerrar').onclick = cerrarModal;
+  $('pdfVer').onclick = () => { const w = window.open(url, '_blank'); if (!w) { const a = document.createElement('a'); a.href = url; a.target = '_blank'; a.rel = 'noopener'; document.body.appendChild(a); a.click(); a.remove(); } };
+  $('pdfBaja').onclick = async () => {
+    // iPhone / iPad: se abre el menú Compartir (Guardar en Archivos, WhatsApp, correo)
+    const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    if (ios && navigator.canShare) { const f = new File([blob], name, { type:'application/pdf' }); if (navigator.canShare({ files:[f] })) { try { await navigator.share({ files:[f], title:name }); cerrarModal(); } catch(e) {} return; } }
+    try {
+      const dl = await window.claude.use('downloads');
+      if (dl) await dl.save({ filename:name, data:blob });
+      else { const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); }
+      cerrarModal(); toast('PDF descargado: ' + name);
+    } catch(e) { if (e && e.code !== 'declined') toast('No se pudo descargar (' + (e.code || e.message) + '). Usa "Abrir para ver".'); }
+  };
 }
 // ---------- gráficas para el Excel (imagen PNG dibujada en canvas)
 const XC = { paro:'#C62828', ok:'#2E7D32', sin:'#C99700', acc:'#2E7D32', MTA:'#2a78d6', MTB:'#eb6834', EA:'#1baf7a', OTRA:'#8a8f8c', lleg:'#2a78d6', rep:'#eb6834' };
