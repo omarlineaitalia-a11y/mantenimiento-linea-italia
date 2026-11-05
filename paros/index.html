@@ -417,6 +417,11 @@ body.kiosk .top nav.nav, body.kiosk .hide-kiosk{display:none}
 <div class="alerta" id="alerta" hidden></div>
 
 <div class="modal" id="modal" hidden><div class="mcard" id="mcard"></div></div>
+<button type="button" id="candadoBtn" hidden>👤 Entrar con mi nómina</button>
+<style>
+#candadoBtn{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 18px);z-index:30;padding:15px 34px;font:inherit;font-size:17px;font-weight:700;color:#fff;border:0;border-radius:14px;cursor:pointer;background:linear-gradient(180deg,#2A7DE1,#1F6FD1);box-shadow:0 4px 0 #154F96,0 10px 26px rgba(14,42,71,.35);max-width:calc(100% - 32px);white-space:nowrap}
+#candadoBtn:active{transform:translateX(-50%) translateY(2px);box-shadow:0 2px 0 #154F96,0 6px 16px rgba(14,42,71,.3)}
+</style>
 <div class="toast" id="toast" hidden></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
@@ -536,6 +541,7 @@ function puedeVer(v){
   return !!S.sesion && vistasDe(S.sesion).includes(v);
 }
 function actualizarNav(){
+  $('candadoBtn').hidden = !!S.sesion;   // botón azul "Entrar con mi nómina" mientras no haya sesión
   document.querySelectorAll('nav.nav button').forEach(b => { b.hidden = !puedeVer(b.dataset.v); });
   $('btnSesion').textContent = S.sesion ? '👤 ' + S.sesion.n.split(' ').slice(0, 2).join(' ') + ' · Salir' : '👤 Entrar';
   const dv = devScreen(); $('opMaq').disabled = !S.sesion && !!dv && dv.v === 'op' && !!dv.maq;
@@ -1525,13 +1531,14 @@ $('btnProbarAviso').addEventListener('click', async () => {
 // ---------- eventos de UI
 document.querySelector('nav.nav').addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (b) setView(b.dataset.v); });
 $('btnSesion').addEventListener('click', () => { if (S.sesion) salirSesion(); else entrar(); });
+$('candadoBtn').addEventListener('click', entrar);
 // sin nómina la pantalla se ve igual, pero ningún botón hace nada: se pide entrar primero
 // (así siempre se sabe quién levanta cada falla o requerimiento). Solo funcionan "Entrar", pantalla completa y las ventanas de nómina.
 ['click','change','submit'].forEach(tipo => document.addEventListener(tipo, e => {
   if (S.sesion) return;
   const t = e.target, el = t.closest && t.closest('button,a,input,select,textarea,label,[data-a],[data-v],[data-k],[role=button],[onclick]');
   if (!el && tipo === 'click') return;
-  if (t.closest('#modal,#btnSesion,#btnFull,#toast,[id^="li-"]')) return;
+  if (t.closest('#modal,#btnSesion,#btnFull,#toast,#candadoBtn,[id^="li-"]')) return;
   e.preventDefault(); e.stopImmediatePropagation();
   if (tipo === 'click') { toast('🔒 Primero entra con tu número de nómina.'); entrar(); }
 }, true));
