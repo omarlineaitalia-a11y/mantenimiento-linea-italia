@@ -101,7 +101,8 @@ class VigiaService : Service() {
         regAG = Cfg.db(this).collection("apps/paros/ag").whereEqualTo("estado", "espera")
             .addSnapshotListener { snap, err ->
                 if (err != null) { regAG?.remove(); regAG = null; h.postDelayed({ escucharAG() }, 30_000); return@addSnapshotListener }
-                val docs = snap?.documents ?: emptyList()
+                // los requerimientos (proyectos con compra de material) no son urgentes: no suenan
+                val docs = (snap?.documents ?: emptyList()).filter { it.getBoolean("req") != true }
                 nAG = docs.size
                 val prefs = getSharedPreferences("vigia", MODE_PRIVATE)
                 val vistos = (prefs.getStringSet("vistosAG", emptySet()) ?: emptySet()).toMutableSet()
