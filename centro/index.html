@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Centro de Mantenimiento · Línea Italia</title>
+<link rel="manifest" href="manifest.json"><meta name="theme-color" content="#0E2A47"><link rel="icon" href="icono-192.png"><link rel="apple-touch-icon" href="icono-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Centro LI">
+<!-- CENTRO DE MANTENIMIENTO (concentrado de Ing. Omar).
+     Agrupa en una sola pantalla los módulos que Omar va pidiendo conectar, SIN modificarlos: cada uno corre en su propio
+     marco con su misma liga (Control de Paros sigue funcionando sola en las demás computadoras).
+     Los módulos conectados se quedan vivos aunque cambies de pestaña: Paros sigue vigilando fallas y el Centro avisa. -->
+<style>
+:root{--navy:#0E2A47;--azul:#1F6FD1;--fondo:#EEF2F6;--linea:#D8E0E8;--txt:#14212E;--muted:#5B6B7B;color-scheme:light}
+*{box-sizing:border-box}html,body{margin:0;height:100%}
+body{font:15px/1.45 "Segoe UI",system-ui,-apple-system,Arial,sans-serif;color:var(--txt);background:var(--fondo);display:grid;grid-template-rows:auto auto 1fr;height:100dvh;overflow:hidden}
+[hidden]{display:none!important}
+header{background:radial-gradient(900px 260px at 85% -60%,rgba(63,193,201,.25),transparent 60%),linear-gradient(120deg,#0B1F35,#0E2A47 55%,#173E66);color:#EAF2FB;display:flex;align-items:center;gap:12px;padding:8px 14px calc(8px) 14px;padding-top:calc(8px + env(safe-area-inset-top,0px));position:relative}
+header::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:linear-gradient(90deg,transparent,#3FC1C9,#F5A623,transparent)}
+.logo{width:40px;height:40px;border-radius:10px;background:#ffffff1a;border:1px solid #ffffff33;display:grid;place-items:center;font-weight:800;letter-spacing:.04em}
+header b{font-size:17px;display:block}header small{opacity:.75;font-size:12px}
+.esp{flex:1}
+.reloj{font:600 17px Consolas,"Courier New",monospace;background:#ffffff14;border:1px solid #ffffff2e;border-radius:10px;padding:3px 10px}
+.btnH{background:#ffffff1a;border:1px solid #ffffff33;color:#fff;border-radius:10px;padding:7px 12px;font:inherit;font-weight:600;cursor:pointer}
+/* aviso de falla que llega desde Control de Paros */
+#alerta{display:flex;align-items:center;gap:12px;padding:10px 16px;background:linear-gradient(90deg,#B71C1C,#E53935);color:#fff;font-weight:700;cursor:pointer;animation:lat 1.2s infinite}
+#alerta.ag{background:linear-gradient(90deg,#880E4F,#D81B60)}
+#alerta button{margin-left:auto;background:#fff;color:#B71C1C;border:0;border-radius:10px;padding:6px 14px;font:inherit;font-weight:800;cursor:pointer}
+@keyframes lat{50%{filter:brightness(1.25)}}
+.cuerpo{display:grid;grid-template-columns:auto minmax(0,1fr);min-height:0}
+nav{background:#0B1F35;color:#C9D8E8;display:flex;flex-direction:column;gap:4px;padding:10px 8px;width:230px;overflow-y:auto;transition:width .2s}
+nav.chico{width:66px}
+nav .t{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#7F95AE;padding:8px 10px 4px;white-space:nowrap;overflow:hidden}
+nav.chico .t,nav.chico .nom,nav.chico .est{display:none}
+.mod{display:flex;align-items:center;gap:10px;border:0;background:transparent;color:inherit;font:inherit;text-align:left;padding:9px 10px;border-radius:12px;cursor:pointer;position:relative;width:100%}
+.mod:hover{background:#ffffff12}
+.mod.on{background:linear-gradient(135deg,#1F6FD1,#173E66);color:#fff;box-shadow:0 6px 16px rgba(0,0,0,.25)}
+.mod .ic{font-size:22px;width:30px;text-align:center;flex:none}
+.mod .nom{flex:1;min-width:0;font-weight:600;line-height:1.2}
+.mod .est{font-size:10.5px;font-weight:700;border-radius:99px;padding:1px 7px;white-space:nowrap}
+.est.si{background:#1E8E5A;color:#fff}.est.no{background:#ffffff1a;color:#9FB6CF}
+.mod.off{opacity:.6}
+.mod .bad{position:absolute;left:30px;top:6px;width:12px;height:12px;border-radius:50%;background:#FF5A4E;box-shadow:0 0 0 0 rgba(255,90,78,.8);animation:pul 1.2s infinite}
+@keyframes pul{70%{box-shadow:0 0 0 9px rgba(255,90,78,0)}100%{box-shadow:0 0 0 0 rgba(255,90,78,0)}}
+main{position:relative;min-width:0;min-height:0;background:var(--fondo)}
+main iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#fff}
+.vacio{position:absolute;inset:0;display:grid;place-items:center;padding:20px}
+.vacio .card{max-width:520px;background:#fff;border-radius:22px;padding:26px;text-align:center;box-shadow:0 14px 34px rgba(14,42,71,.15);border-top:6px solid var(--azul)}
+.vacio .card .big{font-size:60px}
+.vacio h2{margin:6px 0;color:#0B2545}
+.vacio p{color:var(--muted)}
+.vacio code{background:#EEF2F6;border-radius:8px;padding:3px 8px;font-weight:700;color:#0B2545}
+.vacio a{display:inline-block;margin-top:8px;color:var(--azul);font-weight:700}
+/* teléfono: los módulos abajo */
+@media (max-width:760px){
+  .cuerpo{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto}
+  nav,nav.chico{order:2;width:auto;flex-direction:row;overflow-x:auto;padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px))}
+  nav .t,.mod .est,.mod .nom,#bChico{display:none}
+  .mod{flex-direction:column;gap:2px;width:auto;min-width:64px;padding:6px 8px;font-size:11px}
+  .mod .nom{display:block;font-size:10.5px;text-align:center}
+  header small,.reloj{display:none}
+}
+</style>
+</head><body>
+<header>
+  <div class="logo">LI</div>
+  <div><b>Centro de Mantenimiento</b><small>Línea Italia · concentrado de Ing. Omar</small></div>
+  <div class="esp"></div>
+  <button class="btnH" id="bChico" title="Hacer el menú chico o grande">☰</button>
+  <button class="btnH" id="bAparte" title="Abrir este módulo en otra ventana">↗ Aparte</button>
+  <span class="reloj" id="reloj">--:--</span>
+</header>
+<div id="alerta" hidden><span id="alertaT"></span><button type="button">Ver en Control de Paros</button></div>
+<div class="cuerpo">
+  <nav id="nav"></nav>
+  <main id="main"></main>
+</div>
+<script>
+'use strict';
+// MÓDULOS: 'on:true' = conectado al Centro. Se conectan uno por uno cuando Ing. Omar lo pide (no se modifican las apps).
+const MODS = [
+  { k:'paros',  n:'Control de Paros',  ic:'⏱', url:'../paros/', on:true },
+  { k:'equipos', n:'Base de Datos',    ic:'🔎', url:'../equipos/' },
+  { k:'almacen', n:'Almacén',          ic:'📦', url:'../almacen/' },
+  { k:'compras', n:'Compras',          ic:'🛒', url:'../compras/' },
+  { k:'cfe',     n:'Lecturas CFE',     ic:'⚡', url:'../cfe/' },
+  { k:'cajachica', n:'Caja Chica',     ic:'💵', url:'../cajachica/' },
+  { k:'organigrama', n:'Organigrama',  ic:'👥', url:'../organigrama/' }
+];
+const $ = id => document.getElementById(id);
+let actual = '';
+const marcos = {};
+function pintarNav() {
+  const con = MODS.filter(m => m.on), por = MODS.filter(m => !m.on);
+  const btn = m => '<button type="button" class="mod' + (m.k === actual ? ' on' : '') + (m.on ? '' : ' off') + '" data-k="' + m.k + '" title="' + m.n + '"><span class="ic">' + m.ic + '</span><span class="nom">' + m.n + '</span><span class="est ' + (m.on ? 'si">conectado' : 'no">por conectar') + '</span>' + (m.k === 'paros' && hayFalla ? '<span class="bad"></span>' : '') + '</button>';
+  $('nav').innerHTML = '<div class="t">Conectados</div>' + con.map(btn).join('') + (por.length ? '<div class="t">Por conectar</div>' + por.map(btn).join('') : '');
+}
+function abrir(k) {
+  const m = MODS.find(x => x.k === k); if (!m) return;
+  actual = k; try { localStorage.setItem('centro_mod', k); } catch (e) {}
+  Object.values(marcos).forEach(f => f.hidden = true);
+  const v = document.querySelector('.vacio'); if (v) v.remove();
+  if (m.on) {
+    if (!marcos[k]) { const f = document.createElement('iframe'); f.src = m.url; f.title = m.n; f.allow = 'fullscreen; autoplay; clipboard-write; camera'; $('main').appendChild(f); marcos[k] = f; }
+    marcos[k].hidden = false;
+  } else {
+    const d = document.createElement('div'); d.className = 'vacio';
+    d.innerHTML = '<div class="card"><div class="big">' + m.ic + '</div><h2>' + m.n + '</h2><p>Este módulo todavía <b>no está conectado</b> al Centro.<br>Cuando lo quieras aquí, dile al Inge Virtual:</p><code>conecta ' + m.n + ' al Centro</code><br><a href="' + m.url + '" target="_blank" rel="noopener">Abrir ' + m.n + ' por separado ↗</a></div>';
+    $('main').appendChild(d);
+  }
+  pintarNav();
+}
+$('nav').addEventListener('click', e => { const b = e.target.closest('[data-k]'); if (b) abrir(b.dataset.k); });
+$('bChico').onclick = () => { $('nav').classList.toggle('chico'); try { localStorage.setItem('centro_chico', $('nav').classList.contains('chico') ? '1' : ''); } catch (e) {} };
+$('bAparte').onclick = () => { const m = MODS.find(x => x.k === actual); if (m) window.open(m.url, '_blank', 'noopener'); };
+// ---- conexión con Control de Paros: el Centro lee el título de Paros (mismo sitio) y avisa aunque estés en otro módulo
+let hayFalla = false;
+function vigilarParos() {
+  let t = ''; try { const f = marcos.paros; t = f && f.contentDocument ? f.contentDocument.title : ''; } catch (e) {}
+  const falla = /FALLA|PRUEBA|ÁREAS GENERALES|alarma/i.test(t) && /⚠|🔕|🧪|🏢/.test(t);
+  if (falla !== hayFalla) { hayFalla = falla; pintarNav(); }
+  $('alerta').hidden = !falla;
+  if (falla) { $('alertaT').textContent = t; $('alerta').classList.toggle('ag', /ÁREAS GENERALES|🏢/.test(t)); document.title = t + ' · Centro LI'; }
+  else document.title = 'Centro de Mantenimiento · Línea Italia';
+}
+$('alerta').onclick = () => abrir('paros');
+setInterval(vigilarParos, 2000);
+setInterval(() => { $('reloj').textContent = new Date().toLocaleTimeString('es-MX', { hour:'2-digit', minute:'2-digit' }); }, 1000);
+// arranque: Control de Paros siempre se carga (para vigilar fallas) y se abre el último módulo usado
+try { if (localStorage.getItem('centro_chico')) $('nav').classList.add('chico'); } catch (e) {}
+let ult = 'paros'; try { ult = localStorage.getItem('centro_mod') || 'paros'; } catch (e) {}
+abrir('paros'); if (ult !== 'paros') abrir(ult);
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body></html>
