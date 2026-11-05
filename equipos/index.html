@@ -374,9 +374,10 @@ function icEq(e) {
   if (/taladro/.test(n)) return (e.cat === 'MTB' || /banco|pedestal|columna/.test(n)) ? 'taladroBanco' : 'mtc';
   return c.ic;
 }
-// ---- códigos QR: llevan a la ficha de UNA máquina (la app abre la ficha con #CLAVE después de entrar)
+// ---- códigos QR: llevan a la ficha PÚBLICA de una máquina (ficha.html#CLAVE, solo consulta, sin sesión)
 const URL_APP = 'https://omarlineaitalia-a11y.github.io/mantenimiento-linea-italia/equipos/';
-const urlFicha = e => URL_APP + '#' + encodeURIComponent(e.clave);
+// el QR abre la ficha PÚBLICA de solo consulta (sin nómina ni contraseña), p. ej. para Dirección o los dueños
+const urlFicha = e => URL_APP + 'ficha.html#' + encodeURIComponent(e.clave);
 async function qrPng(texto, px) {
   await cargarScript('https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js');
   const q = qrcode(0, 'M'); q.addData(texto); q.make();
@@ -417,7 +418,7 @@ async function pdfEtiquetasQR(L, nombre) {
 async function verQR(e) {
   const c = CAT[e.cat] || CATS[0], v = document.createElement('div'); v.id = 'visor'; v.className = 'qrV';
   v.innerHTML = '<div class="qrC"><div class="qrH" style="--c:' + c.c + '">' + svg(icEq(e), 'ic') + '<div><span class="clave" style="background:' + c.c + '">' + esc(e.clave) + '</span><b>' + esc(nombreDe(e)) + '</b><small>' + esc(c.n) + '</small></div><button class="x" title="Cerrar">✕</button></div>' +
-    '<div class="qrI"><p class="muted small">Generando código…</p></div><p class="small muted" style="text-align:center;margin:0">Al escanearlo abre la ficha de <b>esta máquina</b> (pide entrar con nómina la primera vez).</p>' +
+    '<div class="qrI"><p class="muted small">Generando código…</p></div><p class="small muted" style="text-align:center;margin:0">Al escanearlo abre la ficha de <b>esta máquina</b> en modo <b>solo consulta</b>, sin nómina ni contraseña.</p>' +
     '<div class="row" style="justify-content:center"><button class="btn pri" id="qrPdf">📄 Etiqueta en PDF para pegar</button></div></div>';
   document.body.appendChild(v);
   v.onclick = ev => { if (ev.target === v || ev.target.closest('.x')) v.remove(); };

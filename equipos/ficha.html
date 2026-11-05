@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ficha de máquina · Línea Italia</title>
+<meta name="theme-color" content="#0E2A47"><link rel="icon" href="icono-192.png">
+<!-- Ficha PÚBLICA de solo consulta: la abre el código QR pegado en la máquina, sin nómina ni contraseña.
+     Usa la Base de Datos de planta publicada (equipos-base.js); no lee ni escribe en la nube. -->
+<style>
+:root{--bg:#EEF2F6;--card:#fff;--ink:#14212E;--muted:#5B6B7B;--line:#D8E0E8;--navy:#0E2A47;--azul:#1F6FD1;--c:#1F4FBF;--sombra:0 1px 2px rgba(14,42,71,.06),0 8px 22px rgba(14,42,71,.08);color-scheme:light}
+*{box-sizing:border-box}html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 "Segoe UI",system-ui,-apple-system,Arial,sans-serif}
+.wrap{max-width:760px;margin:0 auto;padding:0 16px 40px}
+header{background:radial-gradient(900px 260px at 85% -60%,rgba(63,193,201,.25),transparent 60%),linear-gradient(120deg,#0B1F35,#0E2A47 55%,#173E66);color:#EAF2FB;padding:12px 0}
+header .wrap{display:flex;align-items:center;gap:10px;padding-bottom:0}
+header b{font-size:15px}header small{display:block;opacity:.75;font-size:12px}
+.pub{margin-left:auto;font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);border-radius:99px;padding:3px 10px;white-space:nowrap}
+.hero{margin-top:16px;border-radius:22px;overflow:hidden;background:var(--card);box-shadow:var(--sombra);border-top:6px solid var(--c)}
+.hero .top{display:flex;gap:16px;align-items:center;padding:18px;background:linear-gradient(135deg,color-mix(in srgb,var(--c) 12%,#fff),#fff)}
+.hero svg{width:150px;height:125px;color:var(--c);flex:none;filter:drop-shadow(0 6px 10px rgba(14,42,71,.2))}
+.clave{display:inline-block;background:var(--c);color:#fff;font:800 22px/1.2 Consolas,"Courier New",monospace;letter-spacing:.04em;border-radius:10px;padding:3px 12px}
+h1{margin:8px 0 2px;font-size:clamp(22px,5vw,30px);line-height:1.15;color:#0B2545}
+.cat{color:var(--muted);font-weight:600}
+.ubi{display:inline-flex;gap:6px;align-items:center;margin-top:8px;background:#E1F4EA;color:#14532D;border-radius:99px;padding:4px 12px;font-weight:700;font-size:14px}
+@media (max-width:520px){.hero .top{flex-direction:column;text-align:center}.hero svg{width:170px;height:140px}}
+h2{font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:#0B2545;margin:22px 0 10px}
+.placa{position:relative;border-radius:16px;padding:16px 18px;background:linear-gradient(160deg,#F4F6F8 0%,#D5DBE1 35%,#EEF1F4 55%,#C3CAD2 100%);border:1px solid #9AA5B1;box-shadow:inset 0 1px 0 #fff,0 6px 18px rgba(14,42,71,.12)}
+.placa .ph{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;border-bottom:2px solid #6B7682;padding-bottom:8px;margin-bottom:8px}
+.placa .ph b{font:900 20px "Arial Black",Arial,sans-serif;letter-spacing:.06em;text-transform:uppercase}
+.placa .ph span{font-size:12px;font-weight:700;color:#3C4855;text-align:right}
+.placa dl{margin:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:0 18px}
+.placa dl div{display:flex;justify-content:space-between;gap:8px;border-bottom:1px dashed #8C97A3;padding:5px 0}
+dt{font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#46525F}
+dd{margin:0;font:700 14px Consolas,"Courier New",monospace;text-align:right;word-break:break-word}
+.datos{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px}
+.dato{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:9px 12px}
+.dato span{display:block;font-size:11.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.dato b{font-weight:600}
+.per{display:flex;gap:6px;flex-wrap:wrap}
+.per i{font-style:normal;color:#fff;font-weight:800;border-radius:8px;padding:4px 10px;font-size:13px}
+.nota{margin-top:24px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 14px;color:var(--muted);font-size:13px}
+.nota a{color:var(--azul);font-weight:700}
+.nada{margin-top:30px;text-align:center;background:#fff;border-radius:20px;padding:30px;box-shadow:var(--sombra)}
+</style>
+<script src="equipos-base.js"></script><script src="iconos.js"></script><script src="iconos-maquinas.js"></script>
+</head><body>
+<header><div class="wrap"><div><b>Línea Italia · Mantenimiento</b><small>Ficha de máquina</small></div><span class="pub">👁 Solo consulta</span></div></header>
+<main class="wrap" id="main"></main>
+<script>
+'use strict';
+const CATS = { MTA:['Maquinaria tipo A', '#1F4FBF', 'mta'], MTB:['Maquinaria tipo B', '#E07B1A', 'mtb'], MTC:['Maquinaria tipo C', '#7B4BC4', 'mtc'], AA:['Aires acondicionados', '#1597D3', 'aa'], EA:['Equipo auxiliar', '#0E9F96', 'ea'], EBT:['Eléctrico baja tensión', '#D2453C', 'ebt'], EMT:['Eléctrico media tensión', '#8E2A2A', 'emt'], EM:['Equipo móvil', '#8A5A2B', 'em'], IL:['Iluminación', '#D9A400', 'il'], AG:['Áreas generales', '#2E9E5B', 'ag'] };
+const PERIODOS = [['Diario', '#E8B10E'], ['Semanal', '#8A5A2B'], ['Quincenal', '#2E9E5B'], ['Mensual', '#D6487E'], ['Trimestral', '#7B4BC4'], ['Semestral', '#1F6FD1'], ['Anual', '#6A1B9A']];
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+const norm = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+const compacto = s => norm(s).replace(/[^a-z0-9]/g, '');
+const limpio = v => String(v || '').replace(/\s*\((verificar|ilegible)[^)]*\)/gi, '').trim();
+// mismo dibujo que en la app: por nombre de la máquina y, si no, por categoría
+function icono(e) {
+  const n = norm((e.corto || '') + ' ' + (e.nombre || ''));
+  if (/compresor|extractor|secador|vaporizador/.test(n)) return 'ea';
+  if (/laser|gweike|g-weike|bimex/.test(n)) return 'laser';
+  if (/dobladora|plegadora/.test(n)) return 'dobladora';
+  if (/soldar|soldadora/.test(n)) return 'soldadora';
+  if (/enchapadora|canteadora|homag|stefani/.test(n)) return 'enchapadora';
+  if (/horno|tunel/.test(n)) return 'horno';
+  if (/prensa|troquel|cizalla/.test(n)) return 'mtb';
+  if (/taladro/.test(n)) return (e.cat === 'MTB' || /banco|pedestal|columna/.test(n)) ? 'taladroBanco' : 'mtc';
+  return (CATS[e.cat] || CATS.MTA)[2];
+}
+function pintar() {
+  const k = compacto(decodeURIComponent((location.hash || '').slice(1)) || new URLSearchParams(location.search).get('k') || '');
+  const e = (window.EQ_BASE || []).find(x => compacto(x.clave) === k || (x.eco && compacto(x.eco) === k));
+  const m = document.getElementById('main');
+  if (!e) { m.innerHTML = '<div class="nada"><h1>Máquina no encontrada</h1><p class="cat">Revisa que el código QR esté completo o pregunta a mantenimiento.</p></div>'; return; }
+  const c = CATS[e.cat] || CATS.MTA, nom = e.corto || e.nombre || e.clave, ubic = limpio(e.ubic) || 'Sin ubicación';
+  document.documentElement.style.setProperty('--c', c[1]); document.title = e.clave + ' · ' + nom + ' · Línea Italia';
+  const fila = (key, lab) => { const v = limpio(e[key]); return v ? '<div><dt>' + lab + '</dt><dd>' + esc(v) + '</dd></div>' : ''; };
+  const dato = (key, lab) => { const v = limpio(e[key]); return v ? '<div class="dato"><span>' + lab + '</span><b>' + esc(v) + '</b></div>' : ''; };
+  const placa = [['marca', 'Marca'], ['modelo', 'Modelo'], ['serie', 'No. de serie'], ['kw', 'Potencia (kW)'], ['w', 'Potencia (W)'], ['amp', 'Corriente (A)'], ['vo', 'Voltaje operación (V)'], ['vc', 'Voltaje control (V)'], ['aceite', 'Aceite / refrigerante'], ['ffab', 'Fabricación']].map(([a, b]) => fila(a, b)).join('');
+  const gen = [['fab', 'Fabricante'], ['eco', 'Número económico'], ['finst', 'Llegada a planta'], ['vida', 'Vida útil (manual)'], ['hdia', 'Horas de uso diario'], ['htot', 'Horas totales'], ['lub', 'Lubricante']].map(([a, b]) => dato(a, b)).join('');
+  const pers = PERIODOS.filter(p => norm(e.periodo).includes(norm(p[0])));
+  m.innerHTML =
+    '<section class="hero"><div class="top"><svg viewBox="0 0 120 100" aria-hidden="true">' + ((window.ICON_R && ICON_R[icono(e)]) || '') + '</svg>' +
+      '<div><span class="clave">' + esc(e.clave) + '</span><h1>' + esc(nom) + '</h1><div class="cat">' + esc(c[0]) + (e.nombre && e.nombre !== nom ? ' · ' + esc(e.nombre) : '') + '</div><div class="ubi">📍 ' + esc(ubic) + '</div></div></div></section>' +
+    (placa ? '<h2>🏷 Placa de datos</h2><div class="placa"><div class="ph"><b>' + esc(limpio(e.marca) || limpio(e.fab) || nom) + '</b><span>DATOS DE PLACA<br>' + esc(e.clave) + '</span></div><dl>' + placa + '</dl></div>' : '') +
+    (gen ? '<h2>📋 Datos generales</h2><div class="datos">' + gen + '</div>' : '') +
+    (pers.length ? '<h2>🛠 Plan de mantenimiento preventivo</h2><div class="per">' + pers.map(p => '<i style="background:' + p[1] + '">' + p[0] + '</i>').join('') + '</div>' : '') +
+    '<div class="nota">👁 <b>Ficha de solo consulta</b> con los datos de la Base de Datos de planta. Para fotos, historial de mantenimiento y cambios, el personal de mantenimiento entra a la <a href="./#' + encodeURIComponent(e.clave) + '">app Base de Datos</a>.</div>';
+}
+pintar(); addEventListener('hashchange', pintar);
+</script>
+</body></html>
