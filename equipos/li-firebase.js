@@ -308,8 +308,10 @@
     '#li-reset input{font:inherit;font-size:18px;padding:9px 11px;border:1px solid #C2C7C4;border-radius:8px}#li-reset button{font:inherit;font-weight:700;font-size:15px;padding:11px;border-radius:8px;border:0;background:#2E7D32;color:#fff;cursor:pointer}' +
     '#li-reset button.x{background:#EEF0EF;color:#1C2620}#li-reset button:disabled{opacity:.6}#li-reset .m{margin:0;min-height:1.2em;font-size:14px}#li-reset .f{margin:0;font-size:13px;color:#4F5A54}';
   document.head.appendChild(css);
-
   function mostrarAcceso(msg) {
+    // QR viejos de las etiquetas (…/equipos/#CLAVE): sin sesión → ficha pública de solo consulta, sin contraseña.
+    // El personal que quiere entrar a la app desde la ficha usa ?app y aquí sí ve el acceso.
+    if (location.hash.length > 1 && !/[?&]app\b/.test(location.search)) { location.replace('ficha.html' + location.hash); return; }
     var d = document.getElementById('li-acceso');
     if (!d) {
       d = document.createElement('div'); d.id = 'li-acceso';

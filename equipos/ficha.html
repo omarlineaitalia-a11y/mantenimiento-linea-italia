@@ -83,7 +83,7 @@ function pintar() {
     (placa ? '<h2>🏷 Placa de datos</h2><div class="placa"><div class="ph"><b>' + esc(limpio(e.marca) || limpio(e.fab) || nom) + '</b><span>DATOS DE PLACA<br>' + esc(e.clave) + '</span></div><dl>' + placa + '</dl></div>' : '') +
     (gen ? '<h2>📋 Datos generales</h2><div class="datos">' + gen + '</div>' : '') +
     (pers.length ? '<h2>🛠 Plan de mantenimiento preventivo</h2><div class="per">' + pers.map(p => '<i style="background:' + p[1] + '">' + p[0] + '</i>').join('') + '</div>' : '') +
-    '<div class="nota">👁 <b>Ficha de solo consulta</b> con los datos de la Base de Datos de planta. Para fotos, historial de mantenimiento y cambios, el personal de mantenimiento entra a la <a href="./#' + encodeURIComponent(e.clave) + '">app Base de Datos</a>.</div>';
+    '<div class="nota">👁 <b>Ficha de solo consulta</b> con los datos de la Base de Datos de planta. Para fotos, historial de mantenimiento y cambios, el personal de mantenimiento entra a la <a href="./?app#' + encodeURIComponent(e.clave) + '">app Base de Datos</a>.</div>';
 }
 pintar(); addEventListener('hashchange', pintar);
 </script>
