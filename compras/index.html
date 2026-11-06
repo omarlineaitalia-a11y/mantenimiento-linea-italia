@@ -384,11 +384,12 @@ if (window.DEMO) {
       <h3><i>2</i>¿Qué necesitas?</h3>
       <p class="tip">Sé exacto: qué es, marca, medida o modelo. Compras de la empresa cotiza solo con lo que escribas aquí.</p>
       <form class="addrow" id="addForm" autocomplete="off">
-        <label class="desc0">Artículo<input id="aDesc" list="frecuentes" placeholder="Ej. Rodamiento de bolas" required></label>
+        <label class="desc0">Artículo<input id="aDesc" list="frecuentes" placeholder="Ej. Rodamiento de bolas"></label>
         <label>Cantidad<div class="stepper"><button type="button" data-step="-1" aria-label="Menos">−</button><input id="aCant" type="number" min="0" step="any" value="1" inputmode="decimal" aria-label="Cantidad"><button type="button" data-step="1" aria-label="Más">+</button></div></label>
         <label>Unidad<select id="aUni"></select></label>
         <label>Tipo<select id="aTipo"><option>Consumible</option><option>Refacción</option></select></label>
         <label class="cod">Medida, marca o modelo<input id="aCod" placeholder="Ej. 6205-2RS SKF · 1/4&quot; · 3M Super 33+"></label>
+        <div class="fotobox"><input type="file" id="aFoto" accept="image/*" multiple hidden><button type="button" id="aFotoBtn">Tomar o subir foto</button><div class="thumbs" id="aThumbs"></div><span class="hint">¿No sabes cómo se llama la pieza? Tómale una foto (o a su placa) y escribe lo que sepas.</span></div>
         <button type="submit" class="primary">+ Agregar a la lista</button>
       </form>
       <p class="hint warn" id="aWarn" hidden>Te faltó la medida, marca o modelo. Si la sabes, agrégala: así Compras cotiza más rápido.</p>
@@ -462,6 +463,8 @@ if (window.DEMO) {
 
     <div class="section">4 · Algo más que deba saber</div>
     <label class="full">¿Para qué se necesita?<textarea id="motivo" rows="2"></textarea></label>
+    <div class="section">Fotos de referencia</div>
+    <div class="dfotos"><div class="thumbs" id="dThumbs"></div><div id="dFotoAdd"><input type="file" id="dFoto" accept="image/*" multiple hidden><button type="button" class="sm" id="dFotoBtn">Agregar foto</button></div></div>
     <label class="full so">Notas internas<textarea id="notas" rows="2" placeholder="No salen en el PDF"></textarea></label>
 
     <div class="section so">Seguimiento</div>
@@ -526,6 +529,23 @@ if (window.DEMO) {
   </div>
   <div class="dfoot"><span class="note" id="iNote"></span><div class="actions"><button type="button" id="iCancel">Cancelar</button><button type="button" class="primary" id="iGo" disabled>Importar</button></div></div>
 </aside>
+<style>
+/* fotos de referencia */
+.fotobox{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:10px;background:var(--sunken);border:1px dashed var(--line);padding:10px}
+.fotobox .hint{flex:1 1 220px}
+.thumbs{display:flex;flex-wrap:wrap;gap:8px}
+.thumb{position:relative;width:64px;height:64px;border:1px solid var(--line);background:var(--surface);border-radius:4px;overflow:hidden;cursor:zoom-in;padding:0}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb .rm{position:absolute;top:2px;right:2px;width:22px;height:22px;padding:0;border-radius:50%;font-size:12px;line-height:20px;background:var(--surface);color:var(--bad);border:1px solid var(--line);cursor:pointer}
+.thumbs.sm .thumb{width:44px;height:44px}
+.tag.foto{border-color:var(--info);color:var(--info);background:var(--info-soft)}
+.dfotos{grid-column:1/-1;display:flex;flex-direction:column;gap:8px}
+.lbx{position:fixed;inset:0;z-index:30;background:rgba(5,12,25,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:calc(16px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) calc(16px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.lbx img{max-width:100%;max-height:78vh;object-fit:contain;background:#fff;border-radius:4px}
+.lbx .acts{display:flex;gap:8px}
+.lbx button{background:#fff;color:var(--navy,#14284b);border-color:#fff}
+</style>
+<div class="lbx" id="lbx" hidden><img id="lbxImg" alt="Foto de referencia"><div class="acts"><button type="button" id="lbxDl" class="so">Descargar foto</button><button type="button" id="lbxClose">Cerrar</button></div></div>
 <div class="toast" id="toast" hidden></div>
 
 <script>
@@ -616,7 +636,7 @@ async function setStatus(r,e,extra={}){
 /* ================= texto para el portal ================= */
 function cpFields(r){
   const para=[r.equipo,r.area].filter(Boolean).join(" - ");
-  const algo=[r.motivo,para?`Para: ${para}`:"",r.prioridad&&r.prioridad!=="Normal"?`Prioridad: ${r.prioridad}`:"",`Solicitó: ${r.solicitante||""} (Mantenimiento). Folio interno ${r.folio}`]
+  const algo=[r.motivo,para?`Para: ${para}`:"",r.prioridad&&r.prioridad!=="Normal"?`Prioridad: ${r.prioridad}`:"",(r.fotos||[]).length?`Se adjunta${r.fotos.length>1?"n":""} ${r.fotos.length} foto${r.fotos.length>1?"s":""} de referencia`:"",`Solicitó: ${r.solicitante||""} (Mantenimiento). Folio interno ${r.folio}`]
     .filter(Boolean).map(s=>s.trim().replace(/\.$/,"")).join(". ")+".";
   return [
     ["Producto o servicio",[r.descripcion,r.codigo].filter(Boolean).join(" - ")],
@@ -680,7 +700,7 @@ function renderAdmin(){
     return `<tr class="row ${sel.has(r._id)?"sel":""}" data-id="${esc(r._id)}">
       <td class="ck" data-stop><input type="checkbox" data-ck="${esc(r._id)}" ${sel.has(r._id)?"checked":""} aria-label="Seleccionar ${esc(r.folio)}"></td>
       <td class="folio">${esc(r.folio)}</td>
-      <td class="desc"><b>${esc(r.descripcion)}</b><small>${esc(r.codigo||"")}</small>${needsDetail(r)&&aTab==="rev"?` <span class="tag warnb">Falta medida o marca</span>`:""}</td>
+      <td class="desc"><b>${esc(r.descripcion)}</b><small>${esc(r.codigo||"")}</small>${(r.fotos||[]).length?` <span class="tag foto">Con foto${r.fotos.length>1?" ("+r.fotos.length+")":""}</span>`:""}${needsDetail(r)&&aTab==="rev"&&!(r.fotos||[]).length?` <span class="tag warnb">Falta medida o marca</span>`:""}</td>
       <td class="num">${r.cantidad==null||r.cantidad===""?'<span class="late">Falta</span>':esc(r.cantidad)+" "+esc(r.unidad||"")}</td>
       <td class="desc"><b>${esc(r.equipo||"—")}</b><small>${esc(r.area||"")}</small></td>
       ${ex.map(c=>`<td>${c}</td>`).join("")}</tr>`}).join("");
@@ -736,7 +756,8 @@ async function makeResguardo(list){
   list=[...list].sort((a,b)=>(a.folio||"").localeCompare(b.folio||""));
   const nuevos=list.filter(r=>!r.lote&&r.estatus==="Por subir");
   const lote=nuevos.length?nextLote():[...new Set(list.map(r=>r.lote).filter(Boolean))].join(", ")||"Consulta";
-  let pdf;try{pdf=buildPdf(list,lote)}catch(e){toast("No se pudo armar el PDF");console.error(e);return}
+  const fotosPdf=await fotosParaPdf(list);
+  let pdf;try{pdf=buildPdf(list,lote,fotosPdf)}catch(e){toast("No se pudo armar el PDF");console.error(e);return}
   const dl=await window.claude?.use?.("downloads");
   if(!dl){toast("La descarga no está disponible en esta vista");return}
   try{
@@ -746,7 +767,7 @@ async function makeResguardo(list){
     sel.clear();renderAdmin();
   }catch(e){if(e?.code!=="declined")toast("No se descargó el PDF")}
 }
-function buildPdf(list,lote){
+function buildPdf(list,lote,FP){FP=FP||{};
   const {jsPDF}=window.jspdf;const doc=new jsPDF({unit:"pt",format:"letter"});
   const W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight(),M=40;
   const INK=[15,31,61],NAVY=[20,40,75],ACC=[31,61,110],MUT=[91,107,133],LINE=[207,216,230],SUN=[231,236,244];
@@ -784,6 +805,15 @@ function buildPdf(list,lote){
       rowPageBreak:"avoid",
       didParseCell:d=>{if(d.section==="body"&&d.row.index===f.length)d.cell.styles.minCellHeight=20}});
     y=doc.lastAutoTable.finalY+10;
+    const fl=(r.fotos||[]).map(id=>FP[id]).filter(Boolean);
+    if(fl.length){
+      if(y+130>H-60){doc.addPage();y=50}
+      doc.setFont("helvetica","bold");doc.setFontSize(7.5);doc.setTextColor(...MUT);doc.text("FOTOS DE REFERENCIA",M+6,y+4);
+      let x=M+6;const bx=120;
+      fl.slice(0,4).forEach(du=>{try{const pr=doc.getImageProperties(du);const sc=Math.min(bx/pr.width,bx/pr.height);const w=pr.width*sc,h=pr.height*sc;
+        doc.setDrawColor(...LINE);doc.rect(x,y+10,bx,bx);doc.addImage(du,"JPEG",x+(bx-w)/2,y+10+(bx-h)/2,w,h);x+=bx+10}catch(e){}});
+      y+=bx+22;
+    }
   });
   if(y>H-130){doc.addPage();y=60}
   y=Math.max(y+40,H-110);
@@ -827,6 +857,7 @@ function openDrawer(r,copyFrom){
   const cp=$("cpbox");
   if(staff&&r){cp.hidden=false;$("cpRows").innerHTML=cpFields(r).map(([k,v],i)=>`<div class="cprow"><span>${esc(k)}</span><span>${esc(v||"—")}</span>${v?`<button type="button" class="sm" data-copy="${i}">Copiar</button>`:"<span></span>"}</div>`).join("")}
   else cp.hidden=true;
+  dFotos=[...((r||copyFrom||{}).fotos||[])];dFotosEdit=editable;renderDFotos();
   const h=(r?.hist||[]);$("histT").hidden=!h.length;
   $("hist").innerHTML=h.map(x=>`<div><b>${esc(stLabel(x.e))}</b>${x.n?` · ${esc(x.n)}`:""}<br><small>${esc(fmtDT(x.f))}${x.por?" · "+esc(x.por):""}</small></div>`).join("");
   $("btnSave").hidden=!editable;$("btnSave").textContent=r?"Guardar":"Guardar solicitud";
@@ -843,7 +874,7 @@ $("form").addEventListener("submit",async e=>{
   e.preventDefault();if(!col){toast("Sin conexión con el registro");return}
   const now=new Date().toISOString();
   const d={};REQ_FIELDS.forEach(f=>d[f]=$(f).value.trim());
-  d.cantidad=d.cantidad===""?null:+d.cantidad;d.actualizado=now;
+  d.cantidad=d.cantidad===""?null:+d.cantidad;d.actualizado=now;d.fotos=[...dFotos];
   if(staff){ADM_FIELDS.forEach(f=>d[f]=$(f).value.trim());
     const p=personal.find(x=>x.nombre===d.solicitante);d.solicitanteId=p?.h||editing?.solicitanteId||""}
   $("btnSave").disabled=true;
@@ -914,7 +945,7 @@ function cardHtml(r,showWho){
   return `<article class="rcard ${isLate(r)?"late":""}" data-open="${esc(r._id)}">
     <div class="rtop"><span class="folio">${esc(r.folio)}${r.prioridad==="Urgente"?' · <span class="late">URGENTE</span>':""}</span><span class="pill ${st.c}">${esc(st.f>=0?PHASES[st.f]:stLabel(r.estatus))}</span></div>
     <span class="rdesc">${esc(r.descripcion)}${r.codigo?` <small class="rmeta">${esc(r.codigo)}</small>`:""}</span>
-    <span class="rmeta">${meta}</span>${stepsHtml(r)}
+    <span class="rmeta">${meta}</span>${thumbsHtml(r.fotos,{sm:1})}${stepsHtml(r)}
     <p class="rmsg">${isLate(r)?'<span class="late">Ya pasó la fecha que pediste.</span> ':""}${esc(st.msg)}</p>
     ${r.notaMtto?`<p class="rnote">Mantenimiento: ${esc(r.notaMtto)}</p>`:""}
     <div class="ract">${acts.join("")}</div></article>`;
@@ -931,7 +962,7 @@ function renderPortal(){
   const inCart=new Set(cart.map(c=>c.descripcion.toLowerCase()));
   const q=top.filter(f=>!inCart.has(f.d.toLowerCase())).slice(0,14);
   $("quickBox").hidden=!q.length;$("quick").innerHTML=q.map(f=>`<button type="button" data-q="${esc(f.d)}">${esc(f.d)}</button>`).join("");
-  $("cart").innerHTML=cart.length?cart.map((c,i)=>`<div class="cline"><span><b>${esc(c.descripcion)}</b><small>${esc(c.tipo)}${c.codigo?" · "+esc(c.codigo):' · <span class="late">sin medida o marca</span>'}</small></span>
+  $("cart").innerHTML=cart.length?cart.map((c,i)=>`<div class="cline"><span><b>${esc(c.descripcion)}</b><small>${esc(c.tipo)}${c.codigo?" · "+esc(c.codigo):(c.fotos||[]).length?"":' · <span class="late">sin medida o marca</span>'}</small>${thumbsHtml(c.fotos,{sm:1})}</span>
     <input type="number" min="0" step="any" value="${esc(c.cantidad)}" data-ci="${i}" aria-label="Cantidad de ${esc(c.descripcion)}">
     <select data-cu="${i}" aria-label="Unidad">${UNITS.map(u=>`<option ${u===c.unidad?"selected":""}>${u}</option>`).join("")}</select>
     <button type="button" class="x" data-cx="${i}" aria-label="Quitar ${esc(c.descripcion)}">✕</button></div>`).join("")
@@ -958,14 +989,17 @@ function renderPortal(){
 function addToCart(item){
   const k=item.descripcion.trim().toLowerCase();
   const ex=cart.find(c=>c.descripcion.toLowerCase()===k&&(c.codigo||"")===(item.codigo||""));
-  if(ex){ex.cantidad=(+ex.cantidad||0)+(+item.cantidad||0);toast(`Sumé ${item.cantidad} a ${ex.descripcion}`)}
-  else cart.push({descripcion:item.descripcion.trim(),cantidad:item.cantidad,unidad:item.unidad||"pza",tipo:item.tipo||"Consumible",codigo:item.codigo||""});
+  if(ex&&!(item.fotos||[]).length&&!(ex.fotos||[]).length){ex.cantidad=(+ex.cantidad||0)+(+item.cantidad||0);toast(`Sumé ${item.cantidad} a ${ex.descripcion}`)}
+  else cart.push({descripcion:item.descripcion.trim(),cantidad:item.cantidad,unidad:item.unidad||"pza",tipo:item.tipo||"Consumible",codigo:item.codigo||"",fotos:item.fotos||[]});
   saveCart();renderPortal();
 }
 $("addForm").addEventListener("submit",e=>{
-  e.preventDefault();const d=$("aDesc").value.trim();if(!d)return;const cod=$("aCod").value.trim();
-  addToCart({descripcion:d,cantidad:$("aCant").value===""?null:+$("aCant").value,unidad:$("aUni").value,tipo:$("aTipo").value,codigo:cod});
-  $("aWarn").hidden=!!cod||d.split(/\s+/).length>=3;
+  e.preventDefault();let d=$("aDesc").value.trim();const cod=$("aCod").value.trim(),fts=[...pendFotos];
+  if(!d&&!fts.length){toast("Escribe el artículo o agrega una foto");$("aDesc").focus();return}
+  if(!d)d="Pieza por identificar (ver foto)";
+  addToCart({descripcion:d,cantidad:$("aCant").value===""?null:+$("aCant").value,unidad:$("aUni").value,tipo:$("aTipo").value,codigo:cod,fotos:fts});
+  $("aWarn").hidden=!!cod||fts.length>0||d.split(/\s+/).length>=3;
+  pendFotos=[];$("aThumbs").innerHTML="";
   $("aDesc").value="";$("aCant").value=1;$("aCod").value="";$("aDesc").focus();
 });
 $("aDesc").addEventListener("change",()=>{const k=$("aDesc").value.trim().toLowerCase();const r=[...rows].reverse().find(x=>(x.descripcion||"").toLowerCase()===k);if(r){$("aUni").value=r.unidad||"pza";$("aTipo").value=r.tipo||"Consumible";if(!$("aCod").value)$("aCod").value=r.codigo||""}});
@@ -991,7 +1025,7 @@ $("cSend").addEventListener("click",async()=>{
     for(let i=0;i<cart.length;i++){const c=cart[i];
       await col.doc().set({folio:folios[i],pedido:pid,tipo:c.tipo,prioridad:cPrio,descripcion:c.descripcion,codigo:c.codigo,equipo:$("cEquipo").value.trim(),area:$("cArea").value.trim(),
         solicitante:session.nombre,solicitanteId:session.h,cantidad:+c.cantidad,unidad:c.unidad,fechaSolicitud:today(),fechaRequerida:$("cFecha").value,
-        motivo:$("cMotivo").value.trim(),proveedorSug:$("cProv").value.trim(),estatus:"Por revisar",creado:now,actualizado:now,hist:[{e:"Por revisar",f:now,por:session.nombre}]});
+        motivo:$("cMotivo").value.trim(),proveedorSug:$("cProv").value.trim(),fotos:c.fotos||[],estatus:"Por revisar",creado:now,actualizado:now,hist:[{e:"Por revisar",f:now,por:session.nombre}]});
       done.push(folios[i])}
     cart=[];$("cMotivo").value="";$("cProv").value="";saveCart();
     toast(done.length>1?`Enviada: ${done[0]} a ${done[done.length-1]}`:`Enviada: ${done[0]}`);mMode="act";showTab("mias");
@@ -1220,6 +1254,71 @@ $("iGo").addEventListener("click",async()=>{
     toast(done.length?`Se importaron ${done.length}; los demás siguen en la lista. Intenta de nuevo.`:"No se pudo importar. Revisa tu conexión e intenta de nuevo.");
   }finally{$("iGo").disabled=!IMP.rows.length}
 });
+
+/* ================= fotos de referencia ================= */
+const MAXF=3, FOTO_CACHE={};
+let ASSETS=null, pendFotos=[], dFotos=[], dFotosEdit=false;
+const fsrc=id=>FOTO_CACHE[id]||("/_blob/"+id);
+function thumbsHtml(ids,o){ids=ids||[];o=o||{};if(!ids.length)return"";
+  return `<div class="thumbs${o.sm?" sm":""}">${ids.map((id,i)=>`<span class="thumb" data-foto="${esc(id)}" role="button" tabindex="0" aria-label="Ver foto ${i+1}"><img src="${esc(fsrc(id))}" alt="">${o.rm?`<button type="button" class="rm" data-rmfoto="${i}" aria-label="Quitar foto">✕</button>`:""}</span>`).join("")}</div>`}
+async function getAssets(){
+  if(ASSETS)return ASSETS;
+  const a=await window.claude?.use?.("assets");if(a)return(ASSETS=a);
+  if(window.DEMO){ASSETS={upload:async b=>{const url=await new Promise((ok,ko)=>{const fr=new FileReader();fr.onload=()=>ok(fr.result);fr.onerror=ko;fr.readAsDataURL(b)});
+    const id=[...crypto.getRandomValues(new Uint8Array(16))].map(x=>x.toString(16).padStart(2,"0")).join("");return{id,url}}};return ASSETS}
+  return null;
+}
+async function subirFotos(files,ya){
+  const a=await getAssets();if(!a){toast("Las fotos no están disponibles en este equipo");return[]}
+  const libres=Math.max(0,MAXF-(ya||0)),lista=[...files].filter(f=>/^image\//.test(f.type));
+  if(lista.length<files.length)toast("Solo se aceptan imágenes");
+  if(lista.length>libres)toast(`Máximo ${MAXF} fotos por artículo`);
+  const out=[];
+  for(const f of lista.slice(0,libres)){try{toast("Subiendo foto…");const r=await a.upload(f);FOTO_CACHE[r.id]=r.url;out.push(r.id)}catch(e){toast("No se pudo subir la foto. Revisa tu conexión.")}}
+  if(out.length)toast(out.length>1?`${out.length} fotos agregadas`:"Foto agregada");
+  return out;
+}
+// formulario del portal
+$("aFotoBtn").addEventListener("click",()=>$("aFoto").click());
+$("aFoto").addEventListener("change",async e=>{const ids=await subirFotos(e.target.files,pendFotos.length);pendFotos.push(...ids);e.target.value="";$("aThumbs").innerHTML=thumbsHtml(pendFotos,{rm:1})});
+$("aThumbs").addEventListener("click",e=>{const rm=e.target.closest("[data-rmfoto]");if(rm){e.stopPropagation();pendFotos.splice(+rm.dataset.rmfoto,1);$("aThumbs").innerHTML=thumbsHtml(pendFotos,{rm:1})}});
+// detalle
+function renderDFotos(){
+  $("dThumbs").innerHTML=dFotos.length?thumbsHtml(dFotos,{rm:dFotosEdit}):`<span class="note">${dFotosEdit?"Sin fotos. Agrega una si ayuda a identificar la pieza.":"Sin fotos."}</span>`;
+  $("dFotoAdd").hidden=!dFotosEdit||dFotos.length>=MAXF;
+}
+$("dFotoBtn").addEventListener("click",()=>$("dFoto").click());
+$("dFoto").addEventListener("change",async e=>{const ids=await subirFotos(e.target.files,dFotos.length);dFotos.push(...ids);e.target.value="";renderDFotos();if(ids.length)toast("Foto agregada. Toca Guardar para conservarla.")});
+$("dThumbs").addEventListener("click",e=>{const rm=e.target.closest("[data-rmfoto]");if(rm){e.stopPropagation();dFotos.splice(+rm.dataset.rmfoto,1);renderDFotos()}});
+// ver en grande (en cualquier lista)
+let lbxCtx=null;
+document.addEventListener("click",e=>{
+  if(e.target.closest("[data-rmfoto]"))return;
+  const t=e.target.closest(".thumb[data-foto]");if(!t)return;
+  e.preventDefault();e.stopPropagation();
+  const id=t.dataset.foto,img=t.querySelector("img");
+  lbxCtx={id,folio:(t.closest("[data-id],[data-open]")?.dataset.id||t.closest("[data-open]")?.dataset.open||"")};
+  $("lbxImg").src=img&&img.src?img.src:fsrc(id);$("lbx").hidden=false;
+},true);
+document.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.classList&&e.target.classList.contains("thumb"))e.target.click();if(e.key==="Escape"&&!$("lbx").hidden){e.stopPropagation();$("lbx").hidden=true}},true);
+$("lbxClose").addEventListener("click",()=>$("lbx").hidden=true);
+$("lbx").addEventListener("click",e=>{if(e.target.id==="lbx")$("lbx").hidden=true});
+$("lbxDl").addEventListener("click",async()=>{
+  if(!staff)return;const src=$("lbxImg").src;if(!/^data:/.test(src)){toast("La foto todavía se está cargando");return}
+  const dl=await window.claude?.use?.("downloads");if(!dl){toast("La descarga no está disponible en esta vista");return}
+  const r=editing||rows.find(x=>x._id===lbxCtx?.folio);
+  const blob=await (await fetch(src)).blob();
+  try{await dl.save({filename:`${r?.folio||"foto"} foto.jpg`,data:blob})}catch(e){if(e?.code!=="declined")toast("No se descargó la foto")}
+});
+// fotos para el PDF
+async function fotosParaPdf(list){
+  const ids=[...new Set(list.flatMap(r=>r.fotos||[]))],out={};
+  for(const id of ids){
+    if(/^data:/.test(FOTO_CACHE[id]||"")){out[id]=FOTO_CACHE[id];continue}
+    try{const s=await db.doc("fotos/"+id).get();const d=s.exists?s.data()?.data:"";if(d){out[id]=d;FOTO_CACHE[id]=d}}catch(e){}
+  }
+  return out;
+}
 /* ================= arranque ================= */
 (async()=>{
   try{
