@@ -387,8 +387,50 @@ function agFormulario(cont){
   });
 }
 
+// ---------- visor de fotos (lightbox): ver en grande y descargar, sin depender de /_blob (que la tablet no abría)
+(function(){ if (document.getElementById('agLbCss')) return; const s = document.createElement('style'); s.id = 'agLbCss';
+  s.textContent = '.agLb{position:fixed;inset:0;z-index:80;background:rgba(6,14,24,.92);display:grid;place-items:center;padding:12px}'
+    + '.agLb img{max-width:96vw;max-height:82vh;border-radius:10px;box-shadow:0 10px 40px rgba(0,0,0,.6);object-fit:contain}'
+    + '.agLbBar{position:absolute;top:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;padding-top:calc(10px + env(safe-area-inset-top,0px));color:#fff;font-weight:700}'
+    + '.agLbBar button{background:#ffffff26;border:1px solid #ffffff40;color:#fff;border-radius:10px;padding:9px 14px;font:inherit;font-weight:700;cursor:pointer}'
+    + '.agLbBar button[data-lbdesc]{background:#1F6FD1;border-color:#1F6FD1}'
+    + '.agLbNav{position:absolute;top:50%;transform:translateY(-50%);width:50px;height:50px;border-radius:50%;background:#ffffff26;border:1px solid #ffffff40;color:#fff;font-size:28px;line-height:1;cursor:pointer}'
+    + '.agLbNav.izq{left:10px}.agLbNav.der{right:10px}';
+  document.head.appendChild(s);
+})();
+function agVerFoto(imgs, i){
+  i = Math.max(0, Math.min(imgs.length - 1, i));
+  const lb = document.createElement('div'); lb.className = 'agLb';
+  const draw = () => {
+    const src = imgs[i].getAttribute('src') || '';
+    lb.innerHTML = '<div class="agLbBar"><span>' + (imgs.length > 1 ? (i + 1) + ' / ' + imgs.length : '') + '</span>'
+      + '<span style="display:flex;gap:8px"><button type="button" data-lbdesc>⬇ Descargar</button><button type="button" data-lbcls>✕ Cerrar</button></span></div>'
+      + (imgs.length > 1 ? '<button type="button" class="agLbNav izq" data-lbprev>‹</button><button type="button" class="agLbNav der" data-lbnext>›</button>' : '')
+      + '<img src="' + src + '" alt="foto ' + (i + 1) + '">';
+  };
+  draw();
+  lb.addEventListener('click', ev => {
+    if (ev.target.closest('[data-lbcls]') || ev.target === lb) { lb.remove(); return; }
+    if (ev.target.closest('[data-lbprev]')) { i = (i - 1 + imgs.length) % imgs.length; draw(); return; }
+    if (ev.target.closest('[data-lbnext]')) { i = (i + 1) % imgs.length; draw(); return; }
+    if (ev.target.closest('[data-lbdesc]')) agDescargaFoto(imgs[i].getAttribute('src'), i);
+  });
+  document.body.appendChild(lb);
+}
+async function agDescargaFoto(src, i){
+  if (!src) { toast('La foto todavía se está cargando, espera un momento.'); return; }
+  const nombre = 'requerimiento-foto-' + (i + 1) + '.jpg';
+  try {
+    const blob = await (await fetch(src)).blob();
+    const dl = await window.claude.use('downloads');
+    if (dl) await dl.save({ filename:nombre, data:blob });
+    else { const a = document.createElement('a'); a.href = src; a.download = nombre; document.body.appendChild(a); a.click(); a.remove(); }
+    toast('Foto descargada: ' + nombre);
+  } catch(e) { if (e && e.code !== 'declined') toast('No se pudo descargar la foto.'); }
+}
 // ---------- detalle y acciones
 document.addEventListener('click', e => {
+  const f = e.target.closest('[data-agfoto]'); if (f) { const cont = f.closest('[data-agfotos]'); if (cont) { const imgs = [...cont.querySelectorAll('[data-agfoto]')]; agVerFoto(imgs, imgs.indexOf(f)); return; } }
   const v = e.target.closest('[data-agver]'); if (v) { const r = agById(v.dataset.agver); if (r) agDetalle(r); return; }
   const a = e.target.closest('[data-agacc]'); if (!a) return;
   if (!S.sesion) { toast('🔒 Primero entra con tu nómina (botón 👤 Entrar).'); entrar(); return; }
@@ -413,7 +455,7 @@ function agDetalle(r){
     '<div class="box"><p style="margin:0"><b>' + esc(r.desc || '') + '</b></p><p class="foot">Solicitó: ' + esc(r.sol?.n || '') + ' · ' + fdt(r.t0) + (r.prio ? ' · prioridad ' + esc(r.prio) : '') + '</p>' +
     '<div class="times"><div><b>' + agFmtEst(r.est) + '</b><span>tiempo estimado</span></div><div><b>' + (agMin(r) != null ? dur(agMin(r)) : r.tAcept ? '<span data-since="' + esc(r.tAcept) + '">' + hms(ms(r.tAcept)) + '</span>' : '—') + '</b><span>tiempo real</span></div><div><b>' + esc(r.tec?.n?.split(' ').slice(0, 2).join(' ') || '—') + '</b><span>técnico</span></div><div><b>' + (r.enc ? agEstrellas(r.enc.cal) : '—') + '</b><span>calidad</span></div></div>' +
     (r.req ? '<div class="agRqTag">📐 REQUERIMIENTO · lo necesitan para el <b>' + esc(r.fechaReq || 'sin fecha') + '</b></div>' +
-      ((r.fotos || []).length ? '<div class="agFotos grande">' + r.fotos.map(id => '<a href="/_blob/' + id + '" target="_blank" rel="noopener"><img src="/_blob/' + id + '" alt="croquis"></a>').join('') + '</div>' : '') : '') +
+      ((r.fotos || []).length ? '<div class="agFotos grande" data-agfotos>' + r.fotos.map((id, i) => '<img src="/_blob/' + id + '" alt="croquis ' + (i + 1) + '" data-agfoto="' + i + '" style="cursor:zoom-in">').join('') + '</div><p class="foot" style="margin:2px 0 0">Toca una foto para verla en grande o descargarla.</p>' : '') : '') +
     (r.pend && r.estado === 'pendiente' ? '<div class="banner"><b>Pendiente:</b> ' + esc(r.pend.motivo || '') + ' · fecha compromiso <b>' + esc(r.pend.fecha || 'sin fecha') + '</b><br>' + esc(r.pend.coment || '') + '</div>' : '') +
     (r.solucion ? '<p style="margin:0"><b>Solución:</b> ' + esc(r.solucion) + (r.usados ? '<br><b>Materiales usados:</b> ' + esc(r.usados) : '') + '</p>' : '') +
     (r.cierreAdm ? '<p style="margin:0">🔒 <b>Cerrada por administrador general:</b> ' + esc(r.cierreAdm.n) + ' · ' + esc(r.cierreAdm.motivo) + (r.cierreAdm.com ? ' · ' + esc(r.cierreAdm.com) : '') + ' · ' + fdt(r.cierreAdm.t) + '</p>' : r.lib ? '<p style="margin:0">✅ <b>Liberó:</b> ' + esc(r.lib.n) + ' · nómina ' + esc(r.lib.nom) + ' · ' + fdt(r.lib.t) + '</p>' : '') +
