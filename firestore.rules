@@ -44,8 +44,13 @@ service cloud.firestore {
     function soloAdmin(app, col) {
       return app == 'compras' && col == 'costos';
     }
+    // Mantenimiento Preventivo: las contraseñas (claves) solo las LEEN los administradores (jefe y gerencia);
+    // cualquier persona dada de alta puede guardar la suya al cambiarla
+    function soloAdminLee(app, col) {
+      return soloAdmin(app, col) || (app == 'preventivo' && col == 'claves');
+    }
     match /apps/{app}/{col}/{rest=**} {
-      allow read: if enPersonal(app) && (!soloAdmin(app, col) || esAdmin(app));
+      allow read: if enPersonal(app) && (!soloAdminLee(app, col) || esAdmin(app));
       allow write: if (enPersonal(app) && (col != 'config' || esAdmin(app)) && (!soloAdmin(app, col) || esAdmin(app)))
                    || (request.auth != null && !hayPersonal(app));
     }
