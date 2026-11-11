@@ -134,6 +134,7 @@ function seccionesDe(fmt, fr) {
   for (let d = 1; d < 5; d++) { for (const j of [i - d, i + d]) { const k = orden[j]; if (k && tiene(k)) return { fr: k, secs: fmt.frec[k], aprox: true }; } }
   return { fr, secs: [] };
 }
+const DIB_QUIETO = {};
 function dibujo(t, w) {
   const n = norm(t.eq || t.tipo || ''), c = CAT[t.cat] || ['', '#6D7C8C', 'ag']; let k = c[2];
   if (/compresor|extractor|colector|secador|vaporizador/.test(n)) k = 'ea';
@@ -145,7 +146,9 @@ function dibujo(t, w) {
   else if (/prensa|troquel/.test(n)) k = 'mtb';
   else if (/taladro/.test(n)) k = t.cat === 'MTB' ? 'taladroBanco' : 'mtc';
   const R = window.ICON_R || {};
-  return '<svg viewBox="0 0 120 100" style="color:' + c[1] + '" aria-hidden="true">' + (R[k] || R.mta || '') + '</svg>';
+  // dibujos QUIETOS (sin animación): en tablets sencillas decenas de dibujos animados a la vez rayan la pantalla
+  if (!DIB_QUIETO[k]) DIB_QUIETO[k] = (R[k] || R.mta || '').replace(/<animate(Transform|Motion)?\b[^>]*\/>/g, '').replace(/<animate(Transform|Motion)?\b[^>]*>[\s\S]*?<\/animate(Transform|Motion)?>/g, '');
+  return '<svg viewBox="0 0 120 100" style="color:' + c[1] + '" aria-hidden="true">' + DIB_QUIETO[k] + '</svg>';
 }
 
 // ============================================================ arranque
