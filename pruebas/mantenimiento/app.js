@@ -288,12 +288,13 @@ function vTablero() {
   const L = tareasMes(S.mes), I = indicadores(L), tecs = tecsMes(S.mes);
   const subs = [['general', '📊 Vista general'], ['calificar', '⭐ Por calificar' + (I.porCal ? ' (' + I.porCal + ')' : '')], ['faltantes', '⏳ Faltantes'], ['plan', '🗓️ Plan del mes']];
   if (califica()) subs.splice(2, 0, ['na', '❔ No aplica']);
-  if (califica()) subs.push(['firmas', '✍️ Firmas']);
+  if (califica()) subs.push(['firmas', '✍️ Firmas']); if (califica() && !otorga()) subs.push(['micalif', '🏅 Mi calificación']);
   if (otorga()) subs.push(['jasso', '🧑‍💼 Supervisión'], ['config', '⚙️ Configuración']);
   let h = '<div class="fila" style="margin-bottom:14px;justify-content:space-between"><div class="seg" id="sub1">' + subs.map(([k, l]) => '<button data-sub1="' + k + '" aria-pressed="' + (S.sub1 === k) + '">' + l + '</button>').join('') + '</div>' + selMes() + '</div>';
   if (S.sub1 === 'config' && otorga()) { $('#app').innerHTML = h + vConfig(); return animar(); }
   if (S.sub1 === 'jasso' && otorga()) { $('#app').innerHTML = h + bloqueGeneralJasso(S.mes) + vJasso(L); return animar(); }
   h += '<div class="kpis"><div class="kpi"><b>' + I.n + '</b><span>preventivos del mes</span></div><div class="kpi ok"><b>' + I.hechas + '</b><span>terminados (' + I.avance + ' %)</span></div><div class="kpi mo"><b>' + I.porCal + '</b><span>por calificar</span></div><div class="kpi ' + (I.venc ? 'bad' : 'wa') + '"><b>' + I.pend + '</b><span>faltantes · ' + I.venc + ' vencidos</span></div><div class="kpi ' + notaCls(I.cumpl) + '"><b>' + I.cumpl + '%</b><span>cumplimiento al día</span></div><div class="kpi ' + notaCls(I.calidad) + '"><b>' + (I.calidad == null ? '—' : I.calidad + '%') + '</b><span>calidad promedio</span></div></div>';
+  if (S.sub1 === 'micalif' && califica()) { $('#app').innerHTML = h + '<div class="aviso inf"><span class="i">👁</span><div><b>Solo consulta.</b> Tu calificación depende del trabajo de tu personal técnico (que cumplan y entreguen a tiempo), de que tú evalúes y firmes en 48 h y de cómo califican los líderes de producción las máquinas tipo A.</div></div>' + bloqueGeneralJasso(S.mes); return animar(); }
   if (S.sub1 === 'firmas' && califica()) { $('#app').innerHTML = h + vFirmas(); return; }
   if (S.sub1 === 'na' && califica()) h += vNA();
   else if (S.sub1 === 'calificar') h += vPorCalificar(L);
@@ -398,8 +399,7 @@ function vMiMes() {
   ((S.avisos[S.nom] || {}).m || []).forEach((a, i) => { h += '<div class="aviso inf"><span class="i">📣</span><div style="flex:1"><b>Mensaje de ' + esc(titulo(a.de).split(' ').slice(0, 2).join(' ')) + '</b> · ' + fechaHora(a.t) + '<br>' + esc(a.txt) + '</div><button class="bt s" data-enterado="' + i + '">Enterado</button></div>'; });
   if (S.mes === MES_HOY && faltanSem && dow >= 4) h += '<div class="aviso wa"><span class="i">⏰</span><div><b>Te faltan ' + faltanSem + ' preventivo' + (faltanSem > 1 ? 's' : '') + ' de esta semana.</b> Termínalos antes del sábado; el sábado es para faltantes.</div></div>';
   if (venc) h += '<div class="aviso bad"><span class="i">⚠️</span><div><b>' + venc + ' preventivo' + (venc > 1 ? 's' : '') + ' vencido' + (venc > 1 ? 's' : '') + '.</b> La fecha programada no cambia; hazlos lo antes posible.</div></div>';
-  h += '<div class="caja"><h2>⭐ Mi calificación al día <span class="r">' + nomMes(S.mes) + '</span></h2><div class="anillos">' + anillo(I.cumpl, '#1F6FD1', 'Cumplimiento', I.hechas + ' de ' + I.n + ' terminados') + anillo(I.calidad, '#1E8E5A', 'Calidad del trabajo', I.cals + ' calificados') + anillo(I.calif, '#E07B00', 'Mi calificación', 'promedio de los dos') + '</div>' +
-    '<div class="fila" style="margin-top:12px;justify-content:space-between"><span class="peq mu">Avance general del mes: <b>' + G.hechas + ' de ' + G.n + '</b> (' + G.avance + ' %)</span><button class="bt s" data-plangen="1">🗓️ Ver plan general del mes</button></div></div>';
+  h += perfilTec(T, I, p);
   const sems = {}; T.forEach(t => { const l = iso(lunesDe(deIso(t.f))); (sems[l] = sems[l] || []).push(t); });
   h += '<div class="caja"><h2>🧰 Mis órdenes asignadas <span class="r">' + T.length + '</span></h2>';
   if (!T.length) h += '<div class="vacio"><span class="i">📭</span>No tienes preventivos asignados este mes.</div>';
@@ -1415,7 +1415,7 @@ function vFirmas() {
   if (jefe) h += '<div class="dash-sec"><h3>Para tu firma <span>' + porJefe.length + '</span></h3>' + (porJefe.length ? '<div class="fila" style="margin:0 0 8px"><label class="dpq"><input type="checkbox" id="fTodos"> Seleccionar todos</label><button class="bt p" id="fFirmar">✍️ Firmar seleccionados</button><button class="bt s" id="fMia">Cambiar mi firma</button></div><table class="dash-t"><tr><th></th><th>Equipo</th><th>Ejecutó</th><th>Revisó</th><th class="n">Calif.</th><th></th><th></th></tr>' +
     porJefe.map(z => fila(z, '<td>' + esc(titulo(z.o.calN || '')) + '<small>' + fechaHora(z.o.calT) + '</small></td><td class="n"><span class="dnota ' + notaCls(z.o.cal) + '">' + (z.o.cal != null ? z.o.cal : '—') + '</span></td><td><input type="checkbox" class="fSel" value="' + esc(z.t.k) + '"></td><td><button class="bt s" data-pdforden2="' + esc(z.t.k) + '">Ver</button></td>')).join('') + '</table>' : '<p class="dvacio">No hay preventivos esperando tu firma. <button class="bt s" id="fMia">Cambiar mi firma</button></p>') + '</div>';
   const mios = jefe ? listos : L.filter(z => z.o.firmaS && z.o.calPor === S.nom);
-  h += '<div class="dash-sec"><h3>' + (jefe ? 'Firmados por los tres' : 'Mis firmas del mes') + ' <span>' + mios.length + '</span></h3>' + (mios.length ? '<table class="dash-t"><tr><th></th><th>Equipo</th><th>Ejecutó</th><th class="n">Calif.</th><th>Firmado</th></tr>' + mios.map(z => fila(z, '<td class="n"><span class="dnota ' + notaCls(z.o.cal) + '">' + (z.o.cal != null ? z.o.cal : '—') + '</span></td><td>' + fechaHora(jefe ? z.o.firmaJT : z.o.calT) + '</td>')).join('') + '</table>' : '<p class="dvacio">Todavía ninguno.</p>') + '</div></div>';
+  h += '<div class="dash-sec"><h3>' + (jefe ? 'Firmados por los tres' : 'Mis firmas del mes') + ' <span>' + mios.length + '</span></h3>' + (mios.length ? '<table class="dash-t"><tr><th></th><th>Equipo</th><th>Ejecutó</th><th class="n">Calif.</th><th>Firmado</th><th></th></tr>' + mios.map(z => fila(z, '<td class="n"><span class="dnota ' + notaCls(z.o.cal) + '">' + (z.o.cal != null ? z.o.cal : '—') + '</span></td><td>' + fechaHora(jefe ? z.o.firmaJT : z.o.calT) + '</td><td><button class="bt s" data-pdforden2="' + esc(z.t.k) + '">👁 Ver</button></td>')).join('') + '</table>' : '<p class="dvacio">Todavía ninguno.</p>') + '</div></div>';
   return h;
 }
 
@@ -1894,5 +1894,25 @@ function bloqueGeneralJasso(mes) {
     '<div class="jg-partes">' + partes.map(([k, ic, l, s, c]) => '<div class="jg-p">' + dona(M[k], c, 128, '', '') + '<div><b>' + ic + ' ' + l + '</b><span>' + s + '</span></div></div>').join('') + '</div></div>';
   h += '<div class="dash-sec" style="margin-top:14px"><h3>📅 Semana por semana</h3><div class="jg-sem">' + (G.sem.length ? G.sem.map(s => '<div class="jg-s' + (s.encurso ? ' cur' : '') + '"><div class="jg-s-h"><b>' + fCorta(s.lun) + ' – ' + fCorta(s.sab) + '</b>' + (s.encurso ? '<span class="chip acc">en curso</span>' : '') + '<small>' + s.prog + ' programados</small></div>' +
     dona(s.gen, null, 110, 'General', '') + '<div class="jg-mini">' + partes.map(([k, ic, l, , c]) => '<div title="' + l + '"><span>' + ic + '</span><i><em style="width:' + (s[k] || 0) + '%;background:' + c + '"></em></i><b>' + (s[k] == null ? '—' : s[k]) + '</b></div>').join('') + '</div></div>').join('') : '<p class="dvacio">Aún no hay semanas con preventivos.</p>') + '</div></div></div>';
+  return h;
+}
+
+
+// ============================================================ v15 · PERFIL DEL TÉCNICO: su calificación cada vez que entra
+// Calificación = promedio de (1) entrega de preventivos (cumplimiento) y (2) calidad del trabajo que califica el supervisor (0 · 50 · 100)
+function perfilTec(T, I, p) {
+  const cals = T.map(t => calDe(t)).filter(v => v != null), dist = [0, 50, 100].map(v => cals.filter(c => c === v).length);
+  const lun = iso(lunesDe(new Date())), sems = {}; T.forEach(t => { const l = iso(lunesDe(deIso(t.f))); (sems[l] = sems[l] || []).push(t); });
+  const debidas = T.filter(t => semanaCerrada(t.f) || hecha(t)).length, msg = I.calif >= 85 ? '🟢 ¡Vas excelente, sigue así!' : I.calif >= 60 ? '🟡 Vas bien, puedes subir más' : '🔴 Échale ganas: termina a tiempo y con calidad';
+  let h = '<div class="dash pt"><div class="dash-top"><span class="av" style="width:58px;height:58px;font-size:24px;background:' + colorTec(p.tec) + '">' + esc(p.tec[0]) + '</span><div><small>MI CALIFICACIÓN · ' + esc(nomMes(S.mes).toUpperCase()) + '</small><h2>' + esc(titulo(p.n).split(' ').slice(0, 2).join(' ')) + '</h2></div><span class="chip" style="margin-left:auto">se actualiza sola cada que terminas y te califican</span></div>' +
+    '<div class="jg-top"><div class="jg-gen">' + dona(I.calif, null, 210, '', '', true) + '<b>Mi calificación</b><span>' + msg + '</span></div><div class="jg-partes">' +
+    '<div class="jg-p">' + dona(I.cumpl, '#3D9BFF', 128, '', '') + '<div><b>📦 Entrega de preventivos</b><span>' + I.hechas + ' terminados de ' + debidas + ' que ya tocaban (' + I.n + ' en el mes)</span></div></div>' +
+    '<div class="jg-p">' + dona(I.calidad, '#2ECC71', 128, '', '') + '<div><b>🛠️ Calidad del trabajo</b><span>' + (I.cals ? 'promedio de ' + I.cals + ' calificado(s) por el supervisor' : 'aún sin calificaciones del supervisor') + '</span></div></div>' +
+    '<div class="jg-p pt-dist">' + [[100, '#2ECC71', '😀 100 · bien hecho'], [50, '#F2B233', '😐 50 · le faltó'], [0, '#F2546A', '😞 0 · mal hecho']].map(([v, c, l], i) => '<div><span>' + l + '</span><i><em style="width:' + (cals.length ? dist[2 - i] / cals.length * 100 : 0) + '%;background:' + c + '"></em></i><b>' + dist[2 - i] + '</b></div>').join('') + '</div>' +
+    '<div class="jg-p pt-f"><b>🧮 Cómo se saca</b><span>(Entrega ' + I.cumpl + ' + Calidad ' + (I.calidad == null ? '—' : I.calidad) + ') ÷ 2 = <b style="display:inline;color:#FFC94D">' + I.calif + '</b>' + (I.calidad == null ? ' · mientras no te califiquen cuenta solo la entrega' : '') + '</span></div></div></div>';
+  h += '<div class="dash-sec" style="margin-top:12px"><h3>📅 Mi avance semana por semana</h3><div class="jg-sem">' + Object.keys(sems).sort().filter(l => l <= HOY).map(l => { const A = sems[l], II = indicadores(A);
+    return '<div class="jg-s' + (l === lun ? ' cur' : '') + '"><div class="jg-s-h"><b>' + fCorta(l) + ' – ' + fCorta(iso(sumar(deIso(l), 5))) + '</b>' + (l === lun ? '<span class="chip acc">esta semana</span>' : '') + '<small>' + II.hechas + ' de ' + II.n + ' terminados</small></div>' + dona(II.calif, null, 100, 'Calificación', '') +
+      '<div class="jg-mini"><div title="Entrega"><span>📦</span><i><em style="width:' + II.cumpl + '%;background:#3D9BFF"></em></i><b>' + II.cumpl + '</b></div><div title="Calidad"><span>🛠️</span><i><em style="width:' + (II.calidad || 0) + '%;background:#2ECC71"></em></i><b>' + (II.calidad == null ? '—' : II.calidad) + '</b></div></div></div>'; }).join('') + '</div>' +
+    '<div class="fila" style="margin-top:12px;justify-content:flex-end"><button class="bt s" data-plangen="1">🗓️ Ver plan general del mes</button></div></div></div>';
   return h;
 }
