@@ -25,7 +25,7 @@ const AG_EQ_DEF = (() => {
 const AG_TIPOS = ['Reparación eléctrica', 'Reparación hidráulica (agua / plomería)', 'Reparación estructural', 'Reparación estética', 'Reparación mecánica'];
 const AG_PRIO = { urgente:'Urgente', alta:'Alta (hoy)', media:'Media (semana)', baja:'Baja (mes)' };
 // ubicaciones de la falla (tablero de usuario)
-const AG_UBIC = ['Planta', 'Edificio', 'Comedor', 'Baños', 'Oficina', 'Escaleras', 'Jardín', 'Estacionamiento'];
+const AG_UBIC = ['Planta', 'CEDIS', 'Edificio', 'Comedor', 'Baños', 'Oficina', 'Escaleras', 'Jardín', 'Estacionamiento'];
 const AG_EST = { espera:'Esperando técnico', proceso:'En proceso', pendiente:'Pendiente', terminada:'Terminada · por calificar', cerrada:'Cerrada' };
 const AG_MOTIVOS = ['Falta refacción / material', 'Esperando compra', 'Requiere contratista', 'Requiere paro del área', 'Requiere autorización', 'Otro'];
 
@@ -308,7 +308,7 @@ const AG_GRUPOS = [
   { k:'EMT', n:'Subestación', d:'Media tensión', ic:'emt', c:'#8E2A2A' },
   { k:'otro', n:'Otro', d:'No está en la lista: escríbelo', emo:'✏️', c:'#546E7A' }
 ];
-const AG_UBIC_IC = { Planta:'🏭', Edificio:'🏢', Comedor:'🍽️', 'Baños':'🚻', Oficina:'💼', Escaleras:'🪜', 'Jardín':'🌳', Estacionamiento:'🅿️' };
+const AG_UBIC_IC = { Planta:'🏭', CEDIS:'📦', Edificio:'🏢', Comedor:'🍽️', 'Baños':'🚻', Oficina:'💼', Escaleras:'🪜', 'Jardín':'🌳', Estacionamiento:'🅿️' };
 const AG_EJEMPLOS = ['No enciende', 'Hace ruido raro', 'Gotea / fuga de agua', 'No enfría', 'Se fundió', 'Está roto', 'Huele a quemado'];
 function agNueva(){ $('agBody').innerHTML = '<div id="agFormU"></div>'; agFormulario($('agFormU')); }
 function agFormulario(cont){
