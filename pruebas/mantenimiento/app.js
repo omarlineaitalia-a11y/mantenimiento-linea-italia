@@ -1496,3 +1496,108 @@ function pdfRefacMes(mes) {
 document.addEventListener('click', e => { if (e.target.id === 'pdfRefac') pdfRefacMes(S.mes); const c = e.target.closest('[data-catp]'); if (c) { S.catP = c.dataset.catp; render(); } });
 // filtro de categoría de Parámetros
 const CATF = c => !S.catP || c === S.catP;
+
+// ============================================================ v8 · LO DEL DÍA estilo tablero de planta: resumen grande + lista que sube sola + filtros
+function vDiaBase() {
+  if (!S.diaTab) S.diaTab = HOY;
+  const f = S.diaTab, d = deIso(f), mesD = f.slice(0, 7), lun = iso(lunesDe(d)), fT = S.fDiaTec || '', fC = S.fDiaCat || '';
+  const todas = tareasMes(mesD), filtro = t => (!fT || t.tec === fT) && (!fC || t.cat === fC);
+  const hoyT = todas.filter(t => t.f === f && filtro(t)), atras = todas.filter(t => t.f >= lun && t.f < f && !hecha(t) && filtro(t));
+  const hechasHoy = hoyT.filter(hecha).length;
+  // a esta hora deberían llevar (jornada 08:00 a 17:00)
+  const ahora = new Date(), ini = new Date(d); ini.setHours(8, 0, 0, 0); const fin = new Date(d); fin.setHours(17, 0, 0, 0);
+  const frac = f < HOY ? 1 : f > HOY ? 0 : Math.max(0, Math.min(1, (ahora - ini) / (fin - ini))), deberian = Math.round(hoyT.length * frac), dif = hechasHoy - deberian;
+  const tecsDia = [...new Set(todas.filter(t => t.f === f || (t.f >= lun && t.f < f)).map(t => t.tec))].sort();
+  const porque = t => { const o = S.ords[t.k] || {}, e = estadoT(t);
+    if (e === 'cal') return 'Calificado con ' + calDe(t) + (o.firmaJ ? ' · firmado por los tres' : o.firmaS ? ' · falta firma del jefe' : '');
+    if (e === 'term') return 'Terminado ' + hhmm(o.fin) + ' · falta calificación del supervisor';
+    if (e === 'proc') return 'En proceso desde ' + hhmm(o.ini) + ' · ' + Math.round((Date.now() - new Date(o.ini)) / 60000) + ' min';
+    if (t.f < f) return 'Atrasado: programado ' + fCorta(t.f) + ' · no se ha iniciado';
+    return 'Programado hoy · no se ha iniciado'; };
+  const fila = t => { const e = estadoT(t), atrasada = t.f < f && !hecha(t);
+    return '<div class="tk-r"><span class="dmini">' + dibujo(t) + '</span><div class="tk-eq"><b>' + esc(t.eq) + '</b><small>' + esc(FR[t.fr] || t.fr) + ' · ' + (atrasada ? '<em>atrasado ' + diasEntre(t.f, f) + ' día' + (diasEntre(t.f, f) > 1 ? 's' : '') + '</em>' : 'vence hoy') + '</small></div><div class="tk-tec"><span class="pt" style="background:' + colorTec(t.tec) + '">' + t.tec[0] + '</span>' + esc(corto(t.tec)) + '</div><div class="tk-est ' + e + '">' + EST[e][0] + '<small>' + (S.ords[t.k] && S.ords[t.k].min ? S.ords[t.k].min + ' min reales' : t.min + ' min') + '</small></div><div><span class="tk-cat" style="border-color:' + ((CAT[t.cat] || [])[1] || '#5F7389') + ';color:' + ((CAT[t.cat] || [])[1] || '#9FB3C8') + '">' + esc(t.cat) + '</span></div><div class="tk-pq">' + esc(porque(t)) + '</div></div>'; };
+  const filas = atras.sort((a, b) => a.f.localeCompare(b.f)).concat(hoyT.slice().sort((a, b) => hecha(a) - hecha(b) || a.tec.localeCompare(b.tec)));
+  const anima = filas.length > 7, rows = filas.map(t => '<div data-abrir="' + t.k + '">' + fila(t) + '</div>').join('');
+  let h = '<div class="dash dia-dash"><div class="dash-top"><div><small>LÍNEA ITALIA · MANTENIMIENTO PREVENTIVO</small><h2>📌 ' + (f === HOY ? 'Hoy · ' : '') + fLarga(f)[0].toUpperCase() + fLarga(f).slice(1) + '</h2></div>' +
+    '<div class="fila" style="margin-left:auto"><button class="bt s" data-diatab="-1">‹</button>' + (f !== HOY ? '<button class="bt s" data-diatab="hoy">Hoy</button>' : '') + '<button class="bt s" data-diatab="1">›</button></div>' +
+    '<div class="dash-meta"><small>META DEL DÍA</small><b>' + hoyT.length + ' preventivos</b></div>' + (f === HOY ? '<div class="dash-reloj">' + ahora.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) + '</div>' : '') + '</div>';
+  h += '<div class="dia-ban ' + (dif < 0 ? 'mal' : 'bien') + '"><div><b>' + (dif < 0 ? 'Hoy vamos atrasados' : hoyT.length ? 'Hoy vamos a tiempo' : 'Sin preventivos programados') + '</b><span>llevan ' + hechasHoy + ' de ' + hoyT.length + ' que vencen hoy' + (f === HOY ? ' · a esta hora deberían llevar ' + deberian : '') + '</span></div><strong>' + (dif < 0 ? '↓ ' + dif : '✔ ' + (dif > 0 ? '+' + dif : '0')) + '<small> preventivos</small></strong></div>';
+  if (atras.length) h += '<div class="dia-ban mal"><div><b>Atrasados de días anteriores</b><span>de esta semana, todavía sin terminar</span></div><strong>↓ −' + atras.length + '<small> preventivos</small></strong></div>';
+  h += '<div class="dash-sec"><div class="fila" style="justify-content:space-between;margin-bottom:8px"><h3 style="margin:0">Qué falta por hacer hoy <span>' + filas.filter(t => !hecha(t)).length + ' de ' + filas.length + '</span></h3><div class="fila">' + (anima ? '<button class="bt s ' + (S.tkPausa ? 'p' : '') + '" id="tkPausa">' + (S.tkPausa ? '▶ Seguir' : '⏸ Pausar') + '</button>' : '') +
+    '<select class="in dsel" id="fDiaCat"><option value="">Todas las categorías</option>' + Object.keys(CAT).map(c => '<option value="' + c + '"' + (c === fC ? ' selected' : '') + '>' + c + ' · ' + esc(CAT[c][0]) + '</option>').join('') + '</select>' +
+    '<select class="in dsel" id="fDiaTec"><option value="">Todos los técnicos</option>' + tecsDia.map(x => '<option value="' + x + '"' + (x === fT ? ' selected' : '') + '>' + esc(nombreTec(x)) + '</option>').join('') + '</select></div></div>' +
+    '<div class="tk-h"><span></span><span>Equipo</span><span>Técnico</span><span>Estado</span><span>Cat.</span><span>Por qué</span></div>' +
+    (filas.length ? '<div class="tk-box' + (anima && !S.tkPausa ? ' anima' : '') + '"><div class="tk-in" style="--dur:' + Math.max(20, filas.length * 3) + 's">' + rows + (anima && !S.tkPausa ? rows : '') + '</div></div>' : '<p class="dvacio">' + (d.getDay() === 6 ? 'Sábado: día para terminar los faltantes de la semana.' : 'Sin preventivos para este filtro.') + '</p>') +
+    '<p class="dvacio" style="margin-top:6px">' + filas.length + ' preventivo(s) · ' + (anima ? (S.tkPausa ? 'lista detenida: desliza para revisar · ' : 'la lista sube sola; toca ⏸ Pausar para revisar con calma · ') : '') + 'toca uno para abrir su hoja</p></div>';
+  const calif = hoyT.map(calDe).filter(v => v != null);
+  h += '<div class="dash-kpis">' +
+    '<div class="dk ' + (dif < 0 ? 'mal' : 'bien') + '"><b>' + hechasHoy + '<small style="font-size:18px;color:#CFDAE6"> de ' + hoyT.length + '</small></b><span>Meta del día</span><small>' + (hoyT.length ? Math.round(hechasHoy / hoyT.length * 100) : 0) + ' % de lo que vence hoy</small></div>' +
+    '<div class="dk ' + (atras.length ? 'mal' : 'bien') + '"><b>' + atras.length + '</b><span>Atrasados de días anteriores</span><small>de la semana en curso</small></div>' +
+    '<div class="dk ambar"><b>' + hoyT.filter(t => estadoT(t) === 'proc').length + '</b><span>En proceso ahora</span><small>' + hoyT.filter(t => estadoT(t) === 'term').length + ' esperan calificación</small></div>' +
+    '<div class="dk azul"><b>' + (calif.length ? Math.round(calif.reduce((s, v) => s + v, 0) / calif.length) : '—') + '</b><span>Calidad del día</span><small>' + calif.length + ' calificados</small></div></div></div>';
+  return h;
+}
+document.addEventListener('change', e => { if (e.target.id === 'fDiaCat') { S.fDiaCat = e.target.value; render(); } if (e.target.id === 'fDiaTec') { S.fDiaTec = e.target.value; render(); } });
+
+// ============================================================ v8 · PLAN DEL MES por renglones: una lista por semana (ascendente) con su resumen y su detalle
+function porqueT(t, ref) {
+  const o = S.ords[t.k] || {}, e = estadoT(t);
+  if (e === 'cal') return 'Calificado con ' + calDe(t) + (o.firmaJ ? ' · firmado por los tres' : o.firmaS ? ' · falta firma del jefe' : '');
+  if (e === 'term') return 'Terminado ' + fechaHora(o.fin) + ' · falta calificación del supervisor';
+  if (e === 'proc') return 'En proceso desde ' + fechaHora(o.ini);
+  if (e === 'venc') return 'Vencido: su semana ya cerró sin hacerse';
+  return t.f < (ref || HOY) ? 'Programado ' + fCorta(t.f) + ' · no se ha iniciado' : 'Programado ' + fLarga(t.f);
+}
+function vPlanGeneral(L) {
+  const mio = tecDe(S.nom), f = S.fPlan == null ? (mio ? mio : '') : S.fPlan, fc = S.fCat || '';
+  const T = L.filter(t => (!f || t.tec === f) && (!fc || t.cat === fc)), I = indicadores(T);
+  const sems = {}; T.forEach(t => { const l = iso(lunesDe(deIso(t.f))); (sems[l] = sems[l] || []).push(t); });
+  const lunHoy = iso(lunesDe(new Date()));
+  if (!S.semAbiertas) S.semAbiertas = { [lunHoy]: true };
+  let h = '<div class="dash"><div class="dash-top"><div><small>LÍNEA ITALIA · MANTENIMIENTO PREVENTIVO</small><h2>🗓️ Plan de ' + nomMes(S.mes) + '</h2></div><div class="fila" style="margin-left:auto">' +
+    '<div class="seg">' + (mio ? '<button data-fplan="' + mio + '" aria-pressed="' + (f === mio) + '">👷 Solo los míos</button>' : '') + '<button data-fplan="" aria-pressed="' + (!f) + '">👥 Todos</button></div>' +
+    '<select class="in dsel" id="fPlanTec"><option value="">Todos los técnicos</option>' + tecsMes(S.mes).map(x => '<option value="' + x + '"' + (x === f ? ' selected' : '') + '>' + esc(nombreTec(x)) + '</option>').join('') + '</select>' +
+    '<select class="in dsel" id="fPlanCat"><option value="">Todas las categorías</option>' + Object.keys(CAT).map(c => '<option value="' + c + '"' + (c === fc ? ' selected' : '') + '>' + c + ' · ' + esc(CAT[c][0]) + '</option>').join('') + '</select></div></div>';
+  h += '<div class="dash-kpis"><div class="dk azul"><b>' + I.n + '</b><span>preventivos del mes</span><small>con este filtro</small></div><div class="dk bien"><b>' + I.hechas + '</b><span>terminados</span><small>' + I.avance + ' % de avance</small></div><div class="dk ' + (I.venc ? 'mal' : 'bien') + '"><b>' + I.venc + '</b><span>vencidos</span><small>su semana cerró sin hacerse</small></div><div class="dk ambar"><b>' + I.pend + '</b><span>faltantes</span><small>' + I.porCal + ' por calificar</small></div></div>';
+  Object.keys(sems).sort().forEach((l, n) => {
+    const A = sems[l].sort((a, b) => a.f.localeCompare(b.f) || a.tec.localeCompare(b.tec) || a.eq.localeCompare(b.eq)), II = indicadores(A), abierta = !!S.semAbiertas[l];
+    const porTec = {}; A.forEach(t => { porTec[t.tec] = porTec[t.tec] || [0, 0]; porTec[t.tec][0]++; if (hecha(t)) porTec[t.tec][1]++; });
+    const est = l === lunHoy ? '<span class="chip acc">ESTA SEMANA</span>' : l < lunHoy ? '<span class="chip">cerrada</span>' : '<span class="chip">por venir</span>';
+    h += '<div class="dash-sec sem-b"><button class="sem-h" data-sem2="' + l + '"><span class="sem-n">Semana ' + (n + 1) + '</span><span class="sem-f">' + fCorta(l) + ' al ' + fCorta(iso(sumar(deIso(l), 5))) + '</span>' + est +
+      '<span class="sem-bar"><i style="width:' + II.avance + '%"></i></span><span class="sem-k"><b>' + II.hechas + '</b>/' + II.n + ' hechos</span>' + (II.venc ? '<span class="chip bad">' + II.venc + ' vencidos</span>' : '') + (II.porCal ? '<span class="chip mo">' + II.porCal + ' por calificar</span>' : '') + '<span class="sem-x">' + (abierta ? '▲ Ocultar' : '▼ Ver detalle') + '</span></button>';
+    if (abierta) {
+      h += '<div class="sem-tecs">' + Object.entries(porTec).sort().map(([tc, v]) => '<span class="sem-tc"><span class="pt" style="background:' + colorTec(tc) + '">' + tc[0] + '</span>' + esc(corto(tc)) + ' <b>' + v[1] + '/' + v[0] + '</b></span>').join('') + '</div>' +
+        '<div class="tk-h tk-h7"><span></span><span>Fecha</span><span>Equipo</span><span>Técnico</span><span>Estado</span><span>Cat.</span><span>Detalle</span></div>' +
+        A.map(t => { const e = estadoT(t), o = S.ords[t.k] || {}; return '<div class="tk-r tk-r7" data-abrir="' + t.k + '"><span class="dmini">' + dibujo(t) + '</span><div class="tk-eq"><b>' + DIAS[deIso(t.f).getDay()].slice(0, 3) + ' ' + deIso(t.f).getDate() + '</b><small>' + (t.f === HOY ? 'hoy' : '') + '</small></div><div class="tk-eq"><b>' + esc(t.eq) + '</b><small>' + esc(FR[t.fr] || t.fr) + ' · ' + (o.min ? o.min + ' min reales' : t.min + ' min') + '</small></div><div class="tk-tec"><span class="pt" style="background:' + colorTec(t.tec) + '">' + t.tec[0] + '</span>' + esc(corto(t.tec)) + '</div><div class="tk-est ' + e + '">' + EST[e][0] + (calDe(t) != null ? '<small>calif. ' + calDe(t) + '</small>' : '') + '</div><div><span class="tk-cat" style="border-color:' + ((CAT[t.cat] || [])[1] || '#5F7389') + ';color:' + ((CAT[t.cat] || [])[1] || '#9FB3C8') + '">' + esc(t.cat) + '</span></div><div class="tk-pq">' + esc(porqueT(t)) + '</div></div>'; }).join('');
+    }
+    h += '</div>';
+  });
+  if (!T.length) h += '<p class="dvacio">Sin preventivos con este filtro.</p>';
+  return h + '</div>';
+}
+document.addEventListener('click', e => {
+  const s = e.target.closest('[data-sem2]'); if (s) { S.semAbiertas = S.semAbiertas || {}; S.semAbiertas[s.dataset.sem2] = !S.semAbiertas[s.dataset.sem2]; return render(); }
+  if (e.target.closest('#tkPausa')) { S.tkPausa = !S.tkPausa; return render(); }
+});
+
+// ============================================================ v9 · LO DEL DÍA con el acomodo del tablero de planta: técnicos a la izquierda, avisos y lista a la derecha
+function vDia() {
+  const h = vDiaBase(), i = h.indexOf('<div class="dia-ban'); if (i < 0) return h;
+  return h.slice(0, i) + '<div class="dia-grid"><div class="dia-izq">' + panelesTec() + '</div><div class="dia-der">' + h.slice(i, h.length - 6) + '</div></div></div>';
+}
+function panelesTec() {
+  const f = S.diaTab || HOY, d = deIso(f), lun = iso(lunesDe(d)), fT = S.fDiaTec || '', fC = S.fDiaCat || '', todas = tareasMes(f.slice(0, 7)).filter(t => (!fT || t.tec === fT) && (!fC || t.cat === fC));
+  const ahora = new Date(), ini = new Date(d); ini.setHours(8, 0, 0, 0); const fin = new Date(d); fin.setHours(17, 0, 0, 0);
+  const frac = f < HOY ? 1 : f > HOY ? 0 : Math.max(0, Math.min(1, (ahora - ini) / (fin - ini))), horaAct = f === HOY ? ahora.getHours() : -1;
+  const tecs = [...new Set(todas.filter(t => t.f === f || (t.f >= lun && t.f < f && !hecha(t))).map(t => t.tec))].sort();
+  if (!tecs.length) return '<div class="tp"><p class="dvacio">Sin técnicos con preventivos este día.</p></div>';
+  return tecs.map(tc => {
+    const H = todas.filter(t => t.tec === tc && t.f === f), A = todas.filter(t => t.tec === tc && t.f >= lun && t.f < f && !hecha(t)), hh = H.filter(hecha).length, deb = Math.round(H.length * frac), dif = hh - deb, enProc = H.filter(t => estadoT(t) === 'proc').length;
+    const porHora = {}; H.concat(todas.filter(t => t.tec === tc && t.f < f)).forEach(t => { const o = S.ords[t.k]; if (o && o.fin && o.fin.slice(0, 10) === f) { const hr = new Date(o.fin).getHours(); porHora[hr] = (porHora[hr] || 0) + 1; } });
+    const max = Math.max(1, ...Object.values(porHora)), barras = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17].map(hr => '<div class="tp-c' + (hr === horaAct ? ' act' : '') + '"><span class="tp-v">' + (porHora[hr] || (hr <= horaAct || f < HOY ? '0' : '')) + '</span><i style="height:' + ((porHora[hr] || 0) / max * 100) + '%"></i><small>' + hr + '</small></div>').join('');
+    return '<div class="tp"><div class="tp-top"><span class="pt" style="background:' + colorTec(tc) + '">' + tc[0] + '</span><b>' + esc(nombreTec(tc)) + '</b>' + (enProc ? '<span class="tp-tag">en proceso</span>' : '') + (dif < 0 || A.length ? '<span class="tp-atr">Atrasado</span>' : '') + '</div>' +
+      '<div class="tp-n"><div><b class="' + (hh ? 'v' : '') + '">' + hh + '</b><small>hechos hoy</small></div><div><b>' + H.length + '</b><small>programados</small></div><div><b class="az">' + deb + '</b><small>deberían llevar</small></div><div class="tp-d ' + (dif < 0 || A.length ? 'mal' : 'bien') + '"><b>' + (dif < 0 ? '↓ ' + dif : A.length ? '↓ −' + A.length : '✔') + '</b><small>' + (dif < 0 ? 'a esta hora' : A.length ? 'de días anteriores' : 'al corriente') + '</small></div></div>' +
+      '<div class="tp-bar"><i style="width:' + (H.length ? Math.round(hh / H.length * 100) : 0) + '%"></i></div>' + (A.length ? '<p class="tp-nota">+ ' + A.length + ' atrasado(s) de días anteriores por terminar</p>' : '') +
+      '<div class="tp-g">' + barras + '</div></div>';
+  }).join('');
+}

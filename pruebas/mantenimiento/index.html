@@ -313,7 +313,57 @@ select.in option{background:#131C27;color:#E6EDF5}
 .campo .val{color:#fff}.campo .val.ph{color:#5F7389}.campo label{color:#8FA3B8}
 .saludo{background:#15304F;color:#9CCBFF}
 .teclado button{background:#1E2C3D;border-color:#2F4256;color:#fff}.teclado button:active{background:#2F78C4}
-</style>
+/* Lo del día: lista que sube sola (estilo tablero de planta) */
+.dia-dash{margin-bottom:14px}
+.dia-ban{display:flex;align-items:center;justify-content:space-between;gap:12px;border-radius:14px;padding:12px 16px;margin-bottom:10px;background:#16212E;border-left:6px solid #2ECC71}
+.dia-ban.mal{background:linear-gradient(90deg,#3A1A1E,#2A1519);border-left-color:#F2546A}
+.dia-ban b{display:block;font-size:22px;color:#fff}.dia-ban span{color:#CFDAE6;font-size:14px}
+.dia-ban strong{font-size:44px;font-weight:800;color:#54E08F;white-space:nowrap}.dia-ban.mal strong{color:#FF6B7F}.dia-ban strong small{font-size:18px;font-weight:700}
+.dsel{width:auto!important;min-height:38px;background:#0F1720}
+.tk-h,.tk-r{display:grid;grid-template-columns:48px minmax(180px,2.2fr) minmax(120px,1.2fr) 130px 64px minmax(200px,2.4fr);gap:10px;align-items:center}
+.tk-h{color:#7E92A8;font-size:11.5px;font-weight:600;padding:4px 6px;border-bottom:1px solid #243244}
+.tk-box{max-height:440px;overflow:auto}
+.tk-box.anima{overflow:hidden;-webkit-mask-image:linear-gradient(180deg,transparent,#000 6%,#000 94%,transparent);mask-image:linear-gradient(180deg,transparent,#000 6%,#000 94%,transparent)}
+.tk-box.anima .tk-in{animation:tkSube var(--dur,40s) linear infinite}
+.tk-box.anima:hover .tk-in,.tk-box.anima:active .tk-in{animation-play-state:paused}
+@keyframes tkSube{from{transform:translateY(0)}to{transform:translateY(-50%)}}
+.tk-r{padding:7px 6px;border-bottom:1px solid #1E2A38;cursor:pointer;color:#E6EDF5}.tk-r:hover{background:#18263A}
+.tk-eq b{display:block;font-size:14.5px;color:#fff}.tk-eq small,.tk-est small{display:block;color:#7E92A8;font-size:11.5px}.tk-eq em{font-style:normal;color:#FF6B7F;font-weight:700}
+.tk-tec{display:flex;align-items:center;gap:6px;font-weight:600;font-size:13.5px}.tk-tec .pt{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;color:#fff;font-size:11px;font-weight:800;flex:none}
+.tk-est{font-weight:800;font-size:13.5px}.tk-est.pend{color:#9CCBFF}.tk-est.venc{color:#FF6B7F}.tk-est.proc{color:#FFC94D}.tk-est.term{color:#C9B6FF}.tk-est.cal{color:#54E08F}
+.tk-cat{display:inline-block;border:1.5px solid;border-radius:999px;padding:2px 9px;font-size:11.5px;font-weight:800}
+.tk-pq{font-size:13px;color:#CFDAE6;font-weight:600}
+@media (max-width:900px){.tk-h,.tk-r{grid-template-columns:44px 1.6fr 1fr 100px;}.tk-h span:nth-child(5),.tk-h span:nth-child(6),.tk-r>div:nth-child(5),.tk-r>div:nth-child(6){display:none}.dia-ban strong{font-size:30px}}
+@media (prefers-reduced-motion:reduce){.tk-box.anima{overflow:auto}.tk-box.anima .tk-in{animation:none}}/* Plan del mes por semanas */
+.sem-b{padding:0;overflow:hidden}
+.sem-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap;width:100%;background:#16212E;border:0;color:#E6EDF5;padding:12px 14px;text-align:left;font:inherit;cursor:pointer}
+.sem-h:hover{background:#1A2A3D}
+.sem-n{font-size:17px;font-weight:800;color:#fff}.sem-f{color:#9FB3C8;font-weight:600}
+.sem-bar{flex:1;min-width:120px;height:10px;border-radius:6px;background:#243244;overflow:hidden}.sem-bar i{display:block;height:100%;background:#2ECC71}
+.sem-k{font-size:14px;color:#CFDAE6}.sem-k b{font-size:20px;color:#fff}.sem-x{color:#7DB8FF;font-weight:700;font-size:13px}
+.sem-tecs{display:flex;flex-wrap:wrap;gap:6px;padding:10px 14px 4px}.sem-tc{display:inline-flex;align-items:center;gap:6px;background:#1C2733;border-radius:999px;padding:3px 10px 3px 4px;font-size:13px;font-weight:600}.sem-tc .pt{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;color:#fff;font-size:11px;font-weight:800}.sem-tc b{color:#fff}
+.tk-h7,.tk-r7{grid-template-columns:48px 70px minmax(170px,2fr) minmax(110px,1fr) 120px 60px minmax(200px,2.2fr)!important}
+.sem-b .tk-h7{margin:6px 14px 0}.sem-b .tk-r7{margin:0 14px}
+@media (max-width:900px){.tk-h7,.tk-r7{grid-template-columns:44px 56px 1.6fr 100px!important}.tk-h7 span:nth-child(n+5),.tk-r7>div:nth-child(n+5){display:none}}/* Lo del día: técnicos a la izquierda (como HABILITADO / ENSAMBLE), avisos y lista a la derecha */
+.dia-grid{display:grid;grid-template-columns:minmax(300px,0.95fr) 1.6fr;gap:14px;align-items:start}
+.dia-izq{display:flex;flex-direction:column;gap:10px;max-height:760px;overflow:auto;padding-right:2px}
+.tp{background:#131C27;border-radius:14px;padding:12px 14px;border:1px solid #1C2836}
+.tp-top{display:flex;align-items:center;gap:8px;margin-bottom:6px}.tp-top b{color:#fff;font-size:15px;letter-spacing:.3px;text-transform:uppercase}
+.tp-top .pt{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:800;font-size:12px;flex:none}
+.tp-tag{background:#3A2E0E;color:#FFD166;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:700}
+.tp-atr{margin-left:auto;color:#FF6B7F;font-weight:800;font-size:13px}
+.tp-n{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;align-items:end}
+.tp-n b{display:block;font-size:34px;line-height:1;font-weight:800;color:#CFDAE6}.tp-n b.v{color:#54E08F}.tp-n b.az{color:#7DB8FF}.tp-n small{color:#7E92A8;font-size:11px}
+.tp-d{text-align:right}.tp-d.mal b{color:#FF6B7F;font-size:30px}.tp-d.bien b{color:#54E08F;font-size:30px}
+.tp-bar{height:6px;border-radius:4px;background:#243244;margin:8px 0 4px;overflow:hidden}.tp-bar i{display:block;height:100%;background:linear-gradient(90deg,#F2546A,#FF8C9C)}
+.tp-nota{margin:0 0 4px;font-size:12px;color:#CFDAE6;font-weight:600}
+.tp-g{display:grid;grid-template-columns:repeat(10,1fr);gap:4px;height:90px;align-items:end;border-bottom:1px dashed #3A4B5E;padding-top:14px}
+.tp-c{position:relative;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center}
+.tp-c i{display:block;width:80%;background:#2ECC71;border-radius:3px 3px 0 0;min-height:0}
+.tp-c small{position:absolute;bottom:-16px;font-size:10px;color:#7E92A8}.tp-v{font-size:10.5px;color:#CFDAE6;font-weight:700;margin-bottom:2px}
+.tp-c.act{outline:2px solid #E6EDF5;outline-offset:-1px;border-radius:3px}
+.tp-g{margin-bottom:16px}
+@media (max-width:1100px){.dia-grid{grid-template-columns:1fr}.dia-izq{max-height:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}}</style>
 <script src="config.js?v=3"></script>
 <script>
 // Modo demostración: abierto como archivo de la PC o con ?demo → base guardada en este navegador (no toca Firebase).
@@ -421,6 +471,6 @@ if (!window.DEMO) {
 <script src="plan.js"></script>
 <script src="jspdf.umd.min.js"></script>
 <script src="jspdf.plugin.autotable.min.js"></script>
-<script src="app.js?v=4"></script>
+<script src="app.js?v=7"></script>
 </body>
 </html>
