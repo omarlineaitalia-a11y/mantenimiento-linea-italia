@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#0E2A47">
+<meta name="theme-color" content="#0B1118">
 <title>Mantenimiento Preventivo LI</title>
 <link rel="icon" href="icono-192.png">
 <style>
@@ -246,6 +246,73 @@ label.l{display:block;font-size:12.5px;color:var(--mu);font-weight:600;margin:0 
 @media (max-width:560px){.kpis{grid-template-columns:repeat(2,1fr)!important}.bars .b{grid-template-columns:96px 1fr 84px}.ord{grid-template-columns:56px 1fr}.ord .dib{width:56px;height:48px}.ord .dib svg{width:52px;height:44px}.ord>div:last-child{grid-column:1/-1}.pc{grid-template-columns:1fr}.pc .dib{display:none}.top small{display:none}.anillo svg{width:76px;height:76px}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 @media print{.top,.barra-h,.bt{display:none!important}}
+
+/* ============ TEMA OSCURO · estilo tablero de planta (toda la app; las hojas impresas siguen en blanco) ============ */
+:root{--hero:#0B1118;--hero2:#101A26;--acc:#3D9BFF;--acc2:#15304F;--bg:#0B1118;--card:#131C27;--tx:#E6EDF5;--mu:#8FA3B8;--bo:#243244;--tit:#FFFFFF;
+  --ok:#2ECC71;--okb:#12321F;--wa:#F2B233;--wab:#3A2E0E;--bad:#F2546A;--badb:#3A1A1E;--gr:#6B7F94;--grb:#1C2733;--mo:#9B7BFF;--mob:#2A2147}
+html,body{background:#0B1118;color:#E6EDF5}
+.top{background:#0B1118;border-bottom:1px solid #1E2A38;box-shadow:0 2px 14px rgba(0,0,0,.45)}
+.logo{background:#16212E}
+.tab{background:#131C27;color:#9FB3C8;border:1px solid #1E2A38}.tab[aria-current="true"]{background:#2F78C4;color:#fff;border-color:#2F78C4}
+.yo{background:#131C27;border:1px solid #2F78C4}
+.caja{background:#131C27;box-shadow:none;border:1px solid #1C2836}
+.caja h2{color:#fff}.caja h2 .r{color:#8FA3B8}
+.mu{color:#8FA3B8}
+.kpi{background:#16212E;box-shadow:none;border-top:0;border-left:5px solid #3D9BFF;border-radius:14px}
+.kpi b{font-size:34px;color:#7DB8FF;font-weight:800}.kpi span{color:#CFDAE6;font-weight:600}
+.kpi.ok{border-left-color:#2ECC71}.kpi.ok b{color:#54E08F}.kpi.bad{border-left-color:#F2546A;background:#2A1519}.kpi.bad b{color:#FF6B7F}
+.kpi.wa{border-left-color:#F2B233}.kpi.wa b{color:#FFC94D}.kpi.mo{border-left-color:#9B7BFF}.kpi.mo b{color:#C2ADFF}
+.chip{background:#1C2733;color:#CFDAE6}.chip.ok{background:#12321F;color:#7BEFA6}.chip.wa{background:#3A2E0E;color:#FFD166}.chip.bad{background:#3A1A1E;color:#FF8C9C}.chip.acc{background:#15304F;color:#9CCBFF}.chip.mo{background:#2A2147;color:#C9B6FF}
+.nota.ok{background:#14532D;color:#7BEFA6}.nota.wa{background:#4A3708;color:#FFD166}.nota.bad{background:#4C1620;color:#FF8C9C}.nota.gr{background:#1C2733;color:#8FA3B8}
+.bt{background:#1E2C3D;border-color:#2F4256;color:#E6EDF5}.bt.p{background:#2F78C4;border-color:#2F78C4;box-shadow:none;color:#fff}.bt.ok{background:#1E8E5A;border-color:#1E8E5A;box-shadow:none}.bt.bad{background:#B3263B;border-color:#B3263B}
+input.in,select.in,textarea.in{background:#0F1720;border-color:#2F4256;color:#E6EDF5}
+input.in::placeholder,textarea.in::placeholder{color:#5F7389}
+select.in option{background:#131C27;color:#E6EDF5}
+.seg{background:#16212E}.seg button{color:#9FB3C8}.seg button[aria-pressed="true"]{background:#2F78C4;color:#fff;box-shadow:none}
+.bars .b{border-bottom-color:#1E2A38}.bars .t{background:#1C2733}.bars .v b{color:#fff}
+.tbl th{color:#8FA3B8;border-bottom-color:#2F4256}.tbl td{border-bottom-color:#1E2A38}.tbl tr.click:hover td,.tbl tr:hover td{background:#18263A}
+.tbl tr.catf td{background:#16212E;border-top-color:#2F4256}
+.anillo{background:#16212E}.anillo b{color:#fff}.anillo text{fill:#fff}.anillo circle:first-of-type{stroke:#243244}
+.pc,.ord,.cat,.fmt,.tec,.big{background:#16212E;border-color:#243244;box-shadow:none;color:#E6EDF5}
+.pc .dib,.ord .dib,.tar .dib{background:#1E2C3D}
+.ord h3,.cat b,.big b,.tec b{color:#fff}.fmt b{color:#fff}
+.semana{color:#fff}
+.aviso.wa{background:#3A2E0E;border-color:#6B5418}.aviso.bad{background:#3A1A1E;border-color:#6E2A35}.aviso.inf{background:#132A44;border-color:#24507E}.aviso.ok{background:#12321F;border-color:#1F5C38}
+.vacio{color:#8FA3B8}
+.vida{background:#1C2733}
+.loto{background:#3A2E0E;border-color:#6B5418;color:#FFE3A3}
+/* calendario y lo del día */
+.cal-m{background:#131C27;box-shadow:none;border:1px solid #1C2836}.cal-h div{color:#8FA3B8}
+.cal-d{background:#16212E;color:#E6EDF5}.cal-d:hover:not(:disabled){background:#1A2A3D;border-color:#2F78C4}.cal-d.hoy{background:#142A44;border-color:#3D9BFF}.cal-d.sel{background:#15304F!important;border-color:#3D9BFF!important}
+.cal-n b{color:#fff}.cal-n .cnt{background:#1C2733;color:#CFDAE6}.cal-n .cnt.ok{background:#12321F;color:#7BEFA6}.cal-n .cnt.bad{background:#3A1A1E;color:#FF8C9C}
+.cal-bar{background:#1C2733}.b-pend{background:#3A4B5E}
+.cal-t{background:#1E2C3D;color:#E6EDF5}
+.hoy-c{background:#16212E;border-color:#243244}.hoy-h .cnt{background:#0F1720;border-color:#2F4256;color:#fff}
+.hoy-t{background:#1E2C3D;color:#E6EDF5;box-shadow:none}.hoy-t:hover{background:#22344A}.hoy-t .nm small{color:#8FA3B8}
+.e-venc{background:#2A1519!important}
+/* hoja con el acomodo del Excel */
+.xlcab{border-color:#2F4256}.xltit{border-bottom-color:#2F4256}.xltit b{color:#fff}.xltit span{color:#8FA3B8}.xllogo{color:#7DB8FF}
+.xlh td{border-color:#2F4256}.xlh small{color:#8FA3B8}
+.xls th,.xls td{border-color:#2F4256}.xls tr.h th{background:#1E2C3D;color:#CFDAE6}.xls tr.s td{background:#0E2A47}
+.xls td.n{background:#16212E;color:#fff}.xls td.c{color:#B8C7D6}.xls td.c.aplica{background:#3A1A1E;color:#FF9AA8}
+.xls .o{color:#6B7F94}.xls td.op button{background:#1E2C3D;color:#9FB3C8}
+.xls tr.x td{background:#101923}.xls tr.rM td.v{color:#FF9AA8}
+.xreq{color:#9CCBFF}.xreq.bad{color:#FF9AA8}.xfal{color:#FF6B7F}
+.hall{border-color:#2F4256}
+.fotos .f{background-color:#1E2C3D;border-color:#2F4256}.fotos label.add{border-color:#2F4256;color:#8FA3B8}
+.sec{background:#0E2A47}
+.it{border-bottom-color:#1E2A38}.it .num{background:#1C2733;color:#fff}
+/* ventanas */
+.modal{background:rgba(3,8,14,.7)}
+.hoja{background:#131C27;color:#E6EDF5}
+#vPags{background:#0B1118!important}
+.toast{background:#2F78C4}
+/* entrada */
+.lbox{background:rgba(19,28,39,.96);color:#E6EDF5}.lbox h2{color:#fff}.lbox .cab small{color:#8FA3B8}
+.campo{background:#0F1720;border-color:#2F4256}.campo.act{background:#101C2B;border-color:#3D9BFF;box-shadow:0 0 0 4px rgba(61,155,255,.18)}
+.campo .val{color:#fff}.campo .val.ph{color:#5F7389}.campo label{color:#8FA3B8}
+.saludo{background:#15304F;color:#9CCBFF}
+.teclado button{background:#1E2C3D;border-color:#2F4256;color:#fff}.teclado button:active{background:#2F78C4}
 </style>
 <script src="config.js?v=3"></script>
 <script>
@@ -354,6 +421,6 @@ if (!window.DEMO) {
 <script src="plan.js"></script>
 <script src="jspdf.umd.min.js"></script>
 <script src="jspdf.plugin.autotable.min.js"></script>
-<script src="app.js?v=3"></script>
+<script src="app.js?v=4"></script>
 </body>
 </html>
