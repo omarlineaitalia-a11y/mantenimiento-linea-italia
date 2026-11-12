@@ -1635,6 +1635,56 @@ function vPlanGeneral(L) {
 }
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-mesplan]'); if (!b) return;
-  const m = b.dataset.mesplan; if (S.mes === m && S.planLista) S.planLista = false; else { S.mes = m; S.planLista = true; S.semAbiertas = null; }
-  render(); if (S.planLista) setTimeout(() => { const el = document.querySelector('.sem-b'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 60);
+  const m = b.dataset.mesplan; if (S.mes === m && S.planLista) S.planLista = false; else { S.mes = m; S.planLista = true; S.diaPlan = null; }
+  render(); if (S.planLista) setTimeout(() => { const el = document.querySelector('.dias-g'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 60);
+});
+
+// ============================================================ v11 · PLAN DE MES con ENGRANES: meses → días → lo programado del día
+const ENGRANE_D = (() => { const cx = 50, cy = 50, n = 10, ro = 47, ri = 38, p = []; for (let i = 0; i < n * 4; i++) { const a = (Math.PI * 2 / (n * 4)) * i - Math.PI / 2, r = (i % 4 < 2) ? ro : ri; p.push((cx + r * Math.cos(a)).toFixed(1) + ' ' + (cy + r * Math.sin(a)).toFixed(1)); } return 'M' + p.join(' L') + 'Z M' + (cx + 13) + ' ' + cy + ' a13 13 0 1 0 -26 0 a13 13 0 1 0 26 0Z'; })();
+function engrane(pct, color, id, chico) {
+  const p = Math.max(0, Math.min(100, pct || 0)), alto = 94 * p / 100, y0 = 97 - alto;
+  return '<svg class="engr' + (chico ? ' chico' : '') + '" viewBox="0 0 100 100" aria-hidden="true"><defs><clipPath id="ce' + id + '"><path fill-rule="evenodd" d="' + ENGRANE_D + '"/></clipPath></defs>' +
+    '<path fill-rule="evenodd" d="' + ENGRANE_D + '" fill="#F4F7FB"/>' +
+    '<g clip-path="url(#ce' + id + ')"><rect class="engr-n" x="0" y="' + y0 + '" width="100" height="' + alto + '" fill="' + color + '"/></g>' +
+    '<path fill-rule="evenodd" d="' + ENGRANE_D + '" fill="none" stroke="rgba(11,17,24,.55)" stroke-width="1.5"/>' +
+    (chico ? '' : '<text x="50" y="' + (p >= 45 ? 56 : 56) + '" text-anchor="middle" font-size="15" font-weight="800" fill="#0B2545" class="engr-t">' + Math.round(p) + '%</text>') + '</svg>';
+}
+const colorAv = I => I.venc ? '#F2546A' : I.n && I.avance >= 90 ? '#2ECC71' : I.avance > 0 ? '#F2B233' : '#3D9BFF';
+function vPlanGeneral(L) {
+  const mio = tecDe(S.nom), f = S.fPlan == null ? (mio ? mio : '') : S.fPlan, fc = S.fCat || '', filtro = t => (!f || t.tec === f) && (!fc || t.cat === fc);
+  const meses = mesesPlan(), Tm = tareasMes(S.mes).filter(filtro), Iact = indicadores(Tm);
+  let h = '<div class="dash"><div class="dash-top"><div><small>LÍNEA ITALIA · MANTENIMIENTO PREVENTIVO</small><h2>⚙️ Plan de mes</h2></div><div class="fila" style="margin-left:auto">' +
+    '<div class="seg">' + (mio ? '<button data-fplan="' + mio + '" aria-pressed="' + (f === mio) + '">👷 Solo los míos</button>' : '') + '<button data-fplan="" aria-pressed="' + (!f) + '">👥 Todos</button></div>' +
+    '<select class="in dsel" id="fPlanTec"><option value="">Todos los técnicos</option>' + tecsMes(S.mes).map(x => '<option value="' + x + '"' + (x === f ? ' selected' : '') + '>' + esc(nombreTec(x)) + '</option>').join('') + '</select>' +
+    '<select class="in dsel" id="fPlanCat"><option value="">Todas las categorías</option>' + Object.keys(CAT).map(c => '<option value="' + c + '"' + (c === fc ? ' selected' : '') + '>' + c + ' · ' + esc(CAT[c][0]) + '</option>').join('') + '</select></div>' +
+    '<div class="dash-meta"><small>' + nomMes(S.mes).toUpperCase() + '</small><b>' + Iact.hechas + ' de ' + Iact.n + '</b></div></div>';
+  h += '<div class="dia-ban ' + (Iact.venc ? 'mal' : 'bien') + '"><div><b>' + nomMes(S.mes) + (Iact.venc ? ': vamos atrasados' : ': vamos al corriente') + '</b><span>llevan ' + Iact.hechas + ' de ' + Iact.n + ' preventivos · ' + Iact.avance + ' % de avance' + (Iact.porCal ? ' · ' + Iact.porCal + ' por calificar' : '') + '</span></div><strong>' + (Iact.venc ? '↓ −' + Iact.venc : '✔ ' + Iact.hechas) + '<small> ' + (Iact.venc ? 'vencidos' : 'hechos') + '</small></strong></div>';
+  // meses
+  h += '<div class="mes-g">' + meses.map(m => {
+    const I = indicadores(tareasMes(m).filter(filtro)), sel = m === S.mes;
+    return '<button class="mes-c' + (sel ? ' sel' : '') + (m < MES_HOY ? ' pasado' : '') + '" data-mesplan="' + m + '"><div class="mes-h"><b>' + nomMes(m).replace(' ', '<br><small>') + '</small></b>' + (m === MES_HOY ? '<span class="chip acc">EN CURSO</span>' : '') + '</div>' +
+      '<div class="mes-b">' + engrane(I.avance, colorAv(I), 'm' + m.replace('-', '')) + '<div class="mes-n"><em class="mes-p" style="color:' + colorAv(I) + '">' + I.avance + ' % de avance</em><b>' + I.n + '</b><small>preventivos</small><span><i style="background:#2ECC71"></i>' + I.hechas + ' hechos</span><span><i style="background:#F2B233"></i>' + I.pend + ' pendientes</span>' + (I.venc ? '<span class="rojo"><i style="background:#F2546A"></i>' + I.venc + ' vencidos</span>' : '') + '</div></div>' +
+      '<div class="mes-pie">' + (sel && S.planLista ? '▲ Ocultar días' : '▼ Toca para ver los días') + '</div></button>';
+  }).join('') + '</div></div>';
+  if (!S.planLista) return h;
+  // días del mes elegido
+  const [y, mm] = S.mes.split('-').map(Number), ult = new Date(y, mm, 0).getDate(), dias = [];
+  for (let d = 1; d <= ult; d++) { const fd = new Date(y, mm - 1, d); if (fd.getDay() !== 0) dias.push(iso(fd)); }
+  if (!S.diaPlan || S.diaPlan.slice(0, 7) !== S.mes) S.diaPlan = HOY.slice(0, 7) === S.mes ? HOY : dias[0];
+  h += '<div class="dash" style="margin-top:14px"><div class="dash-top"><div><small>DÍAS DE ' + nomMes(S.mes).toUpperCase() + '</small><h2>📅 Toca un día para ver lo programado</h2></div></div><div class="dias-g">' + dias.map(fd => {
+    const D = Tm.filter(t => t.f === fd), I = indicadores(D), dd = deIso(fd), sel = fd === S.diaPlan;
+    return '<button class="dia-c' + (sel ? ' sel' : '') + (fd === HOY ? ' hoy' : '') + (D.length ? '' : ' vacio') + '" data-diaplan="' + fd + '"><div class="dia-h"><span>' + DIAS[dd.getDay()].slice(0, 3) + '</span><b>' + dd.getDate() + '</b></div>' +
+      (D.length ? engrane(I.avance, colorAv(I), 'd' + fd.replace(/-/g, ''), true) + '<div class="dia-k"><b>' + I.hechas + '</b>/' + D.length + '</div>' + (I.venc ? '<div class="dia-r">↓ ' + I.venc + '</div>' : '') : '<div class="dia-s">' + (dd.getDay() === 6 ? 'Faltantes' : 'Sin programa') + '</div>') + '</button>';
+  }).join('') + '</div>';
+  // lo programado del día elegido
+  const D = Tm.filter(t => t.f === S.diaPlan).sort((a, b) => a.tec.localeCompare(b.tec) || a.eq.localeCompare(b.eq)), ID = indicadores(D);
+  h += '<div class="dash-sec" style="margin-top:12px"><h3>📌 ' + fLarga(S.diaPlan)[0].toUpperCase() + fLarga(S.diaPlan).slice(1) + ' <span>' + ID.hechas + ' de ' + D.length + ' hechos</span></h3>' +
+    (D.length ? '<div class="tk-h tk-h7"><span></span><span>Hora</span><span>Equipo</span><span>Técnico</span><span>Estado</span><span>Cat.</span><span>Detalle</span></div>' + D.map(t => { const e = estadoT(t), o = S.ords[t.k] || {};
+      return '<div class="tk-r tk-r7" data-abrir="' + t.k + '"><span class="dmini">' + dibujo(t) + '</span><div class="tk-eq"><b>' + (o.ini ? hhmm(o.ini) : '—') + '</b><small>' + (o.fin ? 'fin ' + hhmm(o.fin) : '') + '</small></div><div class="tk-eq"><b>' + esc(t.eq) + '</b><small>' + esc(FR[t.fr] || t.fr) + ' · ' + (o.min ? o.min + ' min reales' : t.min + ' min') + '</small></div><div class="tk-tec"><span class="pt" style="background:' + colorTec(t.tec) + '">' + t.tec[0] + '</span>' + esc(nombreTec(t.tec)) + '</div><div class="tk-est ' + e + '">' + EST[e][0] + (calDe(t) != null ? '<small>calif. ' + calDe(t) + '</small>' : '') + '</div><div><span class="tk-cat" style="border-color:' + ((CAT[t.cat] || [])[1] || '#5F7389') + ';color:' + ((CAT[t.cat] || [])[1] || '#9FB3C8') + '">' + esc(t.cat) + '</span></div><div class="tk-pq">' + esc(porqueT(t)) + '</div></div>'; }).join('')
+      : '<p class="dvacio">' + (deIso(S.diaPlan).getDay() === 6 ? 'Sábado: día para hacer los faltantes de la semana.' : 'Sin preventivos programados este día.') + '</p>') + '</div></div>';
+  return h;
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-diaplan]'); if (!b) return; S.diaPlan = b.dataset.diaplan; render();
+  setTimeout(() => { const el = [...document.querySelectorAll('.dash-sec h3')].find(x => x.textContent.startsWith('📌')); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 60);
 });
