@@ -1636,7 +1636,7 @@ function vPlanGeneral(L) {
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-mesplan]'); if (!b) return;
   const m = b.dataset.mesplan; if (S.mes === m && S.planLista) S.planLista = false; else { S.mes = m; S.planLista = true; S.diaPlan = null; }
-  render(); if (S.planLista) setTimeout(() => { const el = document.querySelector('.dias-g'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 60);
+  render(); if (S.planLista) setTimeout(() => { const el = document.querySelector('.calx'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 60);
 });
 
 // ============================================================ v11 · PLAN DE MES con ENGRANES: meses → días → lo programado del día
@@ -1667,24 +1667,29 @@ function vPlanGeneral(L) {
       '<div class="mes-pie">' + (sel && S.planLista ? '▲ Ocultar días' : '▼ Toca para ver los días') + '</div></button>';
   }).join('') + '</div></div>';
   if (!S.planLista) return h;
-  // días del mes elegido
-  const [y, mm] = S.mes.split('-').map(Number), ult = new Date(y, mm, 0).getDate(), dias = [];
-  for (let d = 1; d <= ult; d++) { const fd = new Date(y, mm - 1, d); if (fd.getDay() !== 0) dias.push(iso(fd)); }
-  if (!S.diaPlan || S.diaPlan.slice(0, 7) !== S.mes) S.diaPlan = HOY.slice(0, 7) === S.mes ? HOY : dias[0];
-  h += '<div class="dash" style="margin-top:14px"><div class="dash-top"><div><small>DÍAS DE ' + nomMes(S.mes).toUpperCase() + '</small><h2>📅 Toca un día para ver lo programado</h2></div></div><div class="dias-g">' + dias.map(fd => {
-    const D = Tm.filter(t => t.f === fd), I = indicadores(D), dd = deIso(fd), sel = fd === S.diaPlan;
-    return '<button class="dia-c' + (sel ? ' sel' : '') + (fd === HOY ? ' hoy' : '') + (D.length ? '' : ' vacio') + '" data-diaplan="' + fd + '"><div class="dia-h"><span>' + DIAS[dd.getDay()].slice(0, 3) + '</span><b>' + dd.getDate() + '</b></div>' +
-      (D.length ? engrane(I.avance, colorAv(I), 'd' + fd.replace(/-/g, ''), true) + '<div class="dia-k"><b>' + I.hechas + '</b>/' + D.length + '</div>' + (I.venc ? '<div class="dia-r">↓ ' + I.venc + '</div>' : '') : '<div class="dia-s">' + (dd.getDay() === 6 ? 'Faltantes' : 'Sin programa') + '</div>') + '</button>';
-  }).join('') + '</div>';
+  // días del mes elegido: calendario como el de pared (lunes a domingo, fin de semana en rojo)
+  const [y, mm] = S.mes.split('-').map(Number), primero = new Date(y, mm - 1, 1), ultimo = new Date(y, mm, 0);
+  if (!S.diaPlan || S.diaPlan.slice(0, 7) !== S.mes) S.diaPlan = HOY.slice(0, 7) === S.mes ? HOY : iso(primero);
+  const iniCal = lunesDe(primero), finCal = sumar(lunesDe(ultimo), 6), lm = mesesPlan(), im = lm.indexOf(S.mes);
+  h += '<div class="calx"><div class="calx-t"><button class="calx-n" data-mesplan2="' + (lm[im - 1] || '') + '"' + (im > 0 ? '' : ' disabled') + '>‹</button><b>' + MES[mm - 1][0].toUpperCase() + MES[mm - 1].slice(1) + ' ' + y + '</b><button class="calx-n" data-mesplan2="' + (lm[im + 1] || '') + '"' + (im < lm.length - 1 ? '' : ' disabled') + '>›</button></div>' +
+    '<div class="calx-d">' + ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].map((n, i) => '<div' + (i > 4 ? ' class="fs"' : '') + '>' + n + '</div>').join('') + '</div><div class="calx-g">';
+  for (let dd = new Date(iniCal); dd <= finCal; dd = sumar(dd, 1)) {
+    const fd = iso(dd), otro = dd.getMonth() !== mm - 1, fs = dd.getDay() === 0 || dd.getDay() === 6, D = otro ? [] : Tm.filter(t => t.f === fd), I = indicadores(D);
+    h += '<button class="calx-c' + (otro ? ' otro' : '') + (fs ? ' fs' : '') + (fd === S.diaPlan && !otro ? ' sel' : '') + (fd === HOY ? ' hoy' : '') + '"' + (otro ? ' disabled' : ' data-diaplan="' + fd + '"') + '><b>' + dd.getDate() + '</b>' +
+      (D.length ? '<span class="calx-k" style="color:' + colorAv(I) + '">' + I.hechas + '/' + D.length + '</span><span class="calx-b"><i style="width:' + I.avance + '%;background:' + colorAv(I) + '"></i></span>' + (I.venc ? '<span class="calx-r">↓ ' + I.venc + '</span>' : '') : (!otro && dd.getDay() === 6 ? '<span class="calx-s">faltantes</span>' : '')) + '</button>';
+  }
+  h += '</div></div>';
   // lo programado del día elegido
   const D = Tm.filter(t => t.f === S.diaPlan).sort((a, b) => a.tec.localeCompare(b.tec) || a.eq.localeCompare(b.eq)), ID = indicadores(D);
-  h += '<div class="dash-sec" style="margin-top:12px"><h3>📌 ' + fLarga(S.diaPlan)[0].toUpperCase() + fLarga(S.diaPlan).slice(1) + ' <span>' + ID.hechas + ' de ' + D.length + ' hechos</span></h3>' +
+  h += '<div class="dash-sec dia-lista" style="margin-top:12px"><h3>📌 ' + fLarga(S.diaPlan)[0].toUpperCase() + fLarga(S.diaPlan).slice(1) + ' <span>' + ID.hechas + ' de ' + D.length + ' hechos</span></h3>' +
     (D.length ? '<div class="tk-h tk-h7"><span></span><span>Hora</span><span>Equipo</span><span>Técnico</span><span>Estado</span><span>Cat.</span><span>Detalle</span></div>' + D.map(t => { const e = estadoT(t), o = S.ords[t.k] || {};
       return '<div class="tk-r tk-r7" data-abrir="' + t.k + '"><span class="dmini">' + dibujo(t) + '</span><div class="tk-eq"><b>' + (o.ini ? hhmm(o.ini) : '—') + '</b><small>' + (o.fin ? 'fin ' + hhmm(o.fin) : '') + '</small></div><div class="tk-eq"><b>' + esc(t.eq) + '</b><small>' + esc(FR[t.fr] || t.fr) + ' · ' + (o.min ? o.min + ' min reales' : t.min + ' min') + '</small></div><div class="tk-tec"><span class="pt" style="background:' + colorTec(t.tec) + '">' + t.tec[0] + '</span>' + esc(nombreTec(t.tec)) + '</div><div class="tk-est ' + e + '">' + EST[e][0] + (calDe(t) != null ? '<small>calif. ' + calDe(t) + '</small>' : '') + '</div><div><span class="tk-cat" style="border-color:' + ((CAT[t.cat] || [])[1] || '#5F7389') + ';color:' + ((CAT[t.cat] || [])[1] || '#9FB3C8') + '">' + esc(t.cat) + '</span></div><div class="tk-pq">' + esc(porqueT(t)) + '</div></div>'; }).join('')
-      : '<p class="dvacio">' + (deIso(S.diaPlan).getDay() === 6 ? 'Sábado: día para hacer los faltantes de la semana.' : 'Sin preventivos programados este día.') + '</p>') + '</div></div>';
+      : '<p class="dvacio">' + (deIso(S.diaPlan).getDay() === 6 ? 'Sábado: día para hacer los faltantes de la semana.' : 'Sin preventivos programados este día.') + '</p>') + '</div>';
   return h;
 }
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-diaplan]'); if (!b) return; S.diaPlan = b.dataset.diaplan; render();
-  setTimeout(() => { const el = [...document.querySelectorAll('.dash-sec h3')].find(x => x.textContent.startsWith('📌')); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 60);
+  setTimeout(() => { const el = document.querySelector('.dia-lista'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 60);
 });
+
+document.addEventListener('click', e => { const b = e.target.closest('[data-mesplan2]'); if (!b || b.disabled || !b.dataset.mesplan2) return; S.mes = b.dataset.mesplan2; S.diaPlan = null; S.planLista = true; render(); setTimeout(() => { const el = document.querySelector('.calx'); if (el) el.scrollIntoView({ block: 'start' }); }, 40); });

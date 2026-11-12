@@ -386,7 +386,21 @@ select.in option{background:#131C27;color:#E6EDF5}
 .dia-c:hover{border-color:#2F78C4}.dia-c.sel{border-color:#3D9BFF;background:#142A44;box-shadow:0 0 0 3px rgba(61,155,255,.18)}.dia-c.hoy{border-color:#2ECC71}.dia-c.vacio{opacity:.6}
 .dia-h{display:flex;align-items:baseline;gap:6px;align-self:stretch;justify-content:space-between}.dia-h span{color:#8FA3B8;font-size:12px;text-transform:uppercase;font-weight:700}.dia-h b{font-size:22px;color:#fff}
 .dia-k{font-size:13px;color:#CFDAE6}.dia-k b{font-size:20px;color:#fff}.dia-r{color:#FF6B7F;font-weight:800;font-size:13px}.dia-s{color:#7E92A8;font-size:12px;margin-top:auto}
-@media (prefers-reduced-motion:reduce){.engr-n{animation:none}.mes-c:hover .engr{animation:none}}</style>
+@media (prefers-reduced-motion:reduce){.engr-n{animation:none}.mes-c:hover .engr{animation:none}}/* Calendario del mes (como calendario de pared, con nuestros colores) */
+.calx{margin-top:14px;border-radius:14px;overflow:hidden;border:1px solid #2F4256;background:#131C27}
+.calx-t{display:flex;align-items:center;justify-content:center;gap:14px;background:linear-gradient(90deg,#2F78C4,#3D6FC9);padding:10px}
+.calx-t b{font-size:24px;color:#fff;min-width:220px;text-align:center}.calx-n{background:rgba(255,255,255,.18);border:0;color:#fff;border-radius:10px;width:42px;height:38px;font-size:22px;font-weight:800;cursor:pointer}.calx-n:disabled{opacity:.3;cursor:default}
+.calx-d{display:grid;grid-template-columns:repeat(7,1fr);background:#2A5FA8}.calx-d div{text-align:center;color:#fff;font-size:12.5px;font-weight:700;padding:4px 0}.calx-d div.fs{color:#FFD0D6}
+.calx-g{display:grid;grid-template-columns:repeat(7,1fr)}
+.calx-c{min-height:92px;border:0;border-right:1px solid #243244;border-bottom:1px solid #243244;background:#16212E;color:#fff;font:inherit;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:4px;padding:8px 4px}
+.calx-c:nth-child(7n){border-right:0}
+.calx-c b{font-size:28px;font-weight:800;line-height:1}.calx-c.fs b{color:#FF6B7F}
+.calx-c.otro{background:#0F1720;cursor:default}.calx-c.otro b{color:#4A5C70}
+.calx-c:hover:not(:disabled){background:#1A2A3D}
+.calx-c.sel{background:#15304F;box-shadow:inset 0 0 0 3px #3D9BFF}.calx-c.hoy{box-shadow:inset 0 0 0 3px #2ECC71}.calx-c.hoy.sel{box-shadow:inset 0 0 0 3px #3D9BFF,inset 0 0 0 6px #2ECC71}
+.calx-k{font-size:13px;font-weight:800}.calx-b{width:70%;height:6px;border-radius:4px;background:#243244;overflow:hidden}.calx-b i{display:block;height:100%}
+.calx-r{color:#FF6B7F;font-size:11.5px;font-weight:800}.calx-s{color:#7E92A8;font-size:11px}
+@media (max-width:700px){.calx-c{min-height:66px}.calx-c b{font-size:20px}.calx-t b{font-size:18px;min-width:140px}.calx-d div{font-size:10px}}</style>
 <script src="config.js?v=3"></script>
 <script>
 // Modo demostración: abierto como archivo de la PC o con ?demo → base guardada en este navegador (no toca Firebase).
@@ -494,6 +508,6 @@ if (!window.DEMO) {
 <script src="plan.js"></script>
 <script src="jspdf.umd.min.js"></script>
 <script src="jspdf.plugin.autotable.min.js"></script>
-<script src="app.js?v=10"></script>
+<script src="app.js?v=11"></script>
 </body>
 </html>
