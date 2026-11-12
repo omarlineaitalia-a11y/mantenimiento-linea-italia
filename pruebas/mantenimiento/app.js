@@ -1693,3 +1693,93 @@ document.addEventListener('click', e => {
 });
 
 document.addEventListener('click', e => { const b = e.target.closest('[data-mesplan2]'); if (!b || b.disabled || !b.dataset.mesplan2) return; S.mes = b.dataset.mesplan2; S.diaPlan = null; S.planLista = true; render(); setTimeout(() => { const el = document.querySelector('.calx'); if (el) el.scrollIntoView({ block: 'start' }); }, 40); });
+
+// ============================================================ v13 · PARÁMETROS: VIDA E HISTORIAL GRÁFICO POR MÁQUINA
+// Cada refacción cambiada (en las hojas "Se cambió refacción", baleros registrados o refacciones del cálculo de compras) se toma con su fecha;
+// la vida sale de: lo capturado del proveedor (param/vidas) → el promedio real entre cambios → la vida del balero (horas) → el cálculo de compras.
+const kEq = s => norm(s).replace(/[^a-z0-9]+/g, '_');
+function maquinasPlan() { const M = {}; Object.values(window.PM_PLAN || {}).flat().forEach(t => { if (!M[t.eq]) M[t.eq] = { eq: t.eq, cat: t.cat, no: t.no }; }); tareasMes(S.mes).forEach(t => { if (!M[t.eq]) M[t.eq] = { eq: t.eq, cat: t.cat, no: t.no }; }); return Object.values(M); }
+function compsDeMaquina(eq) {
+  const C = {}, add = (key, nom, origen) => (C[key] = C[key] || { key, nom, origen, cambios: [], vidaBase: null, unidad: '' });
+  const words = norm(eq).split(/[\s·]+/).filter(w => w.length > 3 && !/^\d+$/.test(w));
+  Object.values(S.ords).forEach(o => { if (!o.fin) return; const tt = buscarTarea(o.k); if (!tt || tt.eq !== eq) return; (o.hall || []).filter(x => /cambi/i.test(x.t) && (x.ref || x.d)).forEach(x => { const nom = (x.ref || x.d).trim(); const c = add('h:' + kEq(nom), nom, 'Hojas de preventivo'); c.cambios.push({ f: o.fin.slice(0, 10), nota: x.d, q: x.q, costo: Number(x.costo) || 0, tec: tt.tec, fotos: (x.fotos || []).length }); }); });
+  Object.entries(S.param.baleros || {}).forEach(([id, b]) => { if (!b.eq || !(norm(eq).includes(norm(b.eq)) || norm(b.eq).includes(norm(eq)))) return; const c = add('b:' + id, 'Balero ' + (b.pos || '') + (b.ref ? ' · ' + b.ref : ''), 'Baleros'); (b.hist || []).forEach(h => c.cambios.push({ f: h.f, nota: h.nota, costo: h.costo })); if (b.inst && !c.cambios.some(x => x.f === b.inst)) c.cambios.push({ f: b.inst, nota: 'Instalado' }); const hd = (Number(b.hDia) || 8) * 6 / 7; if (b.vidaH) { c.vidaBase = Math.round(b.vidaH / hd); c.unidad = Number(b.vidaH).toLocaleString('es-MX') + ' h del proveedor'; } });
+  (window.PM_REFAC || []).forEach(x => { const en = norm(x.eq); if (!words.some(w => en.includes(w))) return; const c = add('r:' + x.k, x.n, 'Cálculo de compras'); const ed = (S.param.refac || {})[x.k] || {}; (ed.hist || []).forEach(h => c.cambios.push({ f: h.f, nota: h.nota, costo: h.costo })); const ult = ed.real || x.real || x.ult; if (ult && !c.cambios.some(z => z.f === ult)) c.cambios.push({ f: ult, nota: 'Última compra / cambio' }); if (x.dias) { c.vidaBase = x.dias; c.unidad = 'promedio de compras'; } });
+  const vidas = (S.param.vidas || {})[kEq(eq)] || {};
+  return Object.values(C).map(c => {
+    c.cambios = c.cambios.filter(z => z.f).sort((a, b) => a.f.localeCompare(b.f));
+    for (let i = 1; i < c.cambios.length; i++) c.cambios[i].duro = diasEntre(c.cambios[i - 1].f, c.cambios[i].f);
+    const iv = c.cambios.map(z => z.duro).filter(Boolean), prom = iv.length ? Math.round(iv.reduce((s, v) => s + v, 0) / iv.length) : null;
+    const man = vidas[c.key] && Number(vidas[c.key].dias);
+    c.vida = man || prom || c.vidaBase || null; c.fuenteVida = man ? 'capturada (proveedor)' : prom ? 'promedio real de ' + iv.length + ' cambio(s)' : c.vidaBase ? c.unidad : 'sin dato: captura la vida del proveedor';
+    c.ult = c.cambios.length ? c.cambios[c.cambios.length - 1].f : null;
+    c.prox = c.ult && c.vida ? iso(sumar(deIso(c.ult), c.vida)) : null; c.falta = c.prox ? diasEntre(HOY, c.prox) : null;
+    c.usado = c.ult && c.vida ? Math.round(diasEntre(c.ult, HOY) / c.vida * 100) : null;
+    return c;
+  }).filter(c => c.cambios.length).sort((a, b) => (a.falta == null) - (b.falta == null) || (a.falta || 0) - (b.falta || 0));
+}
+const colVida = u => u == null ? '#6B7F94' : u >= 100 ? '#F2546A' : u >= 85 ? '#F2B233' : '#2ECC71';
+function lecturasDe(eq) {
+  const S2 = {}; Object.values(S.ords).forEach(o => { if (!o.fin) return; const t = buscarTarea(o.k); if (!t || t.eq !== eq) return; const { secs } = seccionesDe(fmtDe(t), t.fr);
+    secs.forEach(s => s.items.forEach(it => { if (!it.med) return; const x = (o.resp || {})[itemId(it)]; if (!x || !(x.v || []).some(Boolean)) return; const cams = (it.campos || []).map(c => it.l + ' ' + c).concat((it.campos2 || []).map(c => (it.l2 || '') + ' ' + c)); const k = s.t + ' · ' + it.l; (S2[k] = S2[k] || { k, cams, pts: [] }).pts.push({ f: o.fin.slice(0, 10), v: x.v.map(Number) }); })); });
+  return Object.values(S2).map(s => (s.pts.sort((a, b) => a.f.localeCompare(b.f)), s));
+}
+function graficaCambios(c) {
+  const W = 640, H = 70, fechas = c.cambios.map(z => z.f).concat([HOY]).concat(c.prox ? [c.prox] : []), t0 = deIso(fechas.reduce((a, b) => a < b ? a : b)).getTime(), t1 = deIso(fechas.reduce((a, b) => a > b ? a : b)).getTime(), pad = 30;
+  const X = f => pad + (t1 === t0 ? 0.5 : (deIso(f).getTime() - t0) / (t1 - t0)) * (W - 2 * pad), A = x => x > W - 70 ? 'end' : x < 70 ? 'start' : 'middle';
+  let s = '<svg viewBox="0 0 ' + W + ' ' + H + '" class="vg"><line x1="' + pad + '" y1="38" x2="' + (W - pad) + '" y2="38" stroke="#2F4256" stroke-width="2"/>';
+  c.cambios.forEach((z, i) => { if (i) { const xa = X(c.cambios[i - 1].f), xb = X(z.f); s += '<line x1="' + xa + '" y1="38" x2="' + xb + '" y2="38" stroke="#3D9BFF" stroke-width="4"/><text x="' + ((xa + xb) / 2) + '" y="30" text-anchor="middle" font-size="11" fill="#9CCBFF">duró ' + z.duro + ' d</text>'; } });
+  if (c.prox && c.ult) s += '<line x1="' + X(c.ult) + '" y1="38" x2="' + X(c.prox) + '" y2="38" stroke="' + colVida(c.usado) + '" stroke-width="4" stroke-dasharray="6 5"/><circle cx="' + X(c.prox) + '" cy="38" r="7" fill="#0B1118" stroke="' + colVida(c.usado) + '" stroke-width="3"/><text x="' + X(c.prox) + '" y="62" text-anchor="' + A(X(c.prox)) + '" font-size="11" fill="' + colVida(c.usado) + '" font-weight="700">cambio ' + fCorta(c.prox) + '</text>';
+  c.cambios.forEach(z => { s += '<circle cx="' + X(z.f) + '" cy="38" r="6" fill="#3D9BFF"/><text x="' + X(z.f) + '" y="62" text-anchor="' + A(X(z.f)) + '" font-size="11" fill="#CFDAE6">' + fCorta(z.f) + '</text>'; });
+  s += '<line x1="' + X(HOY) + '" y1="10" x2="' + X(HOY) + '" y2="48" stroke="#fff" stroke-width="2"/><text x="' + X(HOY) + '" y="9" text-anchor="middle" font-size="10" fill="#fff" font-weight="700">HOY</text></svg>';
+  return s;
+}
+function graficaLecturas(s) {
+  const W = 640, H = 150, pad = 34, vals = s.pts.flatMap(p => p.v.filter(v => !isNaN(v))); if (!vals.length) return '';
+  let lo = Math.min(...vals), hi = Math.max(...vals); if (hi === lo) { hi += 1; lo -= 1; } const m = (hi - lo) * 0.15; lo -= m; hi += m;
+  const X = i => pad + (s.pts.length === 1 ? 0.5 : i / (s.pts.length - 1)) * (W - 2 * pad), Y = v => H - 22 - (v - lo) / (hi - lo) * (H - 40);
+  const cols = ['#3D9BFF', '#2ECC71', '#F2B233', '#C2ADFF', '#FF8C9C', '#4DD0E1'];
+  let g = '<svg viewBox="0 0 ' + W + ' ' + H + '" class="vg">' + [lo + (hi - lo) * 0.25, lo + (hi - lo) * 0.5, lo + (hi - lo) * 0.75].map(v => '<line x1="' + pad + '" x2="' + (W - pad) + '" y1="' + Y(v) + '" y2="' + Y(v) + '" stroke="#1E2A38"/><text x="4" y="' + (Y(v) + 4) + '" font-size="10" fill="#7E92A8">' + v.toFixed(0) + '</text>').join('');
+  s.cams.forEach((c, ci) => { const pts = s.pts.map((p, i) => isNaN(p.v[ci]) ? null : [X(i), Y(p.v[ci])]).filter(Boolean); if (!pts.length) return; g += '<polyline points="' + pts.map(p => p.join(',')).join(' ') + '" fill="none" stroke="' + cols[ci % cols.length] + '" stroke-width="2.5"/>' + pts.map(p => '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="3.5" fill="' + cols[ci % cols.length] + '"/>').join(''); });
+  g += s.pts.map((p, i) => '<text x="' + X(i) + '" y="' + (H - 6) + '" text-anchor="middle" font-size="10" fill="#7E92A8">' + fCorta(p.f) + '</text>').join('') + '</svg>';
+  return g + '<div class="vl-ley">' + s.cams.map((c, ci) => '<span><i style="background:' + cols[ci % cols.length] + '"></i>' + esc(c) + ' · último ' + (s.pts[s.pts.length - 1].v[ci] || '—') + '</span>').join('') + '</div>';
+}
+function pVida() {
+  const maqs = maquinasPlan().filter(m => CATF(m.cat)).map(m => { const C = compsDeMaquina(m.eq); const peor = C.length ? C[0] : null; return Object.assign({}, m, { C, peor, lect: lecturasDe(m.eq) }); })
+    .sort((a, b) => (b.C.length > 0) - (a.C.length > 0) || ((a.peor && a.peor.falta != null ? a.peor.falta : 9e9) - (b.peor && b.peor.falta != null ? b.peor.falta : 9e9)) || a.eq.localeCompare(b.eq));
+  const conHist = maqs.filter(m => m.C.length || m.lect.length), sel = maqs.find(m => m.eq === S.maqP) || conHist[0] || maqs[0];
+  const vencidas = conHist.reduce((s, m) => s + m.C.filter(c => c.falta != null && c.falta < 0).length, 0), prox = conHist.reduce((s, m) => s + m.C.filter(c => c.falta != null && c.falta >= 0 && c.falta <= 30).length, 0);
+  let h = '<div class="dash"><div class="dash-top"><div><small>LÍNEA ITALIA · MANTENIMIENTO PREVENTIVO</small><h2>📈 Vida de refacciones por máquina</h2></div><div class="fila" style="margin-left:auto"><input class="in dsel" id="vBusca" placeholder="Buscar máquina…" value="' + esc(S.vBusca || '') + '" style="min-width:200px"></div></div>' +
+    '<div class="dash-kpis"><div class="dk azul"><b>' + conHist.length + '</b><span>máquinas con historial</span><small>de ' + maqs.length + ' en el plan</small></div><div class="dk ' + (vencidas ? 'mal' : 'bien') + '"><b>' + vencidas + '</b><span>refacciones con cambio vencido</span><small>ya pasaron su vida</small></div><div class="dk ambar"><b>' + prox + '</b><span>cambian en 30 días o menos</span><small>planear la compra</small></div><div class="dk"><b>' + conHist.reduce((s, m) => s + m.C.length, 0) + '</b><span>refacciones vigiladas</span><small>con fecha de cambio</small></div></div>';
+  h += '<div class="vida-grid"><div class="vida-lista">' + maqs.filter(m => !S.vBusca || norm(m.eq).includes(norm(S.vBusca))).map(m => { const p = m.peor, col = p ? colVida(p.usado) : '#3A4B5E';
+    return '<button class="vm' + (sel && m.eq === sel.eq ? ' sel' : '') + (m.C.length || m.lect.length ? '' : ' sin') + '" data-maqp="' + esc(m.eq) + '"><span class="dmini">' + dibujo(m) + '</span><span class="vm-t"><b>' + esc(m.eq) + '</b><small>' + (m.C.length ? m.C.length + ' refacción(es)' + (p && p.falta != null ? ' · ' + (p.falta < 0 ? 'vencida ' + (-p.falta) + ' d' : 'próx. ' + p.falta + ' d') : '') : m.lect.length ? m.lect.length + ' lectura(s)' : 'sin historial') + '</small></span><span class="vm-s" style="background:' + col + '"></span></button>'; }).join('') + '</div>';
+  if (sel) {
+    h += '<div class="vida-det"><div class="vd-top"><span class="dmini" style="width:64px;height:54px">' + dibujo(sel) + '</span><div><h3>' + esc(sel.eq) + '</h3><small>' + esc((CAT[sel.cat] || [sel.cat])[0]) + '</small></div></div>';
+    if (!sel.C.length) h += '<p class="dvacio">Esta máquina todavía no tiene refacciones cambiadas registradas. Se llenan solas cuando el técnico anota "Se cambió refacción" en su hoja, o al registrar un balero.</p>';
+    sel.C.forEach(c => {
+      const u = c.usado, col = colVida(u);
+      h += '<div class="vc"><div class="vc-h"><b>' + esc(c.nom) + '</b><span class="chip">' + esc(c.origen) + '</span>' + (c.falta != null ? '<span class="vc-f" style="color:' + col + '">' + (c.falta < 0 ? '↓ vencida hace ' + (-c.falta) + ' días' : 'faltan ' + c.falta + ' días') + '</span>' : '') + '</div>' +
+        '<div class="vc-bar"><i style="width:' + Math.min(100, u || 0) + '%;background:' + col + '"></i>' + (u != null ? '<span>' + u + ' % de su vida</span>' : '') + '</div>' +
+        '<div class="vc-d"><span>Último cambio: <b>' + (c.ult ? fCorta(c.ult) + ' ' + c.ult.slice(0, 4) : '—') + '</b></span><span>Vida: <b>' + (c.vida ? c.vida + ' días' : '—') + '</b> <small>(' + esc(c.fuenteVida) + ')</small></span><span>Próximo cambio: <b style="color:' + col + '">' + (c.prox ? fLarga(c.prox) + ' ' + c.prox.slice(0, 4) : 'sin calcular') + '</b></span>' + (califica() ? '<button class="bt s" data-vidaman="' + esc(sel.eq) + '|' + esc(c.key) + '|' + esc(c.nom) + '">Vida del proveedor</button>' : '') + '</div>' +
+        graficaCambios(c) + '</div>';
+    });
+    if (sel.lect.length) h += '<h3 class="vd-sub">⚡ Historial de voltajes y corrientes</h3>' + sel.lect.map(s => '<div class="vc"><div class="vc-h"><b>' + esc(s.k) + '</b><span class="chip">' + s.pts.length + ' lectura(s)</span></div>' + graficaLecturas(s) + '</div>').join('');
+    h += '</div>';
+  }
+  return h + '</div></div>';
+}
+document.addEventListener('click', async e => {
+  const m = e.target.closest('[data-maqp]'); if (m) { S.maqP = m.dataset.maqp; return render(); }
+  const v = e.target.closest('[data-vidaman]'); if (v) { const [eq, key, nom] = v.dataset.vidaman.split('|'); const r = prompt('Vida de "' + nom + '" según el proveedor.\nEscribe días (ej. 180) u horas con "h" (ej. 20000h):', ''); if (!r) return; let dias = Number(r.replace(/[^\d.]/g, '')); if (/h/i.test(r)) dias = Math.round(dias / (8 * 6 / 7)); if (!dias) return; await upd('param/vidas', { [kEq(eq)]: { [key]: { dias, t: new Date().toISOString(), por: yoP().n } } }); toast('Vida guardada: ' + dias + ' días'); }
+});
+document.addEventListener('input', e => { if (e.target.id === 'vBusca') { S.vBusca = e.target.value; clearTimeout(window._vbT); window._vbT = setTimeout(() => { render(); const i = document.getElementById('vBusca'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }, 300); } });
+// Parámetros: primero "Vida por máquina" (gráficas); las tablas de antes quedan como pestañas de consulta
+if (S.sub4 === 'refac') S.sub4 = 'vida';
+function vParam() {
+  const subs = [['vida', '📈 Vida por máquina'], ['refac', '🧩 Refacciones por compras'], ['baleros', '🔩 Baleros'], ['horo', '⏲️ Horómetros montacargas'], ['mat', '💲 Refacciones y costos del mes'], ['hist', '🧾 Historial (tabla)']];
+  if (!subs.some(s => s[0] === S.sub4)) S.sub4 = 'vida';
+  let h = '<div class="seg" style="margin-bottom:10px">' + subs.map(([k, l]) => '<button data-sub4="' + k + '" aria-pressed="' + (S.sub4 === k) + '">' + l + '</button>').join('') + '</div>' +
+    '<div class="fila" style="margin-bottom:14px"><span class="peq mu">Categoría:</span><div class="seg">' + [''].concat(Object.keys(CAT)).map(c => '<button data-catp="' + c + '" aria-pressed="' + ((S.catP || '') === c) + '" title="' + esc(c ? CAT[c][0] : 'Todas') + '">' + (c || 'Todas') + '</button>').join('') + '</div>' + (S.catP ? '<span class="chip acc">' + esc(CAT[S.catP][0]) + '</span>' : '') + '</div>';
+  h += ({ vida: pVida, refac: pRefac, baleros: pBaleros, horo: pHoro, mat: pMaterial, hist: pHistorial }[S.sub4])();
+  $('#app').innerHTML = h; animar();
+}
