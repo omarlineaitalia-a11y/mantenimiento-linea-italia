@@ -292,7 +292,7 @@ function vTablero() {
   if (otorga()) subs.push(['jasso', '🧑‍💼 Supervisión'], ['config', '⚙️ Configuración']);
   let h = '<div class="fila" style="margin-bottom:14px;justify-content:space-between"><div class="seg" id="sub1">' + subs.map(([k, l]) => '<button data-sub1="' + k + '" aria-pressed="' + (S.sub1 === k) + '">' + l + '</button>').join('') + '</div>' + selMes() + '</div>';
   if (S.sub1 === 'config' && otorga()) { $('#app').innerHTML = h + vConfig(); return animar(); }
-  if (S.sub1 === 'jasso' && otorga()) { $('#app').innerHTML = h + vJasso(L); return animar(); }
+  if (S.sub1 === 'jasso' && otorga()) { $('#app').innerHTML = h + bloqueGeneralJasso(S.mes) + vJasso(L); return animar(); }
   h += '<div class="kpis"><div class="kpi"><b>' + I.n + '</b><span>preventivos del mes</span></div><div class="kpi ok"><b>' + I.hechas + '</b><span>terminados (' + I.avance + ' %)</span></div><div class="kpi mo"><b>' + I.porCal + '</b><span>por calificar</span></div><div class="kpi ' + (I.venc ? 'bad' : 'wa') + '"><b>' + I.pend + '</b><span>faltantes · ' + I.venc + ' vencidos</span></div><div class="kpi ' + notaCls(I.cumpl) + '"><b>' + I.cumpl + '%</b><span>cumplimiento al día</span></div><div class="kpi ' + notaCls(I.calidad) + '"><b>' + (I.calidad == null ? '—' : I.calidad + '%') + '</b><span>calidad promedio</span></div></div>';
   if (S.sub1 === 'firmas' && califica()) { $('#app').innerHTML = h + vFirmas(); return; }
   if (S.sub1 === 'na' && califica()) h += vNA();
@@ -373,7 +373,7 @@ function vJasso(L) {
   const dist = [0, 50, 100].map(v => calif.filter(o => o.cal === v).length);
   const CJ = califJassoSemanas(S.mes), califJ = CJ.prom;
   const sup = Object.entries(S.pers).find(([, p]) => p.califica);
-  let h = '<div class="grid3"><div class="caja"><h2>🧑‍💼 ' + esc(sup ? titulo(sup[1].n) : 'Supervisor') + ' · ' + nomMes(S.mes) + '</h2><div class="anillos">' + anillo(califJ, '#1F6FD1', 'Su calificación', 'promedio de sus semanas') + anillo(calif.length ? Math.round(aTiempo / calif.length * 100) : null, '#1E8E5A', 'Evalúa a tiempo', 'calificadas en ≤ 48 h') + anillo(coh, '#E07B00', 'Coherencia', 'calificación vs. lo que dice la hoja') + '</div>' +
+  let h = '<div class="grid3"><div class="caja"><h2>🧑‍💼 ' + esc(sup ? titulo(sup[1].n) : 'Supervisor') + ' · ' + nomMes(S.mes) + '</h2><div class="anillos">' + anillo(califJ, '#1F6FD1', 'Puntos semanales', 'promedio de sus semanas') + anillo(calif.length ? Math.round(aTiempo / calif.length * 100) : null, '#1E8E5A', 'Evalúa a tiempo', 'calificadas en ≤ 48 h') + anillo(coh, '#E07B00', 'Coherencia', 'calificación vs. lo que dice la hoja') + '</div>' +
     '<div class="kpis" style="grid-template-columns:repeat(4,1fr);margin-top:14px"><div class="kpi"><b>' + calif.length + '</b><span>calificadas</span></div><div class="kpi ' + (atrasadas.length ? 'bad' : 'ok') + '"><b>' + pendientes.length + '</b><span>sin calificar · ' + atrasadas.length + ' con más de 48 h</span></div><div class="kpi"><b>' + (prom == null ? '—' : prom.toFixed(1) + ' h') + '</b><span>tiempo promedio para calificar</span></div><div class="kpi mo"><b>' + dist[0] + ' / ' + dist[1] + ' / ' + dist[2] + '</b><span>calificaciones 0 / 50 / 100 · promedio que asigna ' + (calif.length ? Math.round(calif.reduce((s, o) => s + o.cal, 0) / calif.length) + ' %' : '—') + '</span></div></div></div>' +
     '<div class="caja"><h2>📌 Cómo se evalúa</h2><ul class="peq" style="padding-left:18px;margin:0;line-height:1.6"><li><b>Su calificación</b> = promedio de sus semanas. Cada semana arranca en <b>100</b> y baja ' + PESO_J.noReal + ' puntos por cada preventivo que un técnico no realizó en su semana, ' + PESO_J.noEval + ' por cada uno que él no evaluó y firmó a tiempo (48 h) y ' + PESO_J.arrastre + ' por cada atraso que viene de semanas anteriores.</li><li><b>A tiempo</b>: calificar a más tardar 48 h después de que el técnico termina.</li><li><b>Coherencia</b>: alerta si pone 100 con puntos en MAL o sin fotos, o 0 a una hoja limpia y con evidencia.</li></ul></div></div>';
   h += tablaSemanasJasso(CJ) + vOrganigrama();
@@ -730,9 +730,9 @@ function vConfig() {
   const cs = S.subC || 'personal', subs = [['personal', '👥 Personal y accesos'], ['mant', '🗓️ Mantenimientos'], ['hojas', '📋 Hojas por equipo'], ['excel', '📗 Excel y cierre de mes']];
   let h = '<div class="seg" style="margin-bottom:14px">' + subs.map(([k, l]) => '<button data-subc="' + k + '" aria-pressed="' + (cs === k) + '">' + l + '</button>').join('') + '</div>';
   if (cs === 'personal') {
-    h += '<div class="caja"><h2>👥 Personal y accesos <span class="r"><button class="bt s p" data-nper>＋ Agregar persona</button></span></h2><div class="scroll"><table class="tbl"><tr><th>Nómina</th><th>Nombre</th><th>Puesto</th><th>Nombre en el Excel</th>' + [1, 2, 3, 4].map(n => '<th class="n">' + PANT[n][0] + ' ' + PANT[n][1] + '</th>').join('') + '<th>Contraseña</th><th class="n">Califica</th><th class="n">Da accesos</th><th class="n">Activo</th></tr>' +
+    h += '<div class="caja"><h2>👥 Personal y accesos <span class="r"><button class="bt s p" data-nper>＋ Agregar persona</button></span></h2><div class="scroll"><table class="tbl"><tr><th>Nómina</th><th>Nombre</th><th>Puesto</th><th>Nombre en el Excel</th>' + [1, 2, 3, 4, 5].map(n => '<th class="n">' + PANT[n][0] + ' ' + PANT[n][1] + '</th>').join('') + '<th>Contraseña</th><th class="n">Califica</th><th class="n">Da accesos</th><th class="n">Activo</th></tr>' +
       Object.entries(S.pers).sort((a, b) => a[1].n.localeCompare(b[1].n)).map(([k, p]) => '<tr><td>' + k + '</td><td><b>' + esc(titulo(p.n)) + '</b></td><td><input class="in" data-per="' + k + '|puesto" value="' + esc(p.puesto || '') + '" style="min-width:140px"></td><td><input class="in" data-per="' + k + '|tec" value="' + esc(p.tec || '') + '" style="width:120px" placeholder="(no es técnico)"></td>' +
-        [1, 2, 3, 4].map(n => '<td class="n"><input type="checkbox" data-perp="' + k + '|' + n + '"' + ((p.pant || []).includes(n) ? ' checked' : '') + '></td>').join('') + celdaClave(k) + '<td class="n"><input type="checkbox" data-perb="' + k + '|califica"' + (p.califica ? ' checked' : '') + '></td><td class="n"><input type="checkbox" data-perb="' + k + '|otorga"' + (p.otorga ? ' checked' : '') + (p.r === 'general' ? ' disabled' : '') + '></td><td class="n"><input type="checkbox" data-perb="' + k + '|a"' + (p.a !== false ? ' checked' : '') + (k === S.nom ? ' disabled' : '') + '></td></tr>').join('') + '</table></div><p class="peq mu" style="margin:10px 0 0">Los técnicos ven 📅 Mi mes y 📋 Hojas. "Nombre en el Excel" debe ser igual al de la columna EM del plan maestro (OSCAR, JORGE…). Solo quien "Da accesos" puede entrar a Configuración.</p></div>';
+        [1, 2, 3, 4, 5].map(n => '<td class="n"><input type="checkbox" data-perp="' + k + '|' + n + '"' + ((p.pant || []).includes(n) ? ' checked' : '') + '></td>').join('') + celdaClave(k) + '<td class="n"><input type="checkbox" data-perb="' + k + '|califica"' + (p.califica ? ' checked' : '') + '></td><td class="n"><input type="checkbox" data-perb="' + k + '|otorga"' + (p.otorga ? ' checked' : '') + (p.r === 'general' ? ' disabled' : '') + '></td><td class="n"><input type="checkbox" data-perb="' + k + '|a"' + (p.a !== false ? ' checked' : '') + (k === S.nom ? ' disabled' : '') + '></td></tr>').join('') + '</table></div><p class="peq mu" style="margin:10px 0 0">Los técnicos ven 📅 Mi mes y 📋 Hojas. Los líderes de área de producción solo ven ⭐ Líderes (palomea solo esa columna). "Nombre en el Excel" debe ser igual al de la columna EM del plan maestro (OSCAR, JORGE…). Solo quien "Da accesos" puede entrar a Configuración.</p></div>';
   } else if (cs === 'mant') {
     const L = tareasMes(S.mes);
     h += '<div class="caja"><h2>🗓️ Mantenimientos de ' + nomMes(S.mes) + ' <span class="r">' + selMes() + '</span></h2><p class="peq mu">Quitar un mantenimiento lo saca del mes (aunque el Excel se vuelva a leer). Para cambiar fechas o técnicos lo mejor es cambiarlo en el Excel: la app lo toma solo.</p><div class="scroll"><table class="tbl"><tr><th>Fecha</th><th>Equipo</th><th>Frecuencia</th><th>Técnico</th><th>Hoja</th><th></th></tr>' + L.map(t => '<tr><td>' + fCorta(t.f) + '</td><td>' + esc(t.eq) + '</td><td>' + esc(FR[t.fr] || t.fr) + '</td><td>' + esc(corto(t.tec)) + '</td><td class="peq">' + esc((fmtDe(t) || {}).id || '— sin hoja —') + '</td><td><button class="bt s" data-quitar="' + t.k + '">Quitar</button></td></tr>').join('') + '</table></div>' +
@@ -753,7 +753,7 @@ function vConfig() {
 }
 document.addEventListener('click', async e => {
   const s = e.target.closest('[data-subc]'); if (s) { S.subC = s.dataset.subc; return render(); }
-  if (e.target.closest('[data-nper]')) { const k = (prompt('Número de nómina:') || '').trim(); if (!/^\d+$/.test(k)) return; const n = (prompt('Nombre completo:') || '').trim().toUpperCase(); if (!n) return; const tec = (prompt('Si es técnico, nombre como aparece en el Excel (columna EM). Si no, deja vacío:') || '').trim().toUpperCase(); await upd('config/personal', { p: { [k]: { n, r: 'usuario', a: true, puesto: tec ? 'Técnico' : '', pant: tec ? [2, 3] : [1, 3], tec } } }); return toast('Persona agregada.'); }
+  if (e.target.closest('[data-nper]')) { const k = (prompt('Número de nómina:') || '').trim(); if (!/^\d+$/.test(k)) return; const n = (prompt('Nombre completo:') || '').trim().toUpperCase(); if (!n) return; const tec = (prompt('Si es técnico, nombre como aparece en el Excel (columna EM). Si no, deja vacío:') || '').trim().toUpperCase(); const area = tec ? '' : (prompt('Si es LÍDER DE ÁREA de producción, escribe su área (ej. Enchapado). Solo verá la pantalla ⭐ Líderes. Si no, deja vacío:') || '').trim(); await upd('config/personal', { p: { [k]: { n, r: 'usuario', a: true, puesto: tec ? 'Técnico' : area ? 'Líder de área · ' + area : '', pant: tec ? [2, 3] : area ? [5] : [1, 3], tec } } }); return toast('Persona agregada.'); }
   const q = e.target.closest('[data-quitar]'); if (q) { if (!confirm('¿Quitar este mantenimiento del mes?')) return; await upd('config/ajustes', { excl: { [q.dataset.quitar]: true } }); return toast('Quitado.'); }
   if (e.target.closest('[data-restaurar]')) { const ex = {}; Object.keys(S.aj.excl || {}).forEach(k => ex[k] = { __delete__: true }); await upd('config/ajustes', { excl: ex }); return; }
   if (e.target.closest('[data-conexcel]')) return revisarExcel(false);
@@ -1782,4 +1782,117 @@ function vParam() {
     '<div class="fila" style="margin-bottom:14px"><span class="peq mu">Categoría:</span><div class="seg">' + [''].concat(Object.keys(CAT)).map(c => '<button data-catp="' + c + '" aria-pressed="' + ((S.catP || '') === c) + '" title="' + esc(c ? CAT[c][0] : 'Todas') + '">' + (c || 'Todas') + '</button>').join('') + '</div>' + (S.catP ? '<span class="chip acc">' + esc(CAT[S.catP][0]) + '</span>' : '') + '</div>';
   h += ({ vida: pVida, refac: pRefac, baleros: pBaleros, horo: pHoro, mat: pMaterial, hist: pHistorial }[S.sub4])();
   $('#app').innerHTML = h; animar();
+}
+
+
+// ============================================================ v14 · PANTALLA 5 · LÍDERES DE ÁREA (producción califica y libera los preventivos de MÁQUINAS TIPO A)
+// Solo entra quien tenga la pantalla 5 en "Personal y accesos" (lo da el jefe). El supervisor y los técnicos no la tienen.
+// Calificación 1 a 5 estrellas → 0, 25, 50, 75, 100. El promedio entra en la calificación general del supervisor.
+PANT[5] = ['⭐', 'Líderes'];
+const ESTR = [null, ['😞', 'Mal hecho', '#F2546A'], ['😕', 'Deficiente', '#FF8A4C'], ['😐', 'Regular', '#F2B233'], ['🙂', 'Bien hecho', '#7DD87D'], ['🤩', 'Excelente', '#2ECC71']];
+const ptsEstr = n => (n - 1) * 25;
+const esLider = () => (yoP().pant || []).includes(5);
+const verLideres = () => esLider() || otorga();
+const pantallasDe = p => { const L = (p.pant || []).slice(); if (otorga() && !L.includes(5)) L.push(5); return L.sort(); };
+function render() {
+  if (!S.nom) return;
+  const p = yoP(), L = pantallasDe(p);
+  if (!L.includes(S.pant)) S.pant = L[0] || 2;
+  $('#bYo').hidden = false;
+  $('#bYo').innerHTML = '<span class="av" style="background:' + (p.tec ? colorTec(p.tec) : '#1F6FD1') + '">' + esc((p.n || '?')[0]) + '</span><span style="text-align:left;line-height:1.1"><b style="font-size:13px">' + esc(titulo(p.n).split(' ').slice(0, 2).join(' ')) + '</b><br><small>' + esc(p.puesto || '') + ' · Salir</small></span>';
+  $('#subt').textContent = (window.DEMO ? '🧪 MODO PRUEBA (datos en este navegador) · ' : '') + 'Línea Italia · ' + nomMes(S.mes);
+  $('#tabs').innerHTML = L.map(n => '<button class="tab' + (n === 5 ? ' tab-lid' : '') + '" data-pant="' + n + '" aria-current="' + (S.pant === n) + '"><span class="i">' + PANT[n][0] + '</span>' + (n === 2 && !p.tec ? 'Plan del mes' : PANT[n][1]) + '</button>').join('');
+  ({ 1: vTablero, 2: vMiMes, 3: vHojas, 4: vParam, 5: vLideres }[S.pant])();
+}
+// dona (gráfica circular) con el promedio en medio, para fondo oscuro
+function dona(v, color, tam, lbl, sub, grande) {
+  const r = 42, c = 2 * Math.PI * r, val = v == null ? 0 : Math.max(0, Math.min(100, v)), col = color || colNota(v);
+  return '<div class="dona' + (grande ? ' g' : '') + '" style="--t:' + (tam || 120) + 'px"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="' + r + '" fill="none" stroke="#243244" stroke-width="' + (grande ? 9 : 11) + '"/><circle class="v" cx="50" cy="50" r="' + r + '" fill="none" stroke="' + col + '" stroke-width="' + (grande ? 9 : 11) + '" stroke-linecap="round" stroke-dasharray="' + c + '" stroke-dashoffset="' + c + '" data-off="' + (c * (1 - val / 100)) + '" transform="rotate(-90 50 50)"/>' +
+    '<text x="50" y="' + (grande ? 52 : 55) + '" text-anchor="middle" font-size="' + (grande ? 24 : 22) + '" font-weight="800" fill="#fff">' + (v == null ? '—' : v) + '</text>' + (grande ? '<text x="50" y="68" text-anchor="middle" font-size="8" font-weight="700" fill="#9FB2C6" letter-spacing=".5">DE 100</text>' : '') + '</svg>' + (lbl ? '<b>' + lbl + '</b>' : '') + (sub ? '<span>' + sub + '</span>' : '') + '</div>';
+}
+const colNota = v => v == null ? '#3A4B5E' : v >= 85 ? '#2ECC71' : v >= 60 ? '#F2B233' : '#F2546A';
+const estrellas = (n, tam) => '<span class="estr" style="font-size:' + (tam || 18) + 'px">' + [1, 2, 3, 4, 5].map(i => '<i class="' + (i <= n ? 'on' : '') + '">★</i>').join('') + '</span>';
+// preventivos de máquinas tipo A ya entregados por el técnico
+function tareasLider(mes) { return tareasMes(mes).filter(t => t.cat === 'MTA' && (S.ords[t.k] || {}).fin).map(t => Object.assign({}, t, { o: S.ords[t.k] })); }
+function promLider(L) { const v = L.map(t => t.o.lid && t.o.lid.v).filter(x => x != null); return v.length ? Math.round(v.reduce((s, x) => s + x, 0) / v.length) : null; }
+function vLideres() {
+  const L = tareasLider(S.mes), lib = L.filter(t => t.o.lid), por = L.filter(t => !t.o.lid), prom = promLider(L), totA = tareasMes(S.mes).filter(t => t.cat === 'MTA').length;
+  const estProm = lib.length ? (lib.reduce((s, t) => s + t.o.lid.n, 0) / lib.length) : 0, fil = S.lidFil || 'por';
+  const V = (fil === 'por' ? por : fil === 'lib' ? lib : L).slice().sort((a, b) => fil === 'lib' ? b.o.lid.t.localeCompare(a.o.lid.t) : a.o.fin.localeCompare(b.o.fin));
+  let h = '<div class="dash lid"><div class="dash-top"><div class="lid-ico">🏭</div><div><small>LÍNEA ITALIA · LÍDERES DE ÁREA DE PRODUCCIÓN</small><h2>⭐ Liberación de preventivos · Máquinas tipo A</h2></div><div class="fila" style="margin-left:auto">' + selMes().replace('class="in"', 'class="in dsel"') + '</div></div>' +
+    '<div class="lid-hero"><div class="lid-hero-d">' + dona(prom, null, 190, '', '', true) + '<b>Calidad según producción</b><span>' + (lib.length ? estrellas(Math.round(estProm), 22) + ' ' + estProm.toFixed(1) + ' de 5' : 'aún sin calificaciones') + '</span></div>' +
+    '<div class="lid-hero-k"><div class="dk ambar"><b>' + por.length + '</b><span>por liberar</span><small>el técnico ya entregó su hoja</small></div><div class="dk bien"><b>' + lib.length + '</b><span>liberados</span><small>revisados por producción</small></div><div class="dk azul"><b>' + totA + '</b><span>preventivos tipo A del mes</span><small>' + (totA - L.length) + ' todavía no terminan</small></div>' +
+    '<div class="lid-esc">' + [5, 4, 3, 2, 1].map(n => { const k = lib.filter(t => t.o.lid.n === n).length; return '<div><span>' + ESTR[n][0] + '</span><i><em style="width:' + (lib.length ? k / lib.length * 100 : 0) + '%;background:' + ESTR[n][2] + '"></em></i><b>' + k + '</b></div>'; }).join('') + '</div></div></div>' +
+    '<div class="lid-como"><span>👁 <b>1.</b> Abre la hoja y revisa la evidencia (fotos, lecturas, hallazgos)</span><span>🔎 <b>2.</b> Ve la máquina: ¿quedó limpia, sin fugas, trabajando bien?</span><span>⭐ <b>3.</b> Califica de 1 a 5 y libera</span></div>' +
+    '<div class="seg" style="margin:4px 0 12px">' + [['por', '⏳ Por liberar (' + por.length + ')'], ['lib', '✅ Liberados (' + lib.length + ')'], ['todos', '📋 Todos (' + L.length + ')']].map(([k, l]) => '<button data-lidfil="' + k + '" aria-pressed="' + (fil === k) + '">' + l + '</button>').join('') + '</div>';
+  h += V.length ? '<div class="lid-grid">' + V.map(t => {
+    const o = t.o, f = fotosDeOrden(o).length, mal = contarMal(o), d = o.lid;
+    return '<div class="lc' + (d ? ' ok' : '') + '"><div class="lc-dib">' + dibujo(t) + '</div><div class="lc-b"><h3>' + esc(t.eq) + '</h3><div class="lc-m">👷 ' + esc(nombreTec(t.tec)) + ' · ' + esc(FR[t.fr] || t.fr) + '</div><div class="lc-m">✅ Entregó ' + fechaHora(o.fin) + '</div>' +
+      '<div class="fila" style="margin-top:6px"><span class="chip">📷 ' + f + ' foto' + (f === 1 ? '' : 's') + '</span>' + (mal ? '<span class="chip wa">⚠️ ' + mal + ' en MAL</span>' : '<span class="chip ok">✔ todo en BIEN</span>') + ((o.hall || []).length ? '<span class="chip acc">🔧 ' + o.hall.length + ' hallazgo(s)</span>' : '') + '</div>' +
+      (d ? '<div class="lc-cal" style="border-color:' + ESTR[d.n][2] + '"><span class="lc-cara">' + ESTR[d.n][0] + '</span><div>' + estrellas(d.n, 20) + '<b style="color:' + ESTR[d.n][2] + '">' + ESTR[d.n][1] + ' · ' + d.v + '</b><small>' + esc(titulo(d.porN || '')) + ' · ' + fechaHora(d.t) + '</small>' + (d.com ? '<small class="lc-com">“' + esc(d.com) + '”</small>' : '') + '</div></div>' : '') +
+      '<button class="bt ' + (d ? 's' : 'p') + ' lc-bt" data-lidver="' + t.k + '">' + (d ? '👁 Ver hoja' + (esLider() ? ' / cambiar' : '') : esLider() ? '👁 Revisar hoja y liberar' : '👁 Ver hoja') + '</button></div></div>';
+  }).join('') + '</div>' : '<div class="lid-vacio"><span>' + (fil === 'por' ? '🎉' : '📭') + '</span>' + (fil === 'por' ? 'No hay preventivos por liberar. Cuando un técnico entregue la hoja de una máquina tipo A, aparecerá aquí.' : 'Todavía no hay preventivos liberados este mes.') + '</div>';
+  // promedio por técnico
+  const tecs = [...new Set(lib.map(t => t.tec))];
+  if (tecs.length) h += '<div class="dash-sec" style="margin-top:14px"><h3>👷 Cómo ve producción el trabajo de cada técnico</h3><div class="lid-tecs">' + tecs.map(tc => { const T = lib.filter(t => t.tec === tc); return dona(promLider(T), null, 110, esc(nombreTec(tc).split(' ').slice(0, 2).join(' ')), T.length + ' liberado(s)'); }).join('') + '</div></div>';
+  $('#app').innerHTML = h + '</div>'; animar();
+}
+async function abrirLiberar(k) {
+  const t = buscarTarea(k); if (!t) return;
+  await abrirVista(t, fmtDe(t), t.fr);
+  if (!$('#modal').classList.contains('on')) return;
+  const d = (S.ords[k] || {}).lid, sel = { n: d ? d.n : 0 };
+  if (!esLider()) { if (d) $('#hoja').insertAdjacentHTML('beforeend', '<div class="lid-bar"><div class="lid-bar-t">' + ESTR[d.n][0] + ' Liberado por ' + esc(titulo(d.porN || '')) + ': ' + estrellas(d.n, 22) + ' ' + d.v + '</div></div>'); return; }
+  $('#hoja').insertAdjacentHTML('beforeend', '<div class="lid-bar" id="lidBar"><div class="lid-bar-t">⭐ ¿El preventivo de <b>' + esc(t.eq) + '</b> realmente se hizo bien?</div><div class="lid-st">' +
+    [1, 2, 3, 4, 5].map(n => '<button data-lidn="' + n + '" style="--c:' + ESTR[n][2] + '"><span>' + ESTR[n][0] + '</span><i>' + '★'.repeat(n) + '</i><b>' + ESTR[n][1] + '</b><small>' + ptsEstr(n) + ' pts</small></button>').join('') + '</div>' +
+    '<div class="fila" style="margin-top:10px"><input class="in" id="lidCom" style="flex:1;min-width:200px" placeholder="Comentario (obligatorio si calificas 3 o menos): ¿qué faltó?" value="' + esc(d ? d.com || '' : '') + '"><button class="bt ok" id="lidOk" style="min-height:50px;font-size:16px">✔ Liberar mantenimiento</button></div></div>');
+  const pinta = () => document.querySelectorAll('[data-lidn]').forEach(b => b.classList.toggle('on', Number(b.dataset.lidn) === sel.n));
+  pinta();
+  document.querySelectorAll('[data-lidn]').forEach(b => b.onclick = () => { sel.n = Number(b.dataset.lidn); pinta(); });
+  $('#lidOk').onclick = async () => {
+    const com = $('#lidCom').value.trim();
+    if (!sel.n) return toast('Elige de 1 a 5 estrellas.');
+    if (sel.n <= 3 && !com) { $('#lidCom').focus(); return toast('Escribe qué faltó o qué estuvo mal.'); }
+    await upd('ordenes/' + k, { lid: { n: sel.n, v: ptsEstr(sel.n), com, por: S.nom, porN: yoP().n, t: new Date().toISOString() } });
+    $('#modal').classList.remove('on'); $('#hoja').style.maxWidth = ''; toast(ESTR[sel.n][0] + ' Preventivo liberado: ' + ESTR[sel.n][1] + ' (' + ptsEstr(sel.n) + ')'); render();
+  };
+}
+document.addEventListener('click', e => {
+  const f = e.target.closest('[data-lidfil]'); if (f) { S.lidFil = f.dataset.lidfil; return render(); }
+  const v = e.target.closest('[data-lidver]'); if (v) return abrirLiberar(v.dataset.lidver);
+});
+
+// ============================================================ CALIFICACIÓN GENERAL DEL SUPERVISOR (semana por semana)
+// 4 partes, mismo peso: cumplimiento de los técnicos · entregas a tiempo de los técnicos (en su semana, firmadas) ·
+// firmas a tiempo del supervisor (evalúa y firma ≤ 48 h) · calificación de los líderes de área (máquinas tipo A)
+const pct = (a, b) => b ? Math.round(a / b * 100) : null;
+const promN = A => { const v = A.filter(x => x != null); return v.length ? Math.round(v.reduce((s, x) => s + x, 0) / v.length) : null; };
+function califGeneralJasso(mes) {
+  const L = tareasMes(mes), [y, m] = mes.split('-').map(Number), ini = lunesDe(new Date(y, m - 1, 1)), fin = new Date(y, m, 0), sem = [];
+  const tot = { cD: 0, cH: 0, eD: 0, eH: 0, fD: 0, fH: 0, lid: [] };
+  for (let w = new Date(ini); w <= fin; w = sumar(w, 7)) {
+    const lun = iso(w), sab = iso(sumar(w, 5)); if (lun > HOY) continue;
+    const T = L.filter(t => t.f >= lun && t.f <= sab); if (!T.length) continue;
+    const debidas = T.filter(t => t.f <= HOY || hecha(t)), hechas = debidas.filter(hecha);
+    const aTiempo = debidas.filter(t => { const o = S.ords[t.k]; return (t.ej || 0) > 0 || (o && o.fin && o.fin.slice(0, 10) <= sab && o.firmaT); });
+    const term = T.filter(t => { const o = S.ords[t.k]; return o && o.fin && (o.cal != null || Date.now() - new Date(o.fin) > 48 * 36e5); });
+    const firmS = term.filter(t => evaluadoATiempo(t, S.ords[t.k], new Date().toISOString()));
+    const lid = T.filter(t => t.cat === 'MTA').map(t => ((S.ords[t.k] || {}).lid || {}).v).filter(v => v != null);
+    const c = { cumpl: pct(hechas.length, debidas.length), entr: pct(aTiempo.length, debidas.length), firm: pct(firmS.length, term.length), lid: promN(lid) };
+    sem.push(Object.assign({ lun, sab, encurso: sab >= HOY, prog: T.length, nLid: lid.length, gen: promN([c.cumpl, c.entr, c.firm, c.lid]) }, c));
+    tot.cD += debidas.length; tot.cH += hechas.length; tot.eD += debidas.length; tot.eH += aTiempo.length; tot.fD += term.length; tot.fH += firmS.length; tot.lid = tot.lid.concat(lid);
+  }
+  const M = { cumpl: pct(tot.cH, tot.cD), entr: pct(tot.eH, tot.eD), firm: pct(tot.fH, tot.fD), lid: promN(tot.lid), nLid: tot.lid.length };
+  M.gen = promN([M.cumpl, M.entr, M.firm, M.lid]);
+  return { sem, M };
+}
+function bloqueGeneralJasso(mes) {
+  const G = califGeneralJasso(mes), M = G.M, sup = Object.entries(S.pers).find(([, p]) => p.califica && !p.otorga);
+  const partes = [['cumpl', '🧰', 'Cumplimiento técnicos', 'preventivos hechos de los que tocaban', '#3D9BFF'], ['entr', '⏱️', 'Entregas a tiempo', 'técnicos: hechos y firmados en su semana', '#4DD0E1'], ['firm', '✍️', 'Firmas a tiempo', 'él evalúa y firma en ≤ 48 h', '#C2ADFF'], ['lid', '⭐', 'Calificación de líderes', M.nLid + ' preventivo(s) tipo A liberados', '#F2B233']];
+  let h = '<div class="dash jg"><div class="dash-top"><div><small>CALIFICACIÓN GENERAL DEL SUPERVISOR · ' + esc(nomMes(mes).toUpperCase()) + '</small><h2>🧑‍💼 ' + esc(sup ? titulo(sup[1].n) : 'Supervisor') + '</h2></div><span class="chip" style="margin-left:auto">promedio de las 4 partes, mismo peso</span></div>' +
+    '<div class="jg-top"><div class="jg-gen">' + dona(M.gen, null, 230, '', '', true) + '<b>Calificación general</b><span>' + (M.gen == null ? 'sin datos todavía' : M.gen >= 85 ? '🟢 Va muy bien' : M.gen >= 60 ? '🟡 Hay que apretar' : '🔴 Necesita atención') + '</span></div>' +
+    '<div class="jg-partes">' + partes.map(([k, ic, l, s, c]) => '<div class="jg-p">' + dona(M[k], c, 128, '', '') + '<div><b>' + ic + ' ' + l + '</b><span>' + s + '</span></div></div>').join('') + '</div></div>';
+  h += '<div class="dash-sec" style="margin-top:14px"><h3>📅 Semana por semana</h3><div class="jg-sem">' + (G.sem.length ? G.sem.map(s => '<div class="jg-s' + (s.encurso ? ' cur' : '') + '"><div class="jg-s-h"><b>' + fCorta(s.lun) + ' – ' + fCorta(s.sab) + '</b>' + (s.encurso ? '<span class="chip acc">en curso</span>' : '') + '<small>' + s.prog + ' programados</small></div>' +
+    dona(s.gen, null, 110, 'General', '') + '<div class="jg-mini">' + partes.map(([k, ic, l, , c]) => '<div title="' + l + '"><span>' + ic + '</span><i><em style="width:' + (s[k] || 0) + '%;background:' + c + '"></em></i><b>' + (s[k] == null ? '—' : s[k]) + '</b></div>').join('') + '</div></div>').join('') : '<p class="dvacio">Aún no hay semanas con preventivos.</p>') + '</div></div></div>';
+  return h;
 }
