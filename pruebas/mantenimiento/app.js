@@ -288,12 +288,13 @@ function vTablero() {
   const L = tareasMes(S.mes), I = indicadores(L), tecs = tecsMes(S.mes);
   const subs = [['general', '📊 Vista general'], ['calificar', '⭐ Por calificar' + (I.porCal ? ' (' + I.porCal + ')' : '')], ['faltantes', '⏳ Faltantes'], ['plan', '🗓️ Plan del mes']];
   if (califica()) subs.splice(2, 0, ['na', '❔ No aplica']);
-  if (otorga()) subs.push(['firmas', '✍️ Firmas'], ['jasso', '🧑‍💼 Supervisión'], ['config', '⚙️ Configuración']);
+  if (califica()) subs.push(['firmas', '✍️ Firmas']);
+  if (otorga()) subs.push(['jasso', '🧑‍💼 Supervisión'], ['config', '⚙️ Configuración']);
   let h = '<div class="fila" style="margin-bottom:14px;justify-content:space-between"><div class="seg" id="sub1">' + subs.map(([k, l]) => '<button data-sub1="' + k + '" aria-pressed="' + (S.sub1 === k) + '">' + l + '</button>').join('') + '</div>' + selMes() + '</div>';
   if (S.sub1 === 'config' && otorga()) { $('#app').innerHTML = h + vConfig(); return animar(); }
   if (S.sub1 === 'jasso' && otorga()) { $('#app').innerHTML = h + vJasso(L); return animar(); }
   h += '<div class="kpis"><div class="kpi"><b>' + I.n + '</b><span>preventivos del mes</span></div><div class="kpi ok"><b>' + I.hechas + '</b><span>terminados (' + I.avance + ' %)</span></div><div class="kpi mo"><b>' + I.porCal + '</b><span>por calificar</span></div><div class="kpi ' + (I.venc ? 'bad' : 'wa') + '"><b>' + I.pend + '</b><span>faltantes · ' + I.venc + ' vencidos</span></div><div class="kpi ' + notaCls(I.cumpl) + '"><b>' + I.cumpl + '%</b><span>cumplimiento al día</span></div><div class="kpi ' + notaCls(I.calidad) + '"><b>' + (I.calidad == null ? '—' : I.calidad + '%') + '</b><span>calidad promedio</span></div></div>';
-  if (S.sub1 === 'firmas' && otorga()) { $('#app').innerHTML = h + vFirmas(); return; }
+  if (S.sub1 === 'firmas' && califica()) { $('#app').innerHTML = h + vFirmas(); return; }
   if (S.sub1 === 'na' && califica()) h += vNA();
   else if (S.sub1 === 'calificar') h += vPorCalificar(L);
   else if (S.sub1 === 'faltantes') h += vFaltantes(L);
@@ -461,6 +462,7 @@ function faltantesHoja(t) {
   const o = S.ords[t.k] || {}, { secs } = seccionesDe(fmtDe(t), t.fr), r = o.resp || {}, L = [];
   secs.forEach(s => s.items.forEach(it => { const f = faltantesItem(it, r[itemId(it)] || {}); if (f.length) L.push('#' + it.n + ' ' + (it.v || it.l || '').slice(0, 50) + ': ' + f.join(', ')); }));
   (o.hall || []).forEach((x, i) => { if (!String(x.d || '').trim()) L.push('Hallazgo ' + (i + 1) + ': falta la descripción'); if (hallPideFoto(x) && !(x.fotos || []).length) L.push('Hallazgo ' + (i + 1) + ' (' + x.t + '): falta la foto'); });
+  (o.otros || []).forEach((x, i) => { if (!String(x.pieza || '').trim()) L.push('Daño en otra pieza ' + (i + 1) + ': escribe qué pieza es'); if (!(x.fotos || []).length) L.push('Daño en otra pieza ' + (i + 1) + ': falta la foto'); });
   if (!(o.fotos || []).length && !secs.some(s => s.items.some(it => ((r[itemId(it)] || {}).fotos || []).length))) L.push('Agrega al menos una foto de evidencia del equipo');
   return L;
 }
@@ -505,6 +507,7 @@ function vLlenar() {
   h += '</table></div><p class="peq mu" style="margin:8px 4px 0">BIEN → conservación NO · MAL → realiza la contramedida y marca SI, con foto · NA → escribe por qué. El técnico marca SI o NO según lo que realmente hizo.</p></div>';
   // servicios a resolver (hallazgos, cambios de refacción y modificaciones)
   h += '<div class="caja"><h2>🔧 Servicios a resolver · cambios de refacción · modificaciones</h2><p class="peq mu" style="margin:-6px 0 10px">Si cambiaste una refacción o hiciste una modificación, la foto es obligatoria.</p>' + (o.hall || []).map((x, i) => '<div class="hall"><div class="fila"><select class="in" style="width:200px" data-hall="' + i + '|t"' + dis + '>' + TIPOS_HALL.map(v => '<option' + (x.t === v ? ' selected' : '') + '>' + v + '</option>').join('') + '</select><input class="in" style="flex:2;min-width:180px" data-hall="' + i + '|d" value="' + esc(x.d) + '" placeholder="Descripción de la falla o del trabajo"' + dis + '>' + (dis ? '' : '<button class="bt s" data-delhall="' + i + '">🗑</button>') + '</div><div class="fila" style="margin-top:6px"><input class="in" style="flex:2;min-width:160px" data-hall="' + i + '|ref" value="' + esc(x.ref || '') + '" placeholder="Refacción / material (código o nombre)"' + dis + '><input class="in" style="width:90px" data-hall="' + i + '|q" value="' + esc(x.q || '') + '" placeholder="Cant." inputmode="decimal"' + dis + '><input class="in" style="width:120px" data-hall="' + i + '|costo" value="' + esc(x.costo || '') + '" placeholder="Costo unit. $" inputmode="decimal"' + dis + '></div>' + (hallPideFoto(x) || (x.fotos || []).length ? '<div class="xreq" style="margin-top:6px">📷 Foto ' + (hallPideFoto(x) ? '(obligatoria)' : '') + '</div>' + tiraFotos(x.fotos, dis, 'h:' + i) : '') + '</div>').join('') + (dis ? ((o.hall || []).length ? '' : '<p class="mu peq">Sin hallazgos.</p>') : '<button class="bt s" data-addhall>＋ Agregar servicio / cambio</button>') + '</div>';
+  h += otrosHTML(o, dis);
   h += '<div class="caja"><h2>📷 Evidencia general del equipo</h2>' + tiraFotos(o.fotos, dis, 'g') + (!dis || o.obs ? '<label class="l" style="margin-top:12px">Observaciones</label><textarea class="in" id="obs"' + dis + '>' + esc(o.obs || '') + '</textarea>' : '') + '</div>';
   if (editable && o.ini) h += '<div class="caja"><div class="fila" style="justify-content:space-between"><span class="peq" id="faltan"></span><button class="bt ok" data-terminar style="min-height:52px;font-size:16px">✅ Terminar preventivo</button></div></div>';
   if (o.cal != null || o.calNota) h += '<div class="caja"><h2>⭐ Calificación del supervisor</h2><p><span class="nota ' + notaCls(o.cal) + '">' + o.cal + '</span> por ' + esc(titulo(o.calN || '')) + ' · ' + fechaHora(o.calT) + (o.calNota ? '<br>' + esc(o.calNota) : '') + '</p></div>';
@@ -537,12 +540,14 @@ async function agregarFotoA(destino, ids) {
   if (destino === 'g') return guardarOrden({ fotos: (o.fotos || []).concat(ids) });
   if (destino.startsWith('i:')) { const id = destino.slice(2), x = respDe(id); x.fotos = (x.fotos || []).concat(ids); return guardarOrden({ resp: { [id]: x } }); }
   if (destino.startsWith('h:')) { const i = Number(destino.slice(2)), L = (o.hall || []).map(z => Object.assign({}, z)); L[i].fotos = (L[i].fotos || []).concat(ids); return guardarOrden({ hall: L }); }
+  if (destino.startsWith('o:')) { const i = Number(destino.slice(2)), L = (o.otros || []).map(z => Object.assign({}, z)); L[i].fotos = (L[i].fotos || []).concat(ids); return guardarOrden({ otros: L }); }
 }
 async function quitarFotoDe(destino, id) {
   const o = S.ords[S.hojaT.k] || {};
   if (destino === 'g') return guardarOrden({ fotos: (o.fotos || []).filter(x => x !== id) });
   if (destino.startsWith('i:')) { const k = destino.slice(2), x = respDe(k); x.fotos = (x.fotos || []).filter(z => z !== id); return guardarOrden({ resp: { [k]: x } }); }
   if (destino.startsWith('h:')) { const i = Number(destino.slice(2)), L = (o.hall || []).map(z => Object.assign({}, z)); L[i].fotos = (L[i].fotos || []).filter(z => z !== id); return guardarOrden({ hall: L }); }
+  if (destino.startsWith('o:')) { const i = Number(destino.slice(2)), L = (o.otros || []).map(z => Object.assign({}, z)); L[i].fotos = (L[i].fotos || []).filter(z => z !== id); return guardarOrden({ otros: L }); }
 }
 document.addEventListener('click', async e => {
   if (!S.hoja || S.pant !== 3) return;
@@ -649,7 +654,8 @@ async function pdfHoja(t, fmt, fr, soloBlob) {
 // ============================================================ PANTALLA 4 · PARÁMETROS
 function vParam() {
   const subs = [['refac', '🧩 Refacciones (vida por compras)'], ['baleros', '🔩 Baleros'], ['horo', '⏲️ Horómetros montacargas'], ['mat', '💲 Refacciones y costos del mes'], ['hist', '🧾 Historial por máquina']];
-  let h = '<div class="seg" style="margin-bottom:14px">' + subs.map(([k, l]) => '<button data-sub4="' + k + '" aria-pressed="' + (S.sub4 === k) + '">' + l + '</button>').join('') + '</div>';
+  let h = '<div class="seg" style="margin-bottom:10px">' + subs.map(([k, l]) => '<button data-sub4="' + k + '" aria-pressed="' + (S.sub4 === k) + '">' + l + '</button>').join('') + '</div>' +
+    '<div class="fila" style="margin-bottom:14px"><span class="peq mu">Categoría:</span><div class="seg">' + [''].concat(Object.keys(CAT)).map(c => '<button data-catp="' + c + '" aria-pressed="' + ((S.catP || '') === c) + '" title="' + esc(c ? CAT[c][0] : 'Todas') + '">' + (c || 'Todas') + '</button>').join('') + '</div>' + (S.catP ? '<span class="chip acc">' + esc(CAT[S.catP][0]) + '</span>' : '') + '</div>';
   h += ({ refac: pRefac, baleros: pBaleros, horo: pHoro, mat: pMaterial, hist: pHistorial }[S.sub4])();
   $('#app').innerHTML = h; animar();
 }
@@ -664,7 +670,7 @@ function pRefac() {
     let dias = x.dias; if (hist.length >= 2) { const iv = []; for (let i = 1; i < hist.length; i++) iv.push(diasEntre(hist[i - 1].f, hist[i].f)); dias = Math.round(iv.reduce((s, v) => s + v, 0) / iv.length); }
     const prox = ult && dias ? iso(sumar(deIso(ult), dias)) : ''; return Object.assign({}, x, { ult, dias, prox, rest: prox ? diasEntre(HOY, prox) : null, hist }); });
   const venc = R.filter(x => x.rest != null && x.rest < 0).length, prox = R.filter(x => x.rest != null && x.rest >= 0 && x.rest <= 15).length;
-  const cats = [...new Set(R.map(x => x.cat))].sort((a, b) => Object.keys(CAT).indexOf(a) - Object.keys(CAT).indexOf(b));
+  const cats = [...new Set(R.map(x => x.cat))].filter(CATF).sort((a, b) => Object.keys(CAT).indexOf(a) - Object.keys(CAT).indexOf(b));
   return '<div class="kpis" style="grid-template-columns:repeat(4,1fr)"><div class="kpi bad"><b>' + venc + '</b><span>cambio vencido</span></div><div class="kpi wa"><b>' + prox + '</b><span>cambio en ≤ 15 días</span></div><div class="kpi"><b>' + R.length + '</b><span>refacciones vigiladas</span></div><div class="kpi mo"><b>' + dinero(R.reduce((s, x) => s + (x.anual || 0), 0)) + '</b><span>gasto anual estimado</span></div></div>' +
     '<div class="caja"><h2>🧩 Vida de refacciones por categoría <span class="r">según compras y cambios registrados</span></h2><div class="scroll"><table class="tbl"><tr><th></th><th>Refacción</th><th>Equipo</th><th class="n">Cada cuánto</th><th>Último cambio</th><th>Próximo</th><th class="n">Días</th><th class="n">Gasto anual</th><th></th></tr>' +
     cats.map(c => { const A = R.filter(x => x.cat === c).sort((a, b) => (a.rest == null) - (b.rest == null) || (a.rest || 0) - (b.rest || 0)); return catFila(c, 9, A.length + ' refacción(es) · ' + dinero(A.reduce((s, x) => s + (x.anual || 0), 0)) + ' al año') +
@@ -673,13 +679,14 @@ function pRefac() {
 }
 function pBaleros() {
   const B = Object.entries(S.param.baleros || {}).map(([id, b]) => { const dias = b.inst ? diasEntre(b.inst, HOY) : 0, usadas = dias * (Number(b.hDia) || 8) * (6 / 7), vida = Number(b.vidaH) || 0, pct = vida ? Math.min(100, Math.round(usadas / vida * 100)) : 0, rest = vida ? Math.round((vida - usadas) / ((Number(b.hDia) || 8) * 6 / 7)) : null; return Object.assign({ id, pct, rest, prox: rest != null ? iso(sumar(new Date(), rest)) : '', cat: b.cat || catDeEq(b.eq) }, b); });
-  const cats = [...new Set(B.map(b => b.cat))].sort((a, b) => Object.keys(CAT).indexOf(a) - Object.keys(CAT).indexOf(b));
+  const cats = [...new Set(B.map(b => b.cat))].filter(CATF).sort((a, b) => Object.keys(CAT).indexOf(a) - Object.keys(CAT).indexOf(b));
   return '<div class="caja"><h2>🔩 Baleros por categoría <span class="r">' + (califica() ? '<button class="bt s p" data-nbal>＋ Agregar balero</button>' : '') + '</span></h2>' + (B.length ? '<div class="scroll"><table class="tbl"><tr><th></th><th>Equipo</th><th>Posición / referencia</th><th class="n">Vida (h)</th><th class="n">h/día</th><th>Instalado</th><th>Vida usada</th><th>Cambio estimado</th><th></th></tr>' +
     cats.map(c => catFila(c, 9, B.filter(b => b.cat === c).length + ' balero(s)') + B.filter(b => b.cat === c).sort((a, b) => b.pct - a.pct).map(b => '<tr><td><span class="sem ' + (b.pct >= 100 ? 'bad' : b.pct >= 85 ? 'wa' : 'ok') + '"></span></td><td><b>' + esc(b.eq) + '</b></td><td>' + esc(b.pos) + (b.ref ? '<br><span class="peq mu">' + esc(b.ref) + '</span>' : '') + '</td><td class="n">' + Number(b.vidaH || 0).toLocaleString('es-MX') + '</td><td class="n">' + (b.hDia || 8) + '</td><td>' + (b.inst ? fCorta(b.inst) : '—') + '</td><td><div class="vida"><i data-w="' + b.pct + '" style="width:0;background:' + (b.pct >= 100 ? '#D32F2F' : b.pct >= 85 ? '#E0A100' : '#1E8E5A') + '"></i></div><span class="peq">' + b.pct + ' %</span></td><td>' + (b.prox ? fCorta(b.prox) + (b.rest < 30 ? ' <span class="chip bad">' + b.rest + ' días</span>' : '') : '—') + '</td><td>' + (califica() ? '<button class="bt s" data-cambio="bal|' + b.id + '">Cambiado</button>' : '') + '</td></tr>').join('')).join('') + '</table></div>' : '<div class="vacio"><span class="i">🔩</span>Todavía no hay baleros registrados. Agrega los de las máquinas tipo A con la vida que indica el proveedor.</div>') +
     '<p class="peq mu" style="margin:10px 0 0">Vida usada = días desde la instalación × horas de trabajo al día (6 días por semana) ÷ vida del proveedor. Vidas típicas: ' + (window.PM_VIDA_BALEROS || []).map(v => v[0] + ' ' + v[1].toLocaleString('es-MX') + ' h').join(' · ') + '.</p></div>' +
     vHist('baleros');
 }
 function pHoro() {
+  if (S.catP && S.catP !== 'EM') return '<div class="caja vacio"><span class="i">⏲️</span>Los horómetros son de los montacargas (categoría EM). Elige "Todas" o "EM".</div>';
   const eqs = [...new Set(Object.values(window.PM_PLAN || {}).flat().filter(t => /montacargas/i.test(t.eq)).map(t => t.eq))].sort();
   const H = S.param.horometros || {};
   return '<div class="caja"><h2>⏲️ Horómetros de montacargas <span class="r">cambio de aceite y filtro cada 250 h</span></h2><div class="scroll"><table class="tbl"><tr><th></th><th>Montacargas</th><th class="n">Última lectura</th><th>Fecha</th><th class="n">Último servicio</th><th class="n">Próximo servicio</th><th class="n">Faltan</th><th>Fecha estimada</th><th></th></tr>' +
@@ -1100,6 +1107,7 @@ function datosHoja(t, fmt, fr) {
   const o = t ? (S.ords[t.k] || {}) : {}, secs = fmt ? (fmt.frec[fr] || []) : [], r = o.resp || {};
   const fotos = []; secs.forEach(s => s.items.forEach(it => ((r[itemId(it)] || {}).fotos || []).forEach(id => fotos.push([id, '#' + it.n + ' · ' + (it.v || it.l || '')]))));
   (o.hall || []).forEach((x, i) => (x.fotos || []).forEach(id => fotos.push([id, 'Servicio ' + (i + 1) + ' · ' + x.t + (x.d ? ': ' + x.d : '')])));
+  (o.otros || []).forEach((x, i) => (x.fotos || []).forEach(id => fotos.push([id, 'Daño fuera del preventivo ' + (i + 1) + ' · ' + (x.pieza || '')])));
   (o.fotos || []).forEach(id => fotos.push([id, 'Evidencia general del equipo']));
   return { o, secs, r, fotos };
 }
@@ -1127,7 +1135,7 @@ function paginaHoja(t, fmt, fr) {
   h += '<tr class="sc"><td></td><td>ACTIVIDADES ADICIONALES</td><td class="o">BIEN</td><td class="o">MAL</td><td class="o"></td><td></td><td class="o">SI</td><td class="o">NO</td></tr>';
   for (let i = 0; i < nAd; i++) h += '<tr><td class="n">+' + (i + 1) + '</td><td>' + (adic[i] ? v(adic[i].v) : '&nbsp;') + '</td><td class="o">B</td><td class="o">M</td><td class="o">NA</td><td class="cv"></td><td class="o">S</td><td class="o">N</td></tr>';
   h += '</table>';
-  const srv = o.hall || [], nS = Math.max(t ? srv.length : 4, srv.length, t ? 1 : 0);
+  const srv = (o.hall || []).concat((o.otros || []).map(x => ({ t: 'Daño fuera del preventivo', d: (x.pieza || '') + (x.ubic ? ' · ' + x.ubic : '') + (x.volt ? ' · ' + x.volt + ' V' : '') + (x.modelo ? ' · ' + x.modelo : ''), q: x.q, costo: x.costo, fotos: x.fotos }))), nS = Math.max(t ? srv.length : 4, srv.length, t ? 1 : 0);
   h += '<table><tr><th colspan="2">SERVICIOS A RESOLVER</th></tr><tr><th style="width:40px">REF</th><th>DESCRIPCIÓN DE LA FALLA Y/O MATERIALES REQUERIDOS</th></tr>';
   for (let i = 0; i < nS; i++) { const x = srv[i]; h += '<tr><td class="n">' + (x ? i + 1 : '') + '</td><td>' + (x ? v(x.t + ': ' + (x.d || '') + (x.ref ? ' · Refacción: ' + x.ref : '') + (x.q ? ' · Cant. ' + x.q : '') + (x.costo ? ' · $' + x.costo + ' c/u' : '')) + ((x.fotos || []).length ? ' <span style="color:#555">(ver Anexo 1)</span>' : '') : (t && !srv.length ? 'Sin servicios a resolver' : '&nbsp;')) + '</td></tr>'; }
   h += '</table>' + (o.obs ? '<div class="nt"><b>Observaciones:</b> ' + esc(o.obs) + '</div>' : '') +
@@ -1279,7 +1287,7 @@ function historialMaquinas() {
 function pHistorial() {
   const H = historialMaquinas();
   if (!H.length) return '<div class="caja vacio"><span class="i">🧾</span>Todavía no hay historial: se llena solo cuando los técnicos anotan refacciones cambiadas y lecturas de voltaje y corriente en sus hojas.</div>';
-  const cats = [...new Set(H.map(m => m.cat))];
+  const cats = [...new Set(H.map(m => m.cat))].filter(CATF);
   return cats.map(c => '<div class="caja"><h2><span class="chip" style="background:' + ((CAT[c] || [])[1] || '#888') + '22;color:' + ((CAT[c] || [])[1] || '#333') + '">' + esc(c) + '</span> ' + esc((CAT[c] || [c])[0]) + '</h2>' + H.filter(m => m.cat === c).map(m =>
     '<div class="semana"><span style="width:44px;height:36px;display:inline-grid;place-items:center">' + dibujo(m) + '</span>' + esc(m.eq) + ' <span class="chip">' + m.ref.length + ' refacción(es)</span><span class="chip acc">' + m.med.length + ' lectura(s)</span></div>' +
     (m.ref.length ? '<div class="scroll"><table class="tbl"><tr><th>Fecha</th><th>Refacción cambiada</th><th class="n">Cant.</th><th class="n">Costo</th><th class="n">Duró</th><th>Técnico</th></tr>' + m.ref.map(r => '<tr><td>' + fCorta(r.f) + '</td><td>' + esc(r.ref) + (r.d && r.d !== r.ref ? '<br><span class="peq mu">' + esc(r.d) + '</span>' : '') + (r.fotos ? ' <span class="chip">📷</span>' : '') + '</td><td class="n">' + esc(r.q || '') + '</td><td class="n">' + (r.costo ? dinero(r.costo * (Number(r.q) || 1)) : '—') + '</td><td class="n">' + (r.dur != null ? r.dur + ' días' : 'primer cambio') + '</td><td>' + esc(corto(r.tec)) + '</td></tr>').join('') + '</table></div>' : '') +
@@ -1287,7 +1295,7 @@ function pHistorial() {
 }
 
 // ============================================================ ARCHIVO DE FOTOS: al liberar el mes, las fotos ya guardadas en la carpeta del mes se borran de la app
-const fotosDeOrden = o => [...new Set((o.fotos || []).concat((o.hall || []).flatMap(h => h.fotos || []), Object.values(o.resp || {}).flatMap(x => (x && x.fotos) || [])))];
+const fotosDeOrden = o => [...new Set((o.fotos || []).concat((o.otros || []).flatMap(h => h.fotos || []), (o.hall || []).flatMap(h => h.fotos || []), Object.values(o.resp || {}).flatMap(x => (x && x.fotos) || [])))];
 async function archivarFotos(mes, res) {
   let borradas = 0, quedan = 0;
   for (const t of tareasMes(mes)) {
@@ -1386,3 +1394,105 @@ async function enviarOrganigrama(mes, silencioso) {
   } catch (e) { if (!silencioso) toast('No se pudo enviar al Organigrama: ' + (e.code || e.message) + ' (la cuenta de este equipo debe estar dada de alta en el Organigrama).'); }
 }
 document.addEventListener('click', e => { if (e.target.id === 'bOrg') enviarOrganigrama(S.mes, false); });
+
+// ============================================================ v7 · FIRMAS con estilo de tablero de planta (fondo oscuro, números grandes, alertas)
+// El jefe ve todo (sus firmas y las del supervisor). El supervisor solo ve su parte: calificar y firmar lo que terminan los técnicos.
+function vFirmas() {
+  const L = tareasMes(S.mes).map(t => ({ t, o: S.ords[t.k] })).filter(z => z.o && z.o.firmaT);
+  const espSup = L.filter(z => !z.o.firmaS), porJefe = L.filter(z => z.o.firmaS && !z.o.firmaJ), listos = L.filter(z => firmado(z.o));
+  const hrs = iso => Math.round((Date.now() - new Date(iso)) / 36e5), tarde = z => hrs(z.o.fin) > 48;
+  const jefe = otorga(), atrasSup = espSup.filter(tarde).length;
+  const kpi = (n, t, s, cls) => '<div class="dk ' + (cls || '') + '"><b>' + n + '</b><span>' + t + '</span><small>' + s + '</small></div>';
+  let h = '<div class="dash"><div class="dash-top"><div><small>LÍNEA ITALIA · MANTENIMIENTO PREVENTIVO</small><h2>✍️ Firmas · ' + nomMes(S.mes) + '</h2></div><div class="dash-meta"><small>' + (jefe ? 'JEFE DE MANTENIMIENTO' : 'SUPERVISOR') + '</small><b>' + esc(titulo(yoP().n).split(' ').slice(0, 2).join(' ')) + '</b></div><div class="dash-reloj">' + new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) + '</div></div>';
+  h += '<div class="dash-kpis">' + kpi(espSup.length, jefe ? 'esperan al supervisor' : 'por calificar y firmar', atrasSup ? atrasSup + ' con más de 48 h' : 'todo a tiempo', atrasSup ? 'mal' : 'bien') +
+    (jefe ? kpi(porJefe.length, 'esperan tu firma', 'ya firmados por técnico y supervisor', porJefe.length ? 'ambar' : 'bien') : kpi(L.filter(z => z.o.firmaS && z.o.calPor === S.nom).length, 'firmados por ti', 'en el mes', 'bien')) +
+    kpi(listos.length, 'con las tres firmas', 'listos para liberar el mes', 'azul') + kpi(L.length, 'preventivos terminados', 'firmados por el técnico', '') + '</div>';
+  const fila = (z, extra) => '<tr><td><span class="dmini">' + dibujo(z.t) + '</span></td><td><b>' + esc(z.t.eq) + '</b><small>' + esc(FR[z.t.fr] || z.t.fr) + ' · prog. ' + fCorta(z.t.f) + '</small></td><td>' + esc(nombreTec(z.t.tec)) + '<small>terminó ' + fechaHora(z.o.fin) + '</small></td>' + extra + '</tr>';
+  // supervisor: calificar y firmar
+  h += '<div class="dash-sec"><h3>' + (jefe ? 'Esperando calificación y firma del supervisor' : 'Por calificar y firmar') + ' <span>' + espSup.length + '</span></h3>' + (espSup.length ? '<table class="dash-t"><tr><th></th><th>Equipo</th><th>Ejecutó</th><th>Espera</th><th>' + (jefe ? 'Por qué' : 'Calificar (0 · 50 · 100)') + '</th><th></th></tr>' +
+    espSup.sort((a, b) => a.o.fin.localeCompare(b.o.fin)).map(z => fila(z, '<td><span class="dchip ' + (tarde(z) ? 'mal' : '') + '">' + (tarde(z) ? '↓ ' : '') + hrs(z.o.fin) + ' h</span></td><td>' + (jefe ? '<span class="dpq">' + (tarde(z) ? 'El supervisor no la ha calificado a tiempo' : 'Dentro de las 48 h para calificar') + '</span>' : '<span class="cal"><button class="c0" data-cal="' + z.t.k + '|0">0</button><button class="c50" data-cal="' + z.t.k + '|50">50</button><button class="c100" data-cal="' + z.t.k + '|100">100</button></span>') + '</td><td><button class="bt s" data-pdforden2="' + esc(z.t.k) + '">Ver</button></td>')).join('') + '</table>' : '<p class="dvacio">Nada pendiente 👍</p>') + '</div>';
+  // jefe: firmar
+  if (jefe) h += '<div class="dash-sec"><h3>Para tu firma <span>' + porJefe.length + '</span></h3>' + (porJefe.length ? '<div class="fila" style="margin:0 0 8px"><label class="dpq"><input type="checkbox" id="fTodos"> Seleccionar todos</label><button class="bt p" id="fFirmar">✍️ Firmar seleccionados</button><button class="bt s" id="fMia">Cambiar mi firma</button></div><table class="dash-t"><tr><th></th><th>Equipo</th><th>Ejecutó</th><th>Revisó</th><th class="n">Calif.</th><th></th><th></th></tr>' +
+    porJefe.map(z => fila(z, '<td>' + esc(titulo(z.o.calN || '')) + '<small>' + fechaHora(z.o.calT) + '</small></td><td class="n"><span class="dnota ' + notaCls(z.o.cal) + '">' + (z.o.cal != null ? z.o.cal : '—') + '</span></td><td><input type="checkbox" class="fSel" value="' + esc(z.t.k) + '"></td><td><button class="bt s" data-pdforden2="' + esc(z.t.k) + '">Ver</button></td>')).join('') + '</table>' : '<p class="dvacio">No hay preventivos esperando tu firma. <button class="bt s" id="fMia">Cambiar mi firma</button></p>') + '</div>';
+  const mios = jefe ? listos : L.filter(z => z.o.firmaS && z.o.calPor === S.nom);
+  h += '<div class="dash-sec"><h3>' + (jefe ? 'Firmados por los tres' : 'Mis firmas del mes') + ' <span>' + mios.length + '</span></h3>' + (mios.length ? '<table class="dash-t"><tr><th></th><th>Equipo</th><th>Ejecutó</th><th class="n">Calif.</th><th>Firmado</th></tr>' + mios.map(z => fila(z, '<td class="n"><span class="dnota ' + notaCls(z.o.cal) + '">' + (z.o.cal != null ? z.o.cal : '—') + '</span></td><td>' + fechaHora(jefe ? z.o.firmaJT : z.o.calT) + '</td>')).join('') + '</table>' : '<p class="dvacio">Todavía ninguno.</p>') + '</div></div>';
+  return h;
+}
+
+// ============================================================ v7 · DAÑOS ENCONTRADOS EN OTRAS PIEZAS (fuera del preventivo)
+const otrosHTML = (o, dis) => '<div class="caja"><h2>⚠️ Daños encontrados en otras piezas <span class="r">fuera del preventivo</span></h2><p class="peq mu" style="margin:-6px 0 10px">Si al revisar encuentras dañada una pieza que no es del mantenimiento (por ejemplo un contacto, una lámpara o un cable), regístrala con su foto, voltaje y modelo. Se junta en la lista del mes para encargarla o tenerla en almacén.</p>' +
+  (o.otros || []).map((x, i) => '<div class="hall"><div class="fila"><input class="in" style="flex:2;min-width:180px" data-otro="' + i + '|pieza" value="' + esc(x.pieza || '') + '" placeholder="Pieza dañada (ej. contacto doble polarizado)"' + dis + '><input class="in" style="flex:1;min-width:140px" data-otro="' + i + '|ubic" value="' + esc(x.ubic || '') + '" placeholder="Dónde (ej. muro lado norte)"' + dis + '>' + (dis ? '' : '<button class="bt s" data-delotro="' + i + '">🗑</button>') + '</div><div class="fila" style="margin-top:6px"><input class="in" style="width:110px" data-otro="' + i + '|volt" value="' + esc(x.volt || '') + '" placeholder="Voltaje (V)" inputmode="decimal"' + dis + '><input class="in" style="flex:1;min-width:150px" data-otro="' + i + '|modelo" value="' + esc(x.modelo || '') + '" placeholder="Marca / modelo"' + dis + '><input class="in" style="width:80px" data-otro="' + i + '|q" value="' + esc(x.q || '') + '" placeholder="Cant." inputmode="decimal"' + dis + '><input class="in" style="width:120px" data-otro="' + i + '|costo" value="' + esc(x.costo || '') + '" placeholder="Costo unit. $" inputmode="decimal"' + dis + '><select class="in" style="width:200px" data-otro="' + i + '|acc"' + dis + '>' + ['Encargar (compra)', 'Tener en almacén'].map(v => '<option' + (x.acc === v ? ' selected' : '') + '>' + v + '</option>').join('') + '</select></div><div class="xreq" style="margin-top:6px">📷 Foto del daño (obligatoria)</div>' + tiraFotos(x.fotos, dis, 'o:' + i) + '</div>').join('') +
+  (dis ? ((o.otros || []).length ? '' : '<p class="mu peq">Sin daños fuera del preventivo.</p>') : '<button class="bt s" data-addotro>＋ Registrar daño en otra pieza</button>') + '</div>';
+document.addEventListener('click', async e => {
+  if (!S.hoja || S.pant !== 3) return;
+  if (e.target.closest('[data-addotro]')) { const o = S.ords[S.hojaT.k] || {}; await guardarOrden({ otros: (o.otros || []).concat([{ pieza: '', ubic: '', volt: '', modelo: '', q: '1', costo: '', acc: 'Encargar (compra)' }]) }); const y = scrollY; render(); scrollTo(0, y); return; }
+  const d = e.target.closest('[data-delotro]'); if (d) { const o = S.ords[S.hojaT.k] || {}; const L = (o.otros || []).slice(); L.splice(Number(d.dataset.delotro), 1); await guardarOrden({ otros: L }); const y = scrollY; render(); scrollTo(0, y); }
+});
+document.addEventListener('change', async e => {
+  if (!S.hoja) return;
+  const c = e.target.closest('[data-otro]'); if (!c) return; const [i, k] = c.dataset.otro.split('|'), o = S.ords[S.hojaT.k] || {}, L = (o.otros || []).map(x => Object.assign({}, x)); L[Number(i)][k] = c.value; await guardarOrden({ otros: L }); contarFaltan();
+});
+
+// ============================================================ v7 · MONTACARGAS: refacciones según horómetro (proyección al fin de mes)
+function refacMontacargas(mes) {
+  const H = S.param.horometros || {}, kits = window.PM_MONTACARGAS || [], out = [], [y, m] = mes.split('-').map(Number), finMes = iso(new Date(y, m, 0));
+  const eqs = [...new Set(Object.values(window.PM_PLAN || {}).flat().filter(t => /montacargas/i.test(t.eq)).map(t => t.eq))].sort();
+  eqs.forEach(eq => {
+    const x = H[eq.replace(/[\/.#$\[\]]/g, '_')] || {}, ls = x.lect || [], u = ls[ls.length - 1];
+    if (!u) { out.push({ eq, sinLectura: true }); return; }
+    let ritmo = 0; if (ls.length >= 2) { const a = ls[ls.length - 2], dd = Math.max(1, diasEntre(a.f, u.f)); ritmo = Math.max(0, (u.h - a.h) / dd); } if (!ritmo) ritmo = 8 * 6 / 7;
+    const dias = Math.max(0, diasEntre(u.f > HOY ? u.f : HOY, finMes)), hFin = Math.round(u.h + ritmo * dias), serv = Number(x.serv) || 0;
+    for (let hh = Math.floor(serv / 250) * 250 + 250; hh <= hFin; hh += 250) kits.filter(k => hh % k.cada === 0).forEach(k => k.piezas.forEach(([n, q, cu]) => out.push({ eq, h: hh, n, q, cu: cu || 0, cada: k.cada })));
+  });
+  return out;
+}
+
+// ============================================================ v7 · REFACCIONES Y COSTOS DEL MES (por categoría y máquina) + PDF
+function datosRefacMes(mes) {
+  const L = tareasMes(mes), items = [];
+  L.forEach(t => { const o = S.ords[t.k] || {};
+    (o.hall || []).filter(x => (x.ref || x.d) && /cambi|material|modific/i.test(x.t)).forEach(x => items.push({ tipo: 'real', desc: x.ref || x.d, det: x.d, q: Number(x.q) || 1, cu: Number(x.costo) || 0, eq: t.eq, cat: t.cat, tec: t.tec, origen: x.t + ' · ' + fCorta(t.f), fotos: (x.fotos || []).length }));
+    (o.otros || []).filter(x => x.pieza).forEach(x => items.push({ tipo: 'otro', desc: x.pieza, det: [x.ubic, x.volt ? x.volt + ' V' : '', x.modelo].filter(Boolean).join(' · '), q: Number(x.q) || 1, cu: Number(x.costo) || 0, eq: t.eq, cat: t.cat, tec: t.tec, origen: (x.acc || 'Encargar') + ' · ' + fCorta(t.f), fotos: (x.fotos || []).length, acc: x.acc })); });
+  (window.PM_REFAC || []).forEach(x => { const ed = (S.param.refac || {})[x.k] || {}, hist = ed.hist || [], ult = (hist.length ? hist[hist.length - 1].f : '') || ed.real || x.real || x.ult; if (!ult || !x.dias) return; const prox = iso(sumar(deIso(ult), x.dias)); if (prox.slice(0, 7) === mes || (mes === MES_HOY && prox < HOY)) items.push({ tipo: 'pron', desc: x.n, det: '', q: 1, cu: x.veces ? Math.round(x.gasto / x.veces) : 0, eq: x.eq, cat: x.cat, tec: '', origen: 'Cambio estimado ' + fCorta(prox) }); });
+  refacMontacargas(mes).filter(z => !z.sinLectura).forEach(z => items.push({ tipo: 'mont', desc: z.n, det: 'Servicio de ' + z.h + ' h (cada ' + z.cada + ' h)', q: z.q, cu: z.cu, eq: z.eq, cat: 'EM', tec: '', origen: 'Horómetro → ' + z.h + ' h' }));
+  const alm = S.alm, buscar = d => { if (!alm) return null; const n = norm(d).split(/\s+/).filter(w => w.length > 3); let best = null, sc = 0; alm.forEach(a => { const h = norm(a.c + ' ' + a.n + ' ' + a.d); const s = n.filter(w => h.includes(w)).length; if (s > sc) { sc = s; best = a; } }); return sc >= Math.min(2, n.length) ? best : null; };
+  return items.map(x => { const a = buscar(x.desc), cu = x.cu || (a && a.cu) || 0; return Object.assign({}, x, { a, cu, tot: cu * x.q, hay: !!(a && a.ex >= x.q) }); });
+}
+const TIPO_REF = { real: ['Real (hoja)', 'acc'], otro: ['Daño fuera del preventivo', 'bad'], pron: ['Pronóstico', 'wa'], mont: ['Montacargas (horas)', 'mo'] };
+function pMaterial() {
+  const F = datosRefacMes(S.mes).filter(x => CATF(x.cat)), tot = a => a.reduce((s, f) => s + f.tot, 0), comprar = F.filter(f => !f.hay), hay = F.filter(f => f.hay);
+  const sinLect = refacMontacargas(S.mes).filter(z => z.sinLectura);
+  const faltaPorPrev = {}; F.filter(f => !f.hay && (f.tipo === 'real' || f.tipo === 'otro')).forEach(f => (faltaPorPrev[f.eq] = faltaPorPrev[f.eq] || []).push(f));
+  let h = '<div class="fila" style="margin-bottom:14px;justify-content:space-between"><button class="bt p" id="pdfRefac">📄 PDF del refaccionamiento del mes</button>' + selMes() + '</div>';
+  h += '<div class="kpis" style="grid-template-columns:repeat(5,1fr)"><div class="kpi mo"><b>' + dinero(tot(F)) + '</b><span>costo total del mes</span></div><div class="kpi"><b>' + dinero(tot(F.filter(f => f.tipo === 'real'))) + '</b><span>real anotado en hojas</span></div><div class="kpi wa"><b>' + dinero(tot(F.filter(f => f.tipo === 'pron' || f.tipo === 'mont'))) + '</b><span>pronóstico (refacciones y montacargas)</span></div><div class="kpi bad"><b>' + F.filter(f => f.tipo === 'otro').length + '</b><span>daños fuera del preventivo</span></div><div class="kpi ' + (comprar.length ? 'bad' : 'ok') + '"><b>' + comprar.length + '</b><span>por comprar · ' + dinero(tot(comprar)) + '</span></div></div>';
+  if (!S.alm) h += '<div class="aviso inf"><span class="i">📦</span><div>' + (window.DEMO ? 'En modo prueba no hay conexión con el Almacén LI: todo aparece como "por comprar".' : 'No se pudo leer el Almacén LI (la cuenta de este equipo debe estar dada de alta en el Almacén).') + '</div></div>';
+  if (sinLect.length && CATF('EM')) h += '<div class="aviso wa"><span class="i">⏲️</span><div>Sin lectura de horómetro: ' + sinLect.map(z => esc(z.eq)).join(', ') + '. Captúrala en Parámetros → Horómetros para calcular sus refacciones.</div></div>';
+  const porCat = {}; F.forEach(f => { const c = f.cat || 'Otro'; (porCat[c] = porCat[c] || {}); (porCat[c][f.eq] = porCat[c][f.eq] || []).push(f); });
+  h += '<div class="caja"><h2>💲 Refaccionamiento por categoría y máquina <span class="r">' + nomMes(S.mes) + '</span></h2>' + (F.length ? Object.keys(porCat).sort((a, b) => Object.keys(CAT).indexOf(a) - Object.keys(CAT).indexOf(b)).map(c => { const maqs = porCat[c];
+    return '<div class="semana" style="justify-content:space-between"><span><span class="chip" style="background:' + ((CAT[c] || [])[1] || '#888') + '22;color:' + ((CAT[c] || [])[1] || '#333') + '">' + esc(c) + '</span> ' + esc((CAT[c] || [c])[0]) + '</span><b>' + dinero(tot(Object.values(maqs).flat())) + '</b></div><div class="scroll"><table class="tbl"><tr><th>Máquina</th><th>Refacción / material</th><th class="n">Cant.</th><th class="n">Costo unit.</th><th class="n">Total</th><th>Tipo</th><th>Almacén</th></tr>' +
+      Object.keys(maqs).sort().map(eq => maqs[eq].map((f, i) => '<tr><td>' + (i ? '' : '<b>' + esc(eq) + '</b><br><span class="peq mu">' + dinero(tot(maqs[eq])) + '</span>') + '</td><td>' + esc(f.desc) + (f.det ? '<br><span class="peq mu">' + esc(f.det) + '</span>' : '') + (f.fotos ? ' <span class="chip">📷 ' + f.fotos + '</span>' : '') + '</td><td class="n">' + f.q + '</td><td class="n">' + (f.cu ? dinero(f.cu) : '—') + '</td><td class="n">' + (f.tot ? dinero(f.tot) : '—') + '</td><td><span class="chip ' + TIPO_REF[f.tipo][1] + '">' + TIPO_REF[f.tipo][0] + '</span><br><span class="peq mu">' + esc(f.origen) + '</span></td><td>' + (f.a ? (f.hay ? '<span class="chip ok">Hay ' + f.a.ex + (f.a.ub ? ' · ' + esc(f.a.ub) : '') + '</span>' : '<span class="chip bad">Existencia ' + f.a.ex + '</span>') : '<span class="chip bad">Comprar</span>') + '</td></tr>').join('')).join('') + '</table></div>'; }).join('') : '<div class="vacio">Sin refacciones en el mes.</div>') + '</div>';
+  h += '<div class="grid2"><div class="caja"><h2>🧾 Lo que falta por preventivo</h2>' + (Object.keys(faltaPorPrev).length ? Object.entries(faltaPorPrev).map(([eq, A]) => '<div style="margin-bottom:8px"><b>' + esc(eq) + '</b><ul style="margin:4px 0 0 18px;padding:0">' + A.map(f => '<li>' + esc(f.desc) + ' · ' + f.q + ' pza' + (f.tot ? ' · ' + dinero(f.tot) : '') + '</li>').join('') + '</ul></div>').join('') : '<div class="vacio">No falta material en los preventivos.</div>') + '</div>' +
+    '<div class="caja"><h2>⚠️ Daños fuera del preventivo del mes</h2>' + (F.filter(f => f.tipo === 'otro').length ? '<table class="tbl"><tr><th>Pieza</th><th>Dónde / datos</th><th class="n">Cant.</th><th>Acción</th></tr>' + F.filter(f => f.tipo === 'otro').map(f => '<tr><td><b>' + esc(f.desc) + '</b><br><span class="peq mu">' + esc(f.eq) + '</span></td><td class="peq">' + esc(f.det) + '</td><td class="n">' + f.q + '</td><td><span class="chip ' + (/almac/i.test(f.acc || '') ? 'acc' : 'bad') + '">' + esc(f.acc || 'Encargar') + '</span></td></tr>').join('') + '</table>' : '<div class="vacio">Sin daños registrados.</div>') + '</div></div>';
+  h += '<div class="grid2"><div class="caja"><h2>✅ Pasar a almacén por el material</h2>' + (hay.length ? '<table class="tbl"><tr><th>Técnico</th><th>Material</th><th class="n">Cant.</th><th>Ubicación</th></tr>' + hay.map(f => '<tr><td>' + esc(f.tec ? corto(f.tec) : '—') + '</td><td>' + esc(f.desc) + '</td><td class="n">' + f.q + '</td><td>' + esc(f.a.ub || '') + '</td></tr>').join('') + '</table>' : '<div class="vacio">Nada por surtir.</div>') + '</div>' +
+    '<div class="caja"><h2>🛒 Lista de compras del mes <span class="r">' + dinero(tot(comprar)) + '</span></h2>' + (comprar.length ? '<table class="tbl"><tr><th>Material</th><th>Para</th><th class="n">Cant.</th><th class="n">Total</th></tr>' + comprar.map(f => '<tr><td>' + esc(f.desc) + '</td><td>' + esc(f.eq) + '</td><td class="n">' + f.q + '</td><td class="n">' + (f.tot ? dinero(f.tot) : '—') + '</td></tr>').join('') + '</table>' : '<div class="vacio">Nada por comprar.</div>') + '</div></div>';
+  return h;
+}
+function pdfRefacMes(mes) {
+  const { jsPDF } = window.jspdf, d = new jsPDF({ unit: 'mm', format: 'letter' }), W = 216, M = 12, AZ = [14, 42, 71];
+  const F = datosRefacMes(mes).filter(x => CATF(x.cat)), tot = a => a.reduce((s, f) => s + f.tot, 0), $$ = n => '$' + (Number(n) || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  d.setFillColor(...AZ); d.roundedRect(M, 10, W - 2 * M, 20, 2, 2, 'F'); d.setTextColor(255); d.setFont('helvetica', 'normal'); d.setFontSize(8); d.text('LÍNEA ITALIA · MANTENIMIENTO PREVENTIVO', M + 4, 16); d.setFont('helvetica', 'bold'); d.setFontSize(14); d.text('Refaccionamiento del mes · ' + nomMes(mes) + (S.catP ? ' · ' + S.catP : ''), M + 4, 25); d.setTextColor(23, 33, 46);
+  d.autoTable({ startY: 34, margin: { left: M, right: M }, theme: 'grid', styles: { fontSize: 8.5 }, head: [['Concepto', 'Partidas', 'Importe']], headStyles: { fillColor: AZ }, body: [['Real anotado en las hojas', F.filter(f => f.tipo === 'real').length, $$(tot(F.filter(f => f.tipo === 'real')))], ['Daños fuera del preventivo', F.filter(f => f.tipo === 'otro').length, $$(tot(F.filter(f => f.tipo === 'otro')))], ['Pronóstico de cambios', F.filter(f => f.tipo === 'pron').length, $$(tot(F.filter(f => f.tipo === 'pron')))], ['Montacargas según horas', F.filter(f => f.tipo === 'mont').length, $$(tot(F.filter(f => f.tipo === 'mont')))], [{ content: 'TOTAL DEL MES', styles: { fontStyle: 'bold' } }, F.length, { content: $$(tot(F)), styles: { fontStyle: 'bold' } }], ['Por comprar (sin existencia)', F.filter(f => !f.hay).length, $$(tot(F.filter(f => !f.hay)))]], columnStyles: { 1: { halign: 'right', cellWidth: 24 }, 2: { halign: 'right', cellWidth: 36 } } });
+  const porCat = {}; F.forEach(f => (porCat[f.cat || 'Otro'] = porCat[f.cat || 'Otro'] || []).push(f));
+  Object.keys(porCat).sort((a, b) => Object.keys(CAT).indexOf(a) - Object.keys(CAT).indexOf(b)).forEach(c => {
+    const A = porCat[c].sort((a, b) => a.eq.localeCompare(b.eq));
+    d.autoTable({ startY: d.lastAutoTable.finalY + 6, margin: { left: M, right: M }, theme: 'grid', styles: { fontSize: 7.6, cellPadding: 1.4 }, headStyles: { fillColor: [220, 228, 238], textColor: [23, 33, 46] },
+      head: [[{ content: c + ' · ' + ((CAT[c] || [c])[0]) + '   ' + $$(tot(A)), colSpan: 7, styles: { fillColor: AZ, textColor: 255, fontStyle: 'bold' } }], ['Máquina', 'Refacción / material', 'Cant.', 'Costo unit.', 'Total', 'Tipo', 'Almacén']],
+      body: A.map(f => [f.eq, f.desc + (f.det ? '\n' + f.det : ''), f.q, f.cu ? $$(f.cu) : '—', f.tot ? $$(f.tot) : '—', TIPO_REF[f.tipo][0] + '\n' + f.origen, f.a ? (f.hay ? 'Hay ' + f.a.ex : 'Existencia ' + f.a.ex) : 'Comprar']),
+      columnStyles: { 0: { cellWidth: 34 }, 2: { halign: 'right', cellWidth: 12 }, 3: { halign: 'right', cellWidth: 22 }, 4: { halign: 'right', cellWidth: 22 } } });
+  });
+  const np = d.getNumberOfPages(); for (let i = 1; i <= np; i++) { d.setPage(i); d.setFontSize(7); d.setTextColor(120); d.text('Mantenimiento Preventivo LI · generado ' + new Date().toLocaleString('es-MX') + ' · Hoja ' + i + ' de ' + np, M, 274); }
+  d.save('Refaccionamiento ' + nomMes(mes) + (S.catP ? ' ' + S.catP : '') + '.pdf');
+}
+document.addEventListener('click', e => { if (e.target.id === 'pdfRefac') pdfRefacMes(S.mes); const c = e.target.closest('[data-catp]'); if (c) { S.catP = c.dataset.catp; render(); } });
+// filtro de categoría de Parámetros
+const CATF = c => !S.catP || c === S.catP;

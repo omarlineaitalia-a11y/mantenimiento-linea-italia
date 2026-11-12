@@ -70,3 +70,12 @@ window.PM_VIDA_BALEROS = [
   ['Rodillos y transportadores', 30000],
   ['Reductor / caja de engranes', 30000]
 ];
+
+/* Refacciones de MONTACARGAS según horas del horómetro (servicio cada 250 h). Cantidad y costo unitario de referencia: ajustar con el proveedor.
+ * Cada servicio que cae en un múltiplo de "cada" lleva esas piezas (p. ej. a las 1000 h van los kits de 250, 500 y 1000). */
+window.PM_MONTACARGAS = [
+  { cada: 250, piezas: [['Aceite de motor 15W-40 (litros)', 5, 0], ['Filtro de aceite de motor', 1, 0]] },
+  { cada: 500, piezas: [['Filtro de aire', 1, 0], ['Filtro de combustible / gas', 1, 0]] },
+  { cada: 1000, piezas: [['Aceite hidráulico (litros)', 20, 0], ['Filtro hidráulico', 1, 0], ['Aceite de transmisión (litros)', 6, 0]] },
+  { cada: 2000, piezas: [['Refrigerante (litros)', 8, 0], ['Juego de bujías', 1, 0], ['Banda del motor', 1, 0]] }
+];
