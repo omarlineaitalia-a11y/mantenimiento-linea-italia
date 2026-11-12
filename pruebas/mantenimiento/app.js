@@ -1548,7 +1548,7 @@ function porqueT(t, ref) {
   if (e === 'venc') return 'Vencido: su semana ya cerró sin hacerse';
   return t.f < (ref || HOY) ? 'Programado ' + fCorta(t.f) + ' · no se ha iniciado' : 'Programado ' + fLarga(t.f);
 }
-function vPlanGeneral(L) {
+function vPlanSemanas(L) {
   const mio = tecDe(S.nom), f = S.fPlan == null ? (mio ? mio : '') : S.fPlan, fc = S.fCat || '';
   const T = L.filter(t => (!f || t.tec === f) && (!fc || t.cat === fc)), I = indicadores(T);
   const sems = {}; T.forEach(t => { const l = iso(lunesDe(deIso(t.f))); (sems[l] = sems[l] || []).push(t); });
@@ -1601,3 +1601,40 @@ function panelesTec() {
       '<div class="tp-g">' + barras + '</div></div>';
   }).join('');
 }
+
+// ============================================================ v10 · PLAN DE MES: tarjetas por mes con "gota" de avance; al tocar el mes se despliega su lista
+function gota(pct, color, id) {
+  const p = Math.max(0, Math.min(100, pct || 0)), alto = 112 * p / 100;
+  return '<svg class="gota" viewBox="0 0 100 124" aria-hidden="true"><defs><clipPath id="cg' + id + '"><path d="M50 4C50 4 10 54 10 80a40 40 0 0 0 80 0C90 54 50 4 50 4Z"/></clipPath></defs>' +
+    '<path d="M50 4C50 4 10 54 10 80a40 40 0 0 0 80 0C90 54 50 4 50 4Z" fill="#F4F7FB"/>' +
+    '<g clip-path="url(#cg' + id + ')"><rect class="gota-n" x="0" y="' + (122 - alto) + '" width="100" height="' + alto + '" fill="' + color + '"/><path class="gota-o" d="M0 ' + (122 - alto) + ' q12 -5 25 0 t25 0 t25 0 t25 0 v6 h-100z" fill="' + color + '" opacity=".55"/></g>' +
+    '<path d="M50 4C50 4 10 54 10 80a40 40 0 0 0 80 0C90 54 50 4 50 4Z" fill="none" stroke="rgba(255,255,255,.85)" stroke-width="3"/>' +
+    '<path d="M30 70q-4 10 0 22" stroke="#fff" stroke-width="5" stroke-linecap="round" fill="none" opacity=".55"/>' +
+    '<text x="50" y="92" text-anchor="middle" font-size="22" font-weight="800" fill="' + (p >= 55 ? '#fff' : '#0B2545') + '">' + Math.round(p) + '%</text></svg>';
+}
+function vPlanGeneral(L) {
+  const mio = tecDe(S.nom), f = S.fPlan == null ? (mio ? mio : '') : S.fPlan, fc = S.fCat || '', filtro = t => (!f || t.tec === f) && (!fc || t.cat === fc);
+  const meses = mesesPlan(), Iact = indicadores(tareasMes(S.mes).filter(filtro));
+  let h = '<div class="dash"><div class="dash-top"><div><small>LÍNEA ITALIA · MANTENIMIENTO PREVENTIVO</small><h2>🗓️ Plan de mes</h2></div><div class="fila" style="margin-left:auto">' +
+    '<div class="seg">' + (mio ? '<button data-fplan="' + mio + '" aria-pressed="' + (f === mio) + '">👷 Solo los míos</button>' : '') + '<button data-fplan="" aria-pressed="' + (!f) + '">👥 Todos</button></div>' +
+    '<select class="in dsel" id="fPlanTec"><option value="">Todos los técnicos</option>' + tecsMes(S.mes).map(x => '<option value="' + x + '"' + (x === f ? ' selected' : '') + '>' + esc(nombreTec(x)) + '</option>').join('') + '</select>' +
+    '<select class="in dsel" id="fPlanCat"><option value="">Todas las categorías</option>' + Object.keys(CAT).map(c => '<option value="' + c + '"' + (c === fc ? ' selected' : '') + '>' + c + ' · ' + esc(CAT[c][0]) + '</option>').join('') + '</select></div>' +
+    '<div class="dash-meta"><small>' + nomMes(S.mes).toUpperCase() + '</small><b>' + Iact.hechas + ' de ' + Iact.n + '</b></div></div>';
+  // banner del mes seleccionado
+  const vencP = Iact.venc;
+  h += '<div class="dia-ban ' + (vencP ? 'mal' : 'bien') + '"><div><b>' + nomMes(S.mes) + (vencP ? ': vamos atrasados' : ': vamos al corriente') + '</b><span>llevan ' + Iact.hechas + ' de ' + Iact.n + ' preventivos · ' + Iact.avance + ' % de avance' + (Iact.porCal ? ' · ' + Iact.porCal + ' por calificar' : '') + '</span></div><strong>' + (vencP ? '↓ −' + vencP : '✔ ' + Iact.hechas) + '<small> ' + (vencP ? 'vencidos' : 'hechos') + '</small></strong></div>';
+  // tarjetas de mes con la gota
+  h += '<div class="mes-g">' + meses.map(m => {
+    const I = indicadores(tareasMes(m).filter(filtro)), color = I.venc ? '#F2546A' : I.avance >= 90 ? '#2ECC71' : I.avance > 0 ? '#F2B233' : '#3D9BFF', sel = m === S.mes, enCurso = m === MES_HOY;
+    return '<button class="mes-c' + (sel ? ' sel' : '') + (m < MES_HOY ? ' pasado' : '') + '" data-mesplan="' + m + '"><div class="mes-h"><b>' + nomMes(m).replace(' ', '<br><small>') + '</small></b>' + (enCurso ? '<span class="chip acc">EN CURSO</span>' : '') + '</div>' +
+      '<div class="mes-b">' + gota(I.avance, color, m.replace('-', '')) + '<div class="mes-n"><b>' + I.n + '</b><small>preventivos</small><span><i style="background:#2ECC71"></i>' + I.hechas + ' hechos</span><span><i style="background:#F2B233"></i>' + I.pend + ' pendientes</span>' + (I.venc ? '<span class="rojo"><i style="background:#F2546A"></i>' + I.venc + ' vencidos</span>' : '') + '</div></div>' +
+      '<div class="mes-pie">' + (sel && S.planLista ? '▲ Ocultar lista' : '▼ Toca para ver la lista') + '</div></button>';
+  }).join('') + '</div></div>';
+  if (S.planLista) h += vPlanSemanas(tareasMes(S.mes));
+  return h;
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-mesplan]'); if (!b) return;
+  const m = b.dataset.mesplan; if (S.mes === m && S.planLista) S.planLista = false; else { S.mes = m; S.planLista = true; S.semAbiertas = null; }
+  render(); if (S.planLista) setTimeout(() => { const el = document.querySelector('.sem-b'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 60);
+});
