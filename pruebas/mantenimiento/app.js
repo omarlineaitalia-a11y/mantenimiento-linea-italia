@@ -288,12 +288,13 @@ function vTablero() {
   const L = tareasMes(S.mes), I = indicadores(L), tecs = tecsMes(S.mes);
   const subs = [['general', '📊 Vista general'], ['calificar', '⭐ Por calificar' + (I.porCal ? ' (' + I.porCal + ')' : '')], ['faltantes', '⏳ Faltantes'], ['plan', '🗓️ Plan del mes']];
   if (califica()) subs.splice(2, 0, ['na', '❔ No aplica']);
-  if (califica()) subs.push(['firmas', '✍️ Firmas']); if (califica() && !otorga()) subs.push(['micalif', '🏅 Mi calificación']);
+  if (califica()) subs.push(['firmas', '✍️ Firmas']); if (califica() && !otorga()) subs.push(['micalif', '🏅 Mi calificación']); if (veCalifs()) subs.push(['califs', '👷 Calificaciones']);
   if (otorga()) subs.push(['jasso', '🧑‍💼 Supervisión'], ['config', '⚙️ Configuración']);
   let h = '<div class="fila" style="margin-bottom:14px;justify-content:space-between"><div class="seg" id="sub1">' + subs.map(([k, l]) => '<button data-sub1="' + k + '" aria-pressed="' + (S.sub1 === k) + '">' + l + '</button>').join('') + '</div>' + selMes() + '</div>';
   if (S.sub1 === 'config' && otorga()) { $('#app').innerHTML = h + vConfig(); return animar(); }
   if (S.sub1 === 'jasso' && otorga()) { $('#app').innerHTML = h + bloqueGeneralJasso(S.mes) + vJasso(L); return animar(); }
   h += '<div class="kpis"><div class="kpi"><b>' + I.n + '</b><span>preventivos del mes</span></div><div class="kpi ok"><b>' + I.hechas + '</b><span>terminados (' + I.avance + ' %)</span></div><div class="kpi mo"><b>' + I.porCal + '</b><span>por calificar</span></div><div class="kpi ' + (I.venc ? 'bad' : 'wa') + '"><b>' + I.pend + '</b><span>faltantes · ' + I.venc + ' vencidos</span></div><div class="kpi ' + notaCls(I.cumpl) + '"><b>' + I.cumpl + '%</b><span>cumplimiento al día</span></div><div class="kpi ' + notaCls(I.calidad) + '"><b>' + (I.calidad == null ? '—' : I.calidad + '%') + '</b><span>calidad promedio</span></div></div>';
+  if (S.sub1 === 'califs' && veCalifs()) { $('#app').innerHTML = h + vCalifTecs(); return animar(); }
   if (S.sub1 === 'micalif' && califica()) { $('#app').innerHTML = h + '<div class="aviso inf"><span class="i">👁</span><div><b>Solo consulta.</b> Tu calificación depende del trabajo de tu personal técnico (que cumplan y entreguen a tiempo), de que tú evalúes y firmes en 48 h y de cómo califican los líderes de producción las máquinas tipo A.</div></div>' + bloqueGeneralJasso(S.mes); return animar(); }
   if (S.sub1 === 'firmas' && califica()) { $('#app').innerHTML = h + vFirmas(); return; }
   if (S.sub1 === 'na' && califica()) h += vNA();
@@ -730,9 +731,9 @@ function vConfig() {
   const cs = S.subC || 'personal', subs = [['personal', '👥 Personal y accesos'], ['mant', '🗓️ Mantenimientos'], ['hojas', '📋 Hojas por equipo'], ['excel', '📗 Excel y cierre de mes']];
   let h = '<div class="seg" style="margin-bottom:14px">' + subs.map(([k, l]) => '<button data-subc="' + k + '" aria-pressed="' + (cs === k) + '">' + l + '</button>').join('') + '</div>';
   if (cs === 'personal') {
-    h += '<div class="caja"><h2>👥 Personal y accesos <span class="r"><button class="bt s p" data-nper>＋ Agregar persona</button></span></h2><div class="scroll"><table class="tbl"><tr><th>Nómina</th><th>Nombre</th><th>Puesto</th><th>Nombre en el Excel</th>' + [1, 2, 3, 4, 5].map(n => '<th class="n">' + PANT[n][0] + ' ' + PANT[n][1] + '</th>').join('') + '<th>Contraseña</th><th class="n">Califica</th><th class="n">Da accesos</th><th class="n">Activo</th></tr>' +
+    h += '<div class="caja"><h2>👥 Personal y accesos <span class="r"><button class="bt s p" data-nper>＋ Agregar persona</button></span></h2><div class="scroll"><table class="tbl"><tr><th>Nómina</th><th>Nombre</th><th>Puesto</th><th>Nombre en el Excel</th>' + [1, 2, 3, 4, 5].map(n => '<th class="n">' + PANT[n][0] + ' ' + PANT[n][1] + '</th>').join('') + '<th>Contraseña</th><th class="n">Califica</th><th class="n">Ve calificaciones</th><th class="n">Da accesos</th><th class="n">Activo</th></tr>' +
       Object.entries(S.pers).sort((a, b) => a[1].n.localeCompare(b[1].n)).map(([k, p]) => '<tr><td>' + k + '</td><td><b>' + esc(titulo(p.n)) + '</b></td><td><input class="in" data-per="' + k + '|puesto" value="' + esc(p.puesto || '') + '" style="min-width:140px"></td><td><input class="in" data-per="' + k + '|tec" value="' + esc(p.tec || '') + '" style="width:120px" placeholder="(no es técnico)"></td>' +
-        [1, 2, 3, 4, 5].map(n => '<td class="n"><input type="checkbox" data-perp="' + k + '|' + n + '"' + ((p.pant || []).includes(n) ? ' checked' : '') + '></td>').join('') + celdaClave(k) + '<td class="n"><input type="checkbox" data-perb="' + k + '|califica"' + (p.califica ? ' checked' : '') + '></td><td class="n"><input type="checkbox" data-perb="' + k + '|otorga"' + (p.otorga ? ' checked' : '') + (p.r === 'general' ? ' disabled' : '') + '></td><td class="n"><input type="checkbox" data-perb="' + k + '|a"' + (p.a !== false ? ' checked' : '') + (k === S.nom ? ' disabled' : '') + '></td></tr>').join('') + '</table></div><p class="peq mu" style="margin:10px 0 0">Los técnicos ven 📅 Mi mes y 📋 Hojas. Los líderes de área de producción solo ven ⭐ Líderes (palomea solo esa columna). "Nombre en el Excel" debe ser igual al de la columna EM del plan maestro (OSCAR, JORGE…). Solo quien "Da accesos" puede entrar a Configuración.</p></div>';
+        [1, 2, 3, 4, 5].map(n => '<td class="n"><input type="checkbox" data-perp="' + k + '|' + n + '"' + ((p.pant || []).includes(n) ? ' checked' : '') + '></td>').join('') + celdaClave(k) + '<td class="n"><input type="checkbox" data-perb="' + k + '|califica"' + (p.califica ? ' checked' : '') + '></td><td class="n"><input type="checkbox" data-perb="' + k + '|verCalif"' + (p.verCalif || p.otorga || p.r === 'general' ? ' checked' : '') + (p.otorga || p.r === 'general' ? ' disabled' : '') + '></td><td class="n"><input type="checkbox" data-perb="' + k + '|otorga"' + (p.otorga ? ' checked' : '') + (p.r === 'general' ? ' disabled' : '') + '></td><td class="n"><input type="checkbox" data-perb="' + k + '|a"' + (p.a !== false ? ' checked' : '') + (k === S.nom ? ' disabled' : '') + '></td></tr>').join('') + '</table></div><p class="peq mu" style="margin:10px 0 0">Los técnicos ven 📅 Mi mes y 📋 Hojas. Los líderes de área de producción solo ven ⭐ Líderes (palomea solo esa columna). "Nombre en el Excel" debe ser igual al de la columna EM del plan maestro (OSCAR, JORGE…). Solo quien "Da accesos" puede entrar a Configuración. "Ve calificaciones" deja ver las calificaciones de todos los técnicos (jefe, gerencia y supervisor ya las ven).</p></div>';
   } else if (cs === 'mant') {
     const L = tareasMes(S.mes);
     h += '<div class="caja"><h2>🗓️ Mantenimientos de ' + nomMes(S.mes) + ' <span class="r">' + selMes() + '</span></h2><p class="peq mu">Quitar un mantenimiento lo saca del mes (aunque el Excel se vuelva a leer). Para cambiar fechas o técnicos lo mejor es cambiarlo en el Excel: la app lo toma solo.</p><div class="scroll"><table class="tbl"><tr><th>Fecha</th><th>Equipo</th><th>Frecuencia</th><th>Técnico</th><th>Hoja</th><th></th></tr>' + L.map(t => '<tr><td>' + fCorta(t.f) + '</td><td>' + esc(t.eq) + '</td><td>' + esc(FR[t.fr] || t.fr) + '</td><td>' + esc(corto(t.tec)) + '</td><td class="peq">' + esc((fmtDe(t) || {}).id || '— sin hoja —') + '</td><td><button class="bt s" data-quitar="' + t.k + '">Quitar</button></td></tr>').join('') + '</table></div>' +
@@ -1793,7 +1794,7 @@ const ESTR = [null, ['😞', 'Mal hecho', '#F2546A'], ['😕', 'Deficiente', '#F
 const ptsEstr = n => (n - 1) * 25;
 const esLider = () => (yoP().pant || []).includes(5);
 const verLideres = () => esLider() || otorga();
-const pantallasDe = p => { const L = (p.pant || []).slice(); if (otorga() && !L.includes(5)) L.push(5); return L.sort(); };
+const pantallasDe = p => { const L = (p.pant || []).slice(); if (otorga() && !L.includes(5)) L.push(5); if (p.verCalif && !L.includes(1)) L.push(1); return L.sort(); };
 function render() {
   if (!S.nom) return;
   const p = yoP(), L = pantallasDe(p);
@@ -1916,3 +1917,28 @@ function perfilTec(T, I, p) {
     '<div class="fila" style="margin-top:12px;justify-content:flex-end"><button class="bt s" data-plangen="1">🗓️ Ver plan general del mes</button></div></div></div>';
   return h;
 }
+
+
+// ============================================================ v16 · CALIFICACIONES DE TODOS LOS TÉCNICOS
+// Las ven: jefe y gerencia (dan accesos), el supervisor y quien tenga palomeado "Ve calificaciones" en Personal y accesos.
+const veCalifs = () => otorga() || califica() || !!yoP().verCalif;
+function vCalifTecs() {
+  const L = tareasMes(S.mes), medal = ['🥇', '🥈', '🥉'];
+  const R = Object.entries(S.pers).filter(([, p]) => p.tec && p.a !== false).map(([nom, p]) => { const T = L.filter(t => t.tec === p.tec); return { nom, p, T, I: indicadores(T) }; }).filter(x => x.T.length)
+    .sort((a, b) => b.I.calif - a.I.calif || b.I.cumpl - a.I.cumpl);
+  const prom = k => promN(R.map(x => x.I[k])), G = califGeneralJasso(S.mes).M, sup = Object.entries(S.pers).find(([, p]) => p.califica && !p.otorga);
+  let h = '<div class="dash"><div class="dash-top"><div><small>LÍNEA ITALIA · MANTENIMIENTO PREVENTIVO · ' + esc(nomMes(S.mes).toUpperCase()) + '</small><h2>👷 Calificaciones del equipo</h2></div><span class="chip" style="margin-left:auto">calificación = (entrega + calidad) ÷ 2</span></div>' +
+    '<div class="jg-top"><div class="jg-gen">' + dona(prom('calif'), null, 200, '', '', true) + '<b>Promedio del equipo</b><span>' + R.length + ' técnicos con preventivos este mes</span></div><div class="jg-partes">' +
+    '<div class="jg-p">' + dona(prom('cumpl'), '#3D9BFF', 120, '', '') + '<div><b>📦 Entrega de preventivos</b><span>promedio de cumplimiento de los técnicos</span></div></div>' +
+    '<div class="jg-p">' + dona(prom('calidad'), '#2ECC71', 120, '', '') + '<div><b>🛠️ Calidad del trabajo</b><span>promedio de lo que califica el supervisor (0 · 50 · 100)</span></div></div>' +
+    '<div class="jg-p">' + dona(G.gen, '#C2ADFF', 120, '', '') + '<div><b>🧑‍💼 Supervisor</b><span>' + esc(sup ? titulo(sup[1].n).split(' ').slice(0, 2).join(' ') : '') + ' · calificación general</span></div></div>' +
+    '<div class="jg-p">' + dona(G.lid, '#F2B233', 120, '', '') + '<div><b>⭐ Líderes de producción</b><span>' + G.nLid + ' preventivo(s) tipo A liberados</span></div></div></div></div>';
+  h += '<div class="dash-sec" style="margin-top:14px"><h3>🏆 Ranking de técnicos <span>' + R.length + '</span></h3><div class="ct-grid">' + R.map((x, i) => { const I = x.I, venc = x.T.filter(t => estadoT(t) === 'venc').length;
+    return '<button class="ct' + (S.calTec === x.p.tec ? ' sel' : '') + '" data-caltec="' + esc(x.p.tec) + '"><div class="ct-h"><span class="av" style="width:42px;height:42px;font-size:18px;background:' + colorTec(x.p.tec) + '">' + esc(x.p.tec[0]) + '</span><div><b>' + esc(titulo(x.p.n).split(' ').slice(0, 2).join(' ')) + '</b><small>' + I.hechas + ' de ' + I.n + ' terminados' + (venc ? ' · <span style="color:#FF6B7F">' + venc + ' vencido(s)</span>' : '') + '</small></div><span class="ct-m">' + (medal[i] || '#' + (i + 1)) + '</span></div>' +
+      '<div class="ct-d">' + dona(I.calif, null, 112, 'Calificación', '') + '<div class="ct-mini">' + dona(I.cumpl, '#3D9BFF', 64, '📦 Entrega', '') + dona(I.calidad, '#2ECC71', 64, '🛠️ Calidad', I.cals + ' calif.') + '</div></div></button>'; }).join('') + '</div>' +
+    (R.length ? '' : '<p class="dvacio">No hay técnicos con preventivos este mes.</p>') + '</div>';
+  const sel = R.find(x => x.p.tec === S.calTec);
+  if (sel) h += '<div class="ct-det">' + perfilTec(sel.T, sel.I, sel.p).replace('<button class="bt s" data-plangen="1">🗓️ Ver plan general del mes</button>', '<button class="bt s" data-caltec="">✕ Cerrar detalle</button>') + '</div>';
+  return h + '</div>';
+}
+document.addEventListener('click', e => { const c = e.target.closest('[data-caltec]'); if (c) { S.calTec = S.calTec === c.dataset.caltec ? '' : c.dataset.caltec; render(); if (S.calTec) setTimeout(() => { const d = document.querySelector('.ct-det'); if (d) d.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 60); } });
