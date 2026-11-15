@@ -370,7 +370,7 @@ function clasParo(min) { const c = C(); min = +min || 0; if (min <= c.m_exc) ret
 function ptsParo(min) { const k = clasParo(min).k, c = C(); return k === 'exc' ? c.p_exc : k === 'sat' ? c.p_sat : c.p_no; }
 function calc(p, m) {
  m = m || M(); const o = m.ord[p.id] || {}; const prog = +o.prog || 0, cump = +o.cump || 0;
- const pct = prog > 0 ? Math.min(cump / prog * 100, 100) : null;
+ const pct = (o.cal != null && o.cal !== '' && !isNaN(+o.cal)) ? Math.min(+o.cal, 100) : (prog > 0 ? Math.min(cump / prog * 100, 100) : null);   // o.cal = calificación que manda Mantenimiento Preventivo
  const ps = m.paros.filter(x => x.tec === p.id); const mins = ps.reduce((a, x) => a + (+x.min || 0), 0);
  const pts = ps.length ? ps.reduce((a, x) => a + ptsParo(x.min), 0) / ps.length : C().p_exc;
  const fin = pct == null ? null : (pct * C().w_cum + pts * C().w_par) / (C().w_cum + C().w_par);
@@ -427,7 +427,7 @@ function renderEv() {
 function renderCum() {
  const m = M(); let h = '<tr><th>Nómina</th><th>Nombre</th><th>Área</th><th>Órdenes programadas</th><th>Órdenes cumplidas</th><th>% cumplimiento</th><th>Clasificación</th></tr>';
  plan().forEach(p => { const o = m.ord[p.id] || {}; const r = calc(p, m);
-  h += `<tr><td>${esc(p.nomina)}</td><td class="l">${esc(p.nombre)}</td><td class="l">${esc(areaDe(p))}</td><td><input type="number" min="0" data-ord="${p.id}" data-c="prog" value="${o.prog ?? ''}"></td><td><input type="number" min="0" data-ord="${p.id}" data-c="cump" value="${o.cump ?? ''}"></td><td><b>${r.pct == null ? '—' : f1(r.pct) + ' %'}</b></td><td>${badge(clasPct(r.pct))}</td></tr>`; });
+  h += `<tr><td>${esc(p.nomina)}</td><td class="l">${esc(p.nombre)}</td><td class="l">${esc(areaDe(p))}</td><td><input type="number" min="0" data-ord="${p.id}" data-c="prog" value="${o.prog ?? ''}"></td><td><input type="number" min="0" data-ord="${p.id}" data-c="cump" value="${o.cump ?? ''}"></td><td><b>${r.pct == null ? '—' : f1(r.pct) + ' %'}</b>${o.fuente === 'preventivo' ? ' <span title="Viene de Mantenimiento Preventivo: promedio de cumplimiento y calidad">🔗</span>' : ''}</td><td>${badge(clasPct(r.pct))}</td></tr>`; });
  const e = equipo(m);
  h += `<tr class="tot"><td></td><td class="l">TOTAL DEL EQUIPO</td><td></td><td>${e.prog}</td><td>${e.cump}</td><td>${e.pctTot == null ? '—' : f1(e.pctTot) + ' %'}</td><td>${badge(clasPct(e.pctTot))}</td></tr>`;
  h += `<tr class="tot"><td></td><td class="l">Promedio de cumplimiento del personal</td><td></td><td></td><td></td><td>${e.prom == null ? '—' : f1(e.prom) + ' %'}</td><td>${badge(clasPct(e.prom))}</td></tr>`;

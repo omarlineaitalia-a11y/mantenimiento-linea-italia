@@ -164,7 +164,7 @@ function dibujo(t, w) {
   DB.collection('avisos').onSnapshot(q => { S.avisos = {}; q.docs.forEach(d => S.avisos[d.id] = d.data()); if (S.nom) render(); });
   DB.collection('acceso').onSnapshot(q => { S.acc = {}; q.docs.forEach(d => S.acc[d.id] = d.data()); });
   DB.collection('claves').onSnapshot(q => { S.claves = {}; q.docs.forEach(d => S.claves[d.id] = d.data()); if (S.nom && S.pant === 1 && S.sub1 === 'config') render(); }, () => {});
-  if (!window.DEMO) cargarAlmacen();
+  setTimeout(cargarAlmacen, 0);   // después de cargar todo el archivo (ALM se define al final)
   let guardado = ''; try { guardado = sessionStorage.getItem('pm_nom') || ''; } catch (e) {}
   setTimeout(() => { if (guardado && S.pers[guardado]) entrar(guardado); else mostrarLogin(); }, 300);
 })();
@@ -231,7 +231,7 @@ function entrar(nom) {
   S.pant = (p.pant || [2])[0];
   if (p.tec && (p.pant || []).includes(2)) S.pant = 2;
   render();
-  if (otorga() && !window.DEMO) revisarExcel(true);   // el envío al Organigrama queda desactivado: no se tocan las apps instaladas
+  if (otorga() && !window.DEMO) { revisarExcel(true); enviarOrganigrama(S.mes, true); const _d = new Date(); enviarOrganigrama(iso(new Date(_d.getFullYear(), _d.getMonth() - 1, 1)).slice(0, 7), true); }   // v19: calificación al Organigrama (autorizado por el Ing. Omar 2026-11-15)
 }
 function salir() { S.nom = null; try { sessionStorage.removeItem('pm_nom'); } catch (e) {} mostrarLogin(); }
 const campoAct = () => LG.campo === 'nom' ? 'nom' : LG.campo;
@@ -508,6 +508,7 @@ function vLlenar() {
   h += '</table></div><p class="peq mu" style="margin:8px 4px 0">BIEN → conservación NO · MAL → realiza la contramedida y marca SI, con foto · NA → escribe por qué. El técnico marca SI o NO según lo que realmente hizo.</p></div>';
   // servicios a resolver (hallazgos, cambios de refacción y modificaciones)
   h += '<div class="caja"><h2>🔧 Servicios a resolver · cambios de refacción · modificaciones</h2><p class="peq mu" style="margin:-6px 0 10px">Si cambiaste una refacción o hiciste una modificación, la foto es obligatoria.</p>' + (o.hall || []).map((x, i) => '<div class="hall"><div class="fila"><select class="in" style="width:200px" data-hall="' + i + '|t"' + dis + '>' + TIPOS_HALL.map(v => '<option' + (x.t === v ? ' selected' : '') + '>' + v + '</option>').join('') + '</select><input class="in" style="flex:2;min-width:180px" data-hall="' + i + '|d" value="' + esc(x.d) + '" placeholder="Descripción de la falla o del trabajo"' + dis + '>' + (dis ? '' : '<button class="bt s" data-delhall="' + i + '">🗑</button>') + '</div><div class="fila" style="margin-top:6px"><input class="in" style="flex:2;min-width:160px" data-hall="' + i + '|ref" value="' + esc(x.ref || '') + '" placeholder="Refacción / material (código o nombre)"' + dis + '><input class="in" style="width:90px" data-hall="' + i + '|q" value="' + esc(x.q || '') + '" placeholder="Cant." inputmode="decimal"' + dis + '><input class="in" style="width:120px" data-hall="' + i + '|costo" value="' + esc(x.costo || '') + '" placeholder="Costo unit. $" inputmode="decimal"' + dis + '></div>' + (hallPideFoto(x) || (x.fotos || []).length ? '<div class="xreq" style="margin-top:6px">📷 Foto ' + (hallPideFoto(x) ? '(obligatoria)' : '') + '</div>' + tiraFotos(x.fotos, dis, 'h:' + i) : '') + '</div>').join('') + (dis ? ((o.hall || []).length ? '' : '<p class="mu peq">Sin hallazgos.</p>') : '<button class="bt s" data-addhall>＋ Agregar servicio / cambio</button>') + '</div>';
+  h += '<div id="almBox">' + almCaja(t, o, almPuede(t, o)) + '</div>';
   h += otrosHTML(o, dis);
   h += '<div class="caja"><h2>📷 Evidencia general del equipo</h2>' + tiraFotos(o.fotos, dis, 'g') + (!dis || o.obs ? '<label class="l" style="margin-top:12px">Observaciones</label><textarea class="in" id="obs"' + dis + '>' + esc(o.obs || '') + '</textarea>' : '') + '</div>';
   if (editable && o.ini) h += '<div class="caja"><div class="fila" style="justify-content:space-between"><span class="peq" id="faltan"></span><button class="bt ok" data-terminar style="min-height:52px;font-size:16px">✅ Terminar preventivo</button></div></div>';
@@ -1709,6 +1710,7 @@ function compsDeMaquina(eq) {
   Object.values(S.ords).forEach(o => { if (!o.fin) return; const tt = buscarTarea(o.k); if (!tt || tt.eq !== eq) return; (o.hall || []).filter(x => /cambi/i.test(x.t) && (x.ref || x.d)).forEach(x => { const nom = (x.ref || x.d).trim(); const c = add('h:' + kEq(nom), nom, 'Hojas de preventivo'); c.cambios.push({ f: o.fin.slice(0, 10), nota: x.d, q: x.q, costo: Number(x.costo) || 0, tec: tt.tec, fotos: (x.fotos || []).length }); }); });
   Object.entries(S.param.baleros || {}).forEach(([id, b]) => { if (!b.eq || !(norm(eq).includes(norm(b.eq)) || norm(b.eq).includes(norm(eq)))) return; const c = add('b:' + id, 'Balero ' + (b.pos || '') + (b.ref ? ' · ' + b.ref : ''), 'Baleros'); (b.hist || []).forEach(h => c.cambios.push({ f: h.f, nota: h.nota, costo: h.costo })); if (b.inst && !c.cambios.some(x => x.f === b.inst)) c.cambios.push({ f: b.inst, nota: 'Instalado' }); const hd = (Number(b.hDia) || 8) * 6 / 7; if (b.vidaH) { c.vidaBase = Math.round(b.vidaH / hd); c.unidad = Number(b.vidaH).toLocaleString('es-MX') + ' h del proveedor'; } });
   (window.PM_REFAC || []).forEach(x => { const en = norm(x.eq); if (!words.some(w => en.includes(w))) return; const c = add('r:' + x.k, x.n, 'Cálculo de compras'); const ed = (S.param.refac || {})[x.k] || {}; (ed.hist || []).forEach(h => c.cambios.push({ f: h.f, nota: h.nota, costo: h.costo })); const ult = ed.real || x.real || x.ult; if (ult && !c.cambios.some(z => z.f === ult)) c.cambios.push({ f: ult, nota: 'Última compra / cambio' }); if (x.dias) { c.vidaBase = x.dias; c.unidad = 'promedio de compras'; } });
+  almCambios(eq, add);
   const vidas = (S.param.vidas || {})[kEq(eq)] || {};
   return Object.values(C).map(c => {
     c.cambios = c.cambios.filter(z => z.f).sort((a, b) => a.f.localeCompare(b.f));
@@ -1993,3 +1995,149 @@ document.addEventListener('change', async e => {
   const c = e.target.closest('[data-placa]'); if (!c || !S.hojaT) return;
   const o = S.ords[S.hojaT.k] || {}, k = c.dataset.placa, v = c.value.trim(); await guardarOrden({ placa: Object.assign({}, o.placa || {}, { [k]: v }) }); const pm = (S.param.placas || {})[kEq(S.hojaT.eq)] || {}; await upd('param/placas', { [kEq(S.hojaT.eq)]: Object.assign({}, pm, { [k]: v, t: new Date().toISOString(), por: S.nom }) }); toast('Dato de placa guardado para esta máquina.');
 });
+
+
+// ============================================================ v19 · ENLACES OFICIALES: ORGANIGRAMA (calificación) y ALMACÉN (existencias y salidas)
+// Organigrama: apps/organigrama/meses/<AAAA-MM>.ord[id] = { cal, ... } — se envía solo al entrar el jefe y con el botón.
+//   Técnicos: promedio de cumplimiento + calidad. Supervisor: su calificación general (cumplimiento, entregas, firmas y líderes).
+// Almacén: lee el catálogo y los movimientos de apps/almacen. Cuando el técnico usa una refacción en el preventivo,
+//   registra la SALIDA en el Almacén (misma forma que la app del Almacén) y queda en la orden y en la vida de la máquina.
+function datosOrganigrama(mes) {
+  const L = tareasMes(mes), filas = [];
+  Object.entries(S.pers).forEach(([nom, p]) => {
+    if (p.a === false) return;
+    if (p.tec) { const T = L.filter(t => t.tec === p.tec); if (!T.length) return; const I = indicadores(T), debidas = T.filter(t => semanaCerrada(t.f) || hecha(t)).length;
+      filas.push({ nom, n: p.n, rol: 'Técnico', prog: debidas, cump: I.hechas, cumpl: I.cumpl, calidad: I.calidad, cal: I.calif }); }
+    else if (p.califica && !p.otorga) { const G = califGeneralJasso(mes).M, I = indicadores(L), debidas = L.filter(t => semanaCerrada(t.f) || hecha(t)).length;
+      filas.push({ nom, n: p.n, rol: 'Supervisor', prog: debidas, cump: I.hechas, cumpl: I.cumpl, calidad: I.calidad, cal: G.gen }); }
+  });
+  return filas;
+}
+function vOrganigrama() {
+  const F = datosOrganigrama(S.mes), env = (S.aj.organigrama || {})[S.mes];
+  return '<div class="caja simple"><h2>🔗 Calificación de preventivo → Organigrama <span class="r">' + (env ? '✔ enviada ' + fechaHora(env) : 'sin enviar') + '</span></h2>' +
+    '<p class="peq mu" style="margin:-4px 0 10px">Pasa al Organigrama (Calificación y paros) como el % de preventivo de cada persona: 60 % de su calificación integral, junto con el 40 % de paros. Técnicos: promedio de cumplimiento y calidad. Supervisor: su calificación general (cumplimiento, entregas, firmas y líderes).</p>' +
+    '<table class="tbl"><tr><th>Nómina</th><th>Nombre</th><th>Puesto</th><th class="n">Programadas</th><th class="n">Cumplidas</th><th class="n">Cumplimiento</th><th class="n">Calidad</th><th class="n">Calificación → Organigrama</th></tr>' +
+    F.map(f => '<tr><td>' + f.nom + '</td><td>' + esc(titulo(f.n)) + '</td><td>' + f.rol + '</td><td class="n">' + f.prog + '</td><td class="n">' + f.cump + '</td><td class="n">' + (f.cumpl == null ? '—' : f.cumpl + '%') + '</td><td class="n">' + (f.calidad == null ? '—' : f.calidad + '%') + '</td><td class="n"><span class="nota ' + notaCls(f.cal) + '">' + (f.cal == null ? '—' : f.cal) + '</span></td></tr>').join('') + '</table>' +
+    '<div class="fila" style="margin-top:10px;justify-content:space-between"><span class="peq mu">Se envía sola cada vez que entra el jefe (este mes y el anterior).</span>' + (otorga() ? '<button class="bt p" id="bOrg">🔗 Enviar ahora al Organigrama</button>' : '') + '</div></div>';
+}
+
+// ---------- Almacén
+const ALM = { items: {}, movs: [], ok: false, err: '', sub: false, q: '' };
+const exAlm = it => (Number(it.ini) || 0) + (Number(it.ent) || 0) - (Number(it.sal) || 0);
+const ubAlm = it => [(it.est || it.doc || '').toUpperCase(), it.niv ? 'N' + it.niv : '', it.pos ? 'P' + it.pos : ''].filter(Boolean).join(' · ');
+function estAlm(it) { const e = exAlm(it), min = Number(it.min) || 0; if (e <= 0) return ['bad', 'Agotado']; if (min > 0 && e <= min) return ['wa', 'Bajo mínimo']; return ['ok', 'Hay ' + e]; }
+const dineroA = v => '$' + Math.round(v || 0).toLocaleString('es-MX');
+function cargarAlmacen() {
+  if (ALM.sub) return; ALM.sub = true;
+  const pasarS = () => { S.alm = Object.values(ALM.items).map(x => ({ c: x.c, n: x.n, d: x.d, m: x.m, ex: exAlm(x), cu: Number(x.cu) || 0, ub: [x.niv, x.pos].filter(Boolean).join('-') })); };
+  if (window.DEMO) { almDemo(); pasarS(); return; }
+  try {
+    const fs = firebase.firestore();
+    fs.collection('apps/almacen/catalogo').onSnapshot(q => { const items = {}; q.docs.forEach(d => { const its = (d.data() || {}).items || {}; for (const k in its) items[d.id + '/' + k] = Object.assign({}, its[k], { k, doc: d.id }); }); ALM.items = items; ALM.ok = true; ALM.err = ''; pasarS(); almRefrescar(); }, e => { ALM.err = e.code || e.message; S.alm = null; almRefrescar(); });
+    fs.collection('apps/almacen/movimientos').orderBy('t', 'desc').limit(1500).onSnapshot(q => { ALM.movs = q.docs.map(d => Object.assign({ id: d.id }, d.data())); almRefrescar(); }, () => {});
+  } catch (e) { ALM.err = e.message; S.alm = null; }
+}
+function almDemo() {
+  let g = null; try { g = JSON.parse(localStorage.getItem('pm_demo_alm_v1') || 'null'); } catch (e) {}
+  if (!g) g = { items: {
+    'A/1': { c: 'R-HGH25', n: 'CARRITO LINEAL HIWIN HGH25', m: 'SELEXX', ini: 6, ent: 2, sal: 3, min: 2, est: 'A', niv: '2', pos: '03', cu: 1850 },
+    'A/2': { c: 'B-6205', n: 'BALERO 6205-2RS', m: 'GENERAL', ini: 20, ent: 0, sal: 4, min: 6, est: 'A', niv: '1', pos: '07', cu: 95 },
+    'B/1': { c: 'F-AIR-50', n: 'FILTRO DE AIRE COMPRESOR', m: 'COMPRESOR', ini: 2, ent: 0, sal: 1, min: 1, est: 'B', niv: '3', pos: '01', cu: 1240 },
+    'B/2': { c: 'BND-A42', n: 'BANDA A42', m: 'ESCUADRADORA', ini: 3, ent: 0, sal: 3, min: 2, est: 'B', niv: '1', pos: '02', cu: 210 },
+    'C/1': { c: 'GRASA-EP2', n: 'GRASA EP2 CARTUCHO', m: 'GENERAL', ini: 12, ent: 6, sal: 5, min: 4, est: 'C', niv: '1', pos: '01', cu: 140, lim: 3, limPer: 'mes' } }, movs: [] };
+  Object.entries(g.items).forEach(([id, x]) => { const [doc, k] = id.split('/'); ALM.items[id] = Object.assign({}, x, { doc, k }); });
+  ALM.movs = g.movs; ALM.ok = true;
+}
+function almGuardarDemo() { const items = {}; Object.entries(ALM.items).forEach(([id, x]) => { const y = Object.assign({}, x); delete y.doc; delete y.k; items[id] = y; }); try { localStorage.setItem('pm_demo_alm_v1', JSON.stringify({ items, movs: ALM.movs })); } catch (e) {} }
+function almRefrescar() {
+  const b = document.getElementById('almBox'); if (b && S.hojaT) { const o = S.ords[S.hojaT.k] || {}; b.innerHTML = almCaja(S.hojaT, o, almPuede(S.hojaT, o)); return; }
+  if (S.nom && S.pant === 4 && S.sub4 === 'alm') render();
+}
+const palabrasEq = eq => norm(eq).split(/[^a-z0-9]+/).filter(w => w.length > 3 && !/^\d+$/.test(w) && !['para', 'con', 'linea', 'italia', 'maquina'].includes(w));
+function coincideMaq(txt, t) {
+  const m = norm(txt || ''); if (!m) return false;
+  const e = eqDe(t) || {}, ws = palabrasEq(t.eq + ' ' + (e.corto || '') + ' ' + (e.eco || '') + ' ' + (e.clave || ''));
+  if (ws.some(w => m.includes(w))) return true;
+  const full = norm(t.eq + ' ' + (e.corto || '')); return m.split(/[^a-z0-9]+/).filter(w => w.length > 3).some(w => full.includes(w));
+}
+function almPuede(t, o) { return t.tec === tecDe(S.nom) && !!o.ini && !o.fin && !['terminada', 'calificada'].includes(o.estado) && o.cal == null; }
+function filaAlm(id, it, puede) {
+  const [cl, tx] = estAlm(it);
+  return '<tr><td><b>' + esc(it.c || '') + '</b></td><td>' + esc(it.n || '') + (it.m ? '<br><small class="mu">' + esc(it.m) + '</small>' : '') + '</td><td class="peq">' + esc(ubAlm(it)) + '</td><td><span class="chip ' + cl + '">' + tx + '</span></td><td>' + (puede && exAlm(it) > 0 ? '<button class="bt s" data-almsacar="' + esc(id) + '">📤 Usar</button>' : '') + '</td></tr>';
+}
+function almCaja(t, o, puede) {
+  let h = '<div class="caja"><h2>📦 Refacciones del Almacén <span class="r">' + (ALM.ok ? '<span class="chip ok">en línea</span>' : '') + '</span></h2>';
+  if (ALM.err) return h + '<div class="aviso inf"><span class="i">📦</span><div>No se pudo leer el Almacén LI (' + esc(ALM.err) + '). Tu nómina debe estar dada de alta en el Almacén para ver existencias y sacar refacciones.</div></div></div>';
+  if (!ALM.ok) return h + '<p class="peq mu">Conectando con el Almacén…</p></div>';
+  const usadas = o.alm || [];
+  if (usadas.length) h += '<p class="peq" style="margin:0 0 6px"><b>Usadas en este preventivo</b> (salida ya registrada en el Almacén):</p><table class="tbl"><tr><th>Código</th><th>Descripción</th><th class="n">Cant.</th><th class="n">Costo</th><th>Hora</th></tr>' +
+    usadas.map(u => '<tr><td>' + esc(u.c) + '</td><td>' + esc(u.n) + '</td><td class="n">' + u.q + '</td><td class="n">' + dineroA(u.q * (u.cu || 0)) + '</td><td>' + fechaHora(u.t) + '</td></tr>').join('') + '</table>';
+  const mias = Object.entries(ALM.items).filter(([, it]) => coincideMaq(it.m, t)).slice(0, 15);
+  h += '<p class="peq" style="margin:10px 0 6px"><b>Refacciones de este equipo en el Almacén</b>' + (puede ? ' · toca <b>📤 Usar</b> para sacarla: se descuenta del Almacén a tu nombre' : (o.ini ? '' : ' · toca "Iniciar" para poder sacar refacciones')) + '</p>' +
+    (mias.length ? '<table class="tbl"><tr><th>Código</th><th>Descripción</th><th>Ubicación</th><th>Existencia</th><th></th></tr>' + mias.map(([id, it]) => filaAlm(id, it, puede)).join('') + '</table>' : '<p class="peq mu">El Almacén no tiene refacciones ligadas a este equipo. Búscala abajo por código o nombre.</p>');
+  h += '<label class="l" style="margin-top:10px">🔎 Buscar en todo el Almacén</label><input class="in" data-almq placeholder="Código o descripción (ej. 6205, banda, filtro)" value="' + esc(ALM.q) + '"><div id="almRes">' + almResultados(puede) + '</div>';
+  return h + '</div>';
+}
+function almResultados(puede) {
+  const q = norm(ALM.q || '').trim(); if (q.length < 3) return '';
+  const ws = q.split(/\s+/), R = Object.entries(ALM.items).filter(([, it]) => { const h = norm((it.c || '') + ' ' + (it.n || '') + ' ' + (it.d || '') + ' ' + (it.m || '')); return ws.every(w => h.includes(w)); }).slice(0, 12);
+  return R.length ? '<table class="tbl" style="margin-top:6px"><tr><th>Código</th><th>Descripción</th><th>Ubicación</th><th>Existencia</th><th></th></tr>' + R.map(([id, it]) => filaAlm(id, it, puede)).join('') + '</table>' : '<p class="peq mu">Sin resultados en el Almacén.</p>';
+}
+function consumidoAlm(it, nomina) {
+  const h = new Date(), per = it.limPer || 'mes'; let a, b;
+  if (per === 'sem') { const l = lunesDe(h); a = iso(l); b = iso(sumar(l, 7)); } else { a = iso(new Date(h.getFullYear(), h.getMonth(), 1)); b = iso(new Date(h.getFullYear(), h.getMonth() + 1, 1)); }
+  return ALM.movs.filter(m => m.tipo === 'S' && m.c === it.c && String(m.nomina) === String(nomina) && (m.f || '') >= a && (m.f || '') < b).reduce((s, m) => s + (Number(m.q) || 0), 0);
+}
+async function almSacar(id) {
+  const t = S.hojaT, o = S.ords[t.k] || {}, it = ALM.items[id]; if (!t || !it || !almPuede(t, o)) return;
+  const hay = exAlm(it), r = prompt('¿Cuántas piezas de ' + it.c + ' · ' + it.n + ' usaste en ' + t.eq + '?\nHay ' + hay + ' en el Almacén (' + ubAlm(it) + ').', '1'); if (r === null) return;
+  const q = Number(String(r).replace(',', '.')); if (!(q > 0)) return toast('Escribe una cantidad mayor a 0.');
+  if (q > hay) return toast('Solo hay ' + hay + ' en el Almacén. Avisa al almacenista para registrar la entrada.');
+  const lim = Number(it.lim) || 0; if (lim) { const usado = consumidoAlm(it, S.nom); if (usado + q > lim) return toast('⛔ Límite excedido de material: ya retiraste ' + usado + ' de ' + lim + ' permitidas ' + (it.limPer === 'sem' ? 'por semana' : 'por mes') + '.'); }
+  const yo = yoP(), ahora = new Date().toISOString();
+  const mov = { t: ahora, f: HOY, tipo: 'S', c: it.c, n: it.n, doc: it.doc, k: it.k, q, nom: String(yo.n || '').toUpperCase(), nomina: S.nom, area: (window.LI_AREA || 'Mantenimiento'), maq: String(t.eq).toUpperCase(), prov: '', fac: '',
+    nota: 'Preventivo ' + nomMes(t.mes) + ' · ' + t.eq, por: '', pn: S.nom, cu: Number(it.cu) || 0, fuente: 'preventivo', orden: t.k };
+  try {
+    if (window.DEMO) { it.sal = (Number(it.sal) || 0) + q; mov.id = 'd' + Date.now(); ALM.movs.unshift(mov); almGuardarDemo(); }
+    else {
+      const fs = firebase.firestore(); try { mov.por = firebase.auth().currentUser.uid; } catch (e) {}
+      await fs.doc('apps/almacen/catalogo/' + it.doc).update(new firebase.firestore.FieldPath('items', it.k, 'sal'), firebase.firestore.FieldValue.increment(q));
+      const ref = await fs.collection('apps/almacen/movimientos').add(mov); mov.id = ref.id;
+    }
+    await guardarOrden({ alm: (o.alm || []).concat([{ c: it.c, n: it.n, q, cu: Number(it.cu) || 0, t: ahora, mov: mov.id, ik: id }]) });
+    toast('📤 Salida registrada en el Almacén: ' + q + ' × ' + it.c);
+    almRefrescar();
+  } catch (e) { toast('No se pudo registrar la salida en el Almacén: ' + (e.code || e.message) + ' (tu nómina debe estar dada de alta en el Almacén).'); }
+}
+document.addEventListener('click', e => { const b = e.target.closest('[data-almsacar]'); if (b) almSacar(b.dataset.almsacar); });
+document.addEventListener('input', e => { if (!e.target.matches('[data-almq]')) return; ALM.q = e.target.value; const r = document.getElementById('almRes'); if (r) r.innerHTML = almResultados(S.hojaT ? almPuede(S.hojaT, S.ords[S.hojaT.k] || {}) : false); });
+// salidas del Almacén a una máquina = cambios de refacción para la vida de piezas (Parámetros)
+function almCambios(eq, add) {
+  const t = { eq }; ALM.movs.filter(m => m.tipo === 'S' && coincideMaq(m.maq, t)).forEach(m => { const c = add('a:' + kEq(m.c || m.n), (m.n || m.c) + (m.c ? ' (' + m.c + ')' : ''), 'Almacén'); c.cambios.push({ f: m.f || (m.t || '').slice(0, 10), nota: 'Salida de almacén · ' + (m.nom || '') + ' · ' + m.q + ' pza', costo: (Number(m.q) || 0) * (Number(m.cu) || 0) }); });
+}
+// Parámetros → 📦 Almacén
+function pAlm() {
+  if (ALM.err) return '<div class="aviso inf"><span class="i">📦</span><div>No se pudo leer el Almacén LI (' + esc(ALM.err) + '). La cuenta de este equipo debe estar dada de alta en el Almacén.</div></div>';
+  if (!ALM.ok) return '<p class="peq mu">Conectando con el Almacén…</p>';
+  const L = tareasMes(S.mes).filter(t => CATF(t.cat)), maqs = {}; L.forEach(t => maqs[t.eq] = t);
+  const T = Object.values(maqs), deMaq = it => T.find(t => coincideMaq(it.m, t));
+  const crit = Object.entries(ALM.items).map(([id, it]) => ({ id, it, t: deMaq(it), st: estAlm(it) })).filter(x => x.t && x.st[0] !== 'ok').sort((a, b) => exAlm(a.it) - exAlm(b.it));
+  const sal = ALM.movs.filter(m => m.tipo === 'S' && (m.f || '').slice(0, 7) === S.mes && (m.fuente === 'preventivo' || T.some(t => coincideMaq(m.maq, t))));
+  const salPrev = sal.filter(m => m.fuente === 'preventivo'), costo = a => a.reduce((s, m) => s + (Number(m.q) || 0) * (Number(m.cu) || 0), 0);
+  let h = '<div class="fila" style="margin-bottom:14px;justify-content:space-between"><span class="peq mu">Datos en vivo del Almacén LI · lo que se saca desde una hoja de preventivo se descuenta allá solo.</span>' + selMes() + '</div>';
+  h += '<div class="kpis" style="grid-template-columns:repeat(4,1fr)"><div class="kpi mo"><b>' + salPrev.length + '</b><span>salidas desde hojas de preventivo</span></div><div class="kpi"><b>' + dineroA(costo(salPrev)) + '</b><span>costo de esas salidas</span></div><div class="kpi"><b>' + sal.length + '</b><span>salidas a máquinas del plan</span></div><div class="kpi ' + (crit.length ? 'wa' : 'ok') + '"><b>' + crit.length + '</b><span>refacciones del plan agotadas o bajo mínimo</span></div></div>';
+  h += '<div class="caja"><h2>⚠️ Refacciones de máquinas del plan agotadas o bajo mínimo <span class="r">' + nomMes(S.mes) + '</span></h2>' + (crit.length ? '<table class="tbl"><tr><th>Código</th><th>Descripción</th><th>Máquina del plan</th><th>Ubicación</th><th class="n">Mínimo</th><th>Existencia</th></tr>' +
+    crit.map(x => '<tr><td><b>' + esc(x.it.c) + '</b></td><td>' + esc(x.it.n) + '</td><td>' + esc(x.t.eq) + '</td><td class="peq">' + esc(ubAlm(x.it)) + '</td><td class="n">' + (Number(x.it.min) || 0) + '</td><td><span class="chip ' + x.st[0] + '">' + x.st[1] + '</span></td></tr>').join('') + '</table>' : '<p class="peq mu">✅ Todo lo ligado a las máquinas del plan tiene existencia arriba del mínimo.</p>') + '</div>';
+  h += '<div class="caja"><h2>📤 Salidas del Almacén a máquinas del plan <span class="r">' + nomMes(S.mes) + '</span></h2>' + (sal.length ? '<table class="tbl"><tr><th>Fecha</th><th>Código</th><th>Descripción</th><th class="n">Cant.</th><th>Máquina</th><th>Quién</th><th class="n">Costo</th><th></th></tr>' +
+    sal.map(m => '<tr><td>' + fCorta(m.f) + '</td><td>' + esc(m.c || '') + '</td><td>' + esc(m.n || '') + '</td><td class="n">' + m.q + '</td><td>' + esc(m.maq || '') + '</td><td>' + esc(titulo(m.nom || '')) + '</td><td class="n">' + dineroA((Number(m.q) || 0) * (Number(m.cu) || 0)) + '</td><td>' + (m.fuente === 'preventivo' ? '<span class="chip acc">hoja</span>' : '') + '</td></tr>').join('') + '</table>' : '<p class="peq mu">Sin salidas este mes.</p>') + '</div>';
+  return h;
+}
+function vParam() {
+  const subs = [['vida', '📈 Vida por máquina'], ['alm', '📦 Almacén'], ['refac', '🧩 Refacciones por compras'], ['baleros', '🔩 Baleros'], ['horo', '⏲️ Horómetros montacargas'], ['mat', '💲 Refacciones y costos del mes'], ['hist', '🧾 Historial (tabla)']];
+  if (!subs.some(s => s[0] === S.sub4)) S.sub4 = 'vida';
+  let h = '<div class="seg" style="margin-bottom:10px">' + subs.map(([k, l]) => '<button data-sub4="' + k + '" aria-pressed="' + (S.sub4 === k) + '">' + l + '</button>').join('') + '</div>' +
+    '<div class="fila" style="margin-bottom:14px"><span class="peq mu">Categoría:</span><div class="seg">' + [''].concat(Object.keys(CAT)).map(c => '<button data-catp="' + c + '" aria-pressed="' + ((S.catP || '') === c) + '" title="' + esc(c ? CAT[c][0] : 'Todas') + '">' + (c || 'Todas') + '</button>').join('') + '</div>' + (S.catP ? '<span class="chip acc">' + esc(CAT[S.catP][0]) + '</span>' : '') + '</div>';
+  h += ({ vida: pVida, alm: pAlm, refac: pRefac, baleros: pBaleros, horo: pHoro, mat: pMaterial, hist: pHistorial }[S.sub4])();
+  $('#app').innerHTML = h; animar();
+}
