@@ -2177,3 +2177,68 @@ async function reiniciarCero() {
   render();
 }
 document.addEventListener('click', e => { if (e.target.closest('[data-reinicio]')) reiniciarCero(); });
+
+
+// ============================================================ v22 · FONDOS ILUSTRADOS POR PANTALLA (mismo estilo que la escena de la entrada)
+// 1 Tablero: manómetro y gráficas · 2 Mi mes: calendario y técnico con tableta · 3 Hojas: checklist y herramientas
+// 4 Parámetros: engranes, balero y curva de vida · 5 Líderes: estrellas, trofeo y mueble terminado
+function engraneSVG(cx, cy, r, n, col, op) {
+  const pts = [], ro = r, ri = r * 0.82;
+  for (let i = 0; i < n * 4; i++) { const a = (i / (n * 4)) * Math.PI * 2, rr = (i % 4 < 2) ? ro : ri; pts.push((cx + rr * Math.cos(a)).toFixed(1) + ',' + (cy + rr * Math.sin(a)).toFixed(1)); }
+  return '<g opacity="' + op + '"><polygon points="' + pts.join(' ') + '" fill="none" stroke="' + col + '" stroke-width="5"/><circle cx="' + cx + '" cy="' + cy + '" r="' + (r * 0.45) + '" fill="none" stroke="' + col + '" stroke-width="5"/><circle cx="' + cx + '" cy="' + cy + '" r="' + (r * 0.14) + '" fill="' + col + '"/></g>';
+}
+function baseNave(acc) {
+  let h = '<defs><linearGradient id="fCielo" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#132E4C"/><stop offset=".6" stop-color="#0D1B2B"/><stop offset="1" stop-color="#0B1118"/></linearGradient>' +
+    '<radialGradient id="fLuz" cx=".72" cy=".25" r=".6"><stop offset="0" stop-color="' + acc + '" stop-opacity=".22"/><stop offset="1" stop-color="' + acc + '" stop-opacity="0"/></radialGradient></defs>' +
+    '<rect width="1600" height="900" fill="url(#fCielo)"/><rect width="1600" height="900" fill="url(#fLuz)"/>';
+  // armaduras del techo
+  h += '<g stroke="#2A4466" stroke-width="3" opacity=".55" fill="none">';
+  for (let x = 0; x <= 1600; x += 200) h += '<path d="M' + x + ' 40 L' + (x + 100) + ' 120 L' + (x + 200) + ' 40 M' + x + ' 40 L' + (x + 200) + ' 40 M' + (x + 100) + ' 120 L' + (x + 100) + ' 40"/>';
+  h += '<line x1="0" y1="120" x2="1600" y2="120"/></g>';
+  // lámparas
+  for (let x = 160; x < 1600; x += 320) h += '<g opacity=".5"><line x1="' + x + '" y1="120" x2="' + x + '" y2="170" stroke="#2A4466" stroke-width="3"/><path d="M' + (x - 30) + ' 185 L' + (x + 30) + ' 185 L' + (x + 18) + ' 170 L' + (x - 18) + ' 170Z" fill="#2A4466"/><path d="M' + (x - 30) + ' 185 L' + (x - 90) + ' 420 L' + (x + 90) + ' 420 L' + (x + 30) + ' 185Z" fill="#F5D88A" opacity=".05"/></g>';
+  // piso en perspectiva
+  h += '<g stroke="#1E3350" stroke-width="2" opacity=".6"><line x1="0" y1="720" x2="1600" y2="720"/>';
+  for (let x = -800; x <= 2400; x += 160) h += '<line x1="800" y1="720" x2="' + x + '" y2="900"/>';
+  h += '<line x1="0" y1="780" x2="1600" y2="780"/><line x1="0" y1="850" x2="1600" y2="850"/></g>';
+  // racks al fondo
+  h += '<g fill="none" stroke="#22395A" stroke-width="3" opacity=".5">';
+  for (let x = 40; x < 1600; x += 380) h += '<rect x="' + x + '" y="470" width="150" height="250"/><line x1="' + x + '" y1="550" x2="' + (x + 150) + '" y2="550"/><line x1="' + x + '" y1="635" x2="' + (x + 150) + '" y2="635"/>';
+  return h + '</g>';
+}
+function escenaPM(n) {
+  const A = { 1: '#3D9BFF', 2: '#2ECC71', 3: '#F5A623', 4: '#9B7BFF', 5: '#F2B233' }[n] || '#3D9BFF';
+  let h = baseNave(A), s = '';
+  if (n === 1) { // manómetro, gráfica de barras, dona, router CNC
+    s += '<g opacity=".55" transform="translate(1180 330)"><circle r="150" fill="#0F2238" stroke="' + A + '" stroke-width="8"/><path d="M-110 50 A120 120 0 1 1 110 50" fill="none" stroke="#2ECC71" stroke-width="16" stroke-dasharray="250 600"/><path d="M-110 50 A120 120 0 1 1 110 50" fill="none" stroke="#F2B233" stroke-width="16" stroke-dasharray="0 250 90 600"/><path d="M-110 50 A120 120 0 1 1 110 50" fill="none" stroke="#F2546A" stroke-width="16" stroke-dasharray="0 340 70 600"/><line x1="0" y1="0" x2="70" y2="-80" stroke="#fff" stroke-width="8" stroke-linecap="round"/><circle r="16" fill="#fff"/></g>';
+    s += '<g opacity=".45">' + [140, 220, 180, 280, 250, 330].map((v, i) => '<rect x="' + (260 + i * 70) + '" y="' + (700 - v) + '" width="44" height="' + v + '" rx="6" fill="' + (i === 5 ? '#2ECC71' : A) + '"/>').join('') + '<polyline points="282,540 352,460 422,500 492,400 562,430 632,350" fill="none" stroke="#F5A623" stroke-width="6"/></g>';
+    s += '<g opacity=".45" transform="translate(1440 620)"><circle r="70" fill="none" stroke="#1E3350" stroke-width="26"/><circle r="70" fill="none" stroke="#2ECC71" stroke-width="26" stroke-dasharray="330 440" transform="rotate(-90)"/></g>';
+    s += '<g opacity=".35" fill="none" stroke="#7FA6D1" stroke-width="5"><rect x="760" y="600" width="300" height="110" rx="8"/><rect x="800" y="520" width="40" height="80"/><rect x="980" y="520" width="40" height="80"/><rect x="800" y="505" width="220" height="30"/><rect x="890" y="535" width="40" height="70"/></g>';
+  } else if (n === 2) { // calendario con palomitas, técnico con casco y tableta, reloj
+    s += '<g opacity=".5" transform="translate(1040 190)"><rect width="420" height="380" rx="22" fill="#0F2238" stroke="' + A + '" stroke-width="7"/><rect width="420" height="70" rx="22" fill="' + A + '" opacity=".6"/><circle cx="90" cy="0" r="12" fill="#fff"/><circle cx="330" cy="0" r="12" fill="#fff"/>';
+    for (let r = 0; r < 4; r++) for (let c = 0; c < 5; c++) { const x = 30 + c * 76, y = 95 + r * 68, k = r * 5 + c; s += '<rect x="' + x + '" y="' + y + '" width="60" height="52" rx="8" fill="#16304D"/>' + (k < 11 ? '<path d="M' + (x + 14) + ' ' + (y + 27) + ' l12 12 l22 -24" fill="none" stroke="#2ECC71" stroke-width="7" stroke-linecap="round"/>' : k === 11 ? '<circle cx="' + (x + 30) + '" cy="' + (y + 26) + '" r="14" fill="#F2B233"/>' : ''); }
+    s += '</g><g opacity=".5" transform="translate(470 330)"><path d="M-70 -95 Q0 -165 70 -95 L80 -80 L-80 -80Z" fill="#F5A623"/><circle cy="-40" r="48" fill="#C9A27E"/><path d="M-95 20 Q0 -20 95 20 L120 330 L-120 330Z" fill="#1F5E9C"/><rect x="-40" y="60" width="110" height="150" rx="12" fill="#0F2238" stroke="#9FD0FF" stroke-width="5" transform="rotate(-12)"/><path d="M-10 120 l14 14 l30 -32" fill="none" stroke="#2ECC71" stroke-width="7" transform="rotate(-12)"/><rect x="-80" y="40" width="160" height="22" fill="#F5A623" opacity=".8"/></g>';
+    s += '<g opacity=".4" transform="translate(220 260)"><circle r="80" fill="none" stroke="#9FB3C8" stroke-width="8"/><line x1="0" y1="0" x2="0" y2="-55" stroke="#fff" stroke-width="7"/><line x1="0" y1="0" x2="40" y2="20" stroke="#fff" stroke-width="7"/></g>';
+  } else if (n === 3) { // tabla con checklist, llave y desarmador cruzados, cámara
+    s += '<g opacity=".5" transform="translate(1080 170) rotate(5)"><rect width="360" height="470" rx="22" fill="#0F2238" stroke="' + A + '" stroke-width="7"/><rect x="120" y="-24" width="120" height="50" rx="12" fill="' + A + '"/>';
+    for (let i = 0; i < 6; i++) { const y = 70 + i * 64; s += '<rect x="34" y="' + y + '" width="34" height="34" rx="6" fill="none" stroke="#9FB3C8" stroke-width="5"/>' + (i < 4 ? '<path d="M40 ' + (y + 18) + ' l10 10 l18 -22" fill="none" stroke="' + (i === 2 ? '#F2546A' : '#2ECC71') + '" stroke-width="6"/>' : '') + '<rect x="90" y="' + (y + 10) + '" width="' + (200 - (i % 3) * 40) + '" height="14" rx="7" fill="#2A4466"/>'; }
+    s += '</g><g opacity=".5" transform="translate(470 450)"><g transform="rotate(-35)"><rect x="-18" y="-190" width="36" height="300" rx="16" fill="#9FB3C8"/><path d="M-55 -230 a55 55 0 1 0 110 0 l-22 0 l0 34 l-66 0 l0 -34Z" fill="#9FB3C8"/></g><g transform="rotate(35)"><rect x="-10" y="-200" width="20" height="210" fill="#C7D3E0"/><rect x="-26" y="0" width="52" height="150" rx="16" fill="#F5A623"/></g></g>';
+    s += '<g opacity=".4" transform="translate(200 230)"><rect x="-90" y="-55" width="180" height="120" rx="18" fill="none" stroke="#9FB3C8" stroke-width="7"/><circle r="38" fill="none" stroke="#9FB3C8" stroke-width="7"/><rect x="-50" y="-78" width="50" height="24" rx="6" fill="#9FB3C8"/></g>';
+  } else if (n === 4) { // engranes, balero, curva de vida
+    s += engraneSVG(1200, 300, 150, 12, A, .5) + engraneSVG(1395, 455, 95, 9, '#3D9BFF', .45) + engraneSVG(1060, 520, 70, 8, '#F5A623', .4);
+    s += '<g opacity=".5" transform="translate(330 330)"><circle r="130" fill="none" stroke="#9FB3C8" stroke-width="12"/><circle r="72" fill="none" stroke="#9FB3C8" stroke-width="12"/>';
+    for (let i = 0; i < 10; i++) { const a = i / 10 * Math.PI * 2; s += '<circle cx="' + (101 * Math.cos(a)).toFixed(1) + '" cy="' + (101 * Math.sin(a)).toFixed(1) + '" r="20" fill="#C7D3E0"/>'; }
+    s += '</g><g opacity=".5"><line x1="560" y1="700" x2="960" y2="700" stroke="#2A4466" stroke-width="4"/><line x1="560" y1="700" x2="560" y2="430" stroke="#2A4466" stroke-width="4"/><line x1="560" y1="480" x2="960" y2="480" stroke="#F2546A" stroke-width="4" stroke-dasharray="14 10"/><path d="M560 680 C700 670 800 620 940 470" fill="none" stroke="' + A + '" stroke-width="7"/><circle cx="905" cy="510" r="12" fill="#F2B233"/></g>';
+  } else if (n === 5) { // estrellas, trofeo, sillón en la línea
+    for (let i = 0; i < 5; i++) { const cx = 980 + i * 110, cy = 220, R = 42, r = 18; let p = ''; for (let k = 0; k < 10; k++) { const a = -Math.PI / 2 + k * Math.PI / 5, rr = k % 2 ? r : R; p += (cx + rr * Math.cos(a)).toFixed(1) + ',' + (cy + rr * Math.sin(a)).toFixed(1) + ' '; } s += '<polygon points="' + p + '" fill="' + (i < 4 ? A : 'none') + '" stroke="' + A + '" stroke-width="4" opacity=".6"/>'; }
+    s += '<g opacity=".5" transform="translate(1240 470)"><path d="M-90 -110 L90 -110 L80 -20 Q0 60 -80 -20Z" fill="#F2B233"/><path d="M-90 -95 Q-150 -90 -130 -40 Q-115 -10 -75 -15" fill="none" stroke="#F2B233" stroke-width="12"/><path d="M90 -95 Q150 -90 130 -40 Q115 -10 75 -15" fill="none" stroke="#F2B233" stroke-width="12"/><rect x="-18" y="35" width="36" height="60" fill="#C99A2E"/><rect x="-70" y="95" width="140" height="34" rx="6" fill="#8A6A1E"/></g>';
+    s += '<g opacity=".45" transform="translate(470 560)"><rect x="-330" y="110" width="660" height="26" rx="13" fill="#2A4466"/>' + [-280, -160, -40, 80, 200, 300].map(x => '<circle cx="' + x + '" cy="123" r="9" fill="#5B7A9E"/>').join('') + '<path d="M-170 100 L-170 0 Q-170 -40 -130 -40 L130 -40 Q170 -40 170 0 L170 100Z" fill="#7A4B2E"/><rect x="-200" y="20" width="60" height="85" rx="20" fill="#9A6240"/><rect x="140" y="20" width="60" height="85" rx="20" fill="#9A6240"/><rect x="-140" y="40" width="280" height="45" rx="14" fill="#B57A52"/></g>';
+  }
+  return '<svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">' + h + s + '</svg>';
+}
+function ponerFondo() {
+  let f = document.getElementById('fondoPM'); if (!f) { f = document.createElement('div'); f.id = 'fondoPM'; f.innerHTML = '<div class="fsvg"></div><div class="fvelo"></div>'; document.body.prepend(f); }
+  const n = S.nom ? S.pant : 0; if (f.dataset.n === String(n)) return; f.dataset.n = String(n);
+  f.querySelector('.fsvg').innerHTML = n ? escenaPM(n) : '';
+}
+{ const _renderSinFondo = render; render = function () { const r = _renderSinFondo.apply(this, arguments); try { ponerFondo(); } catch (e) {} return r; }; }
