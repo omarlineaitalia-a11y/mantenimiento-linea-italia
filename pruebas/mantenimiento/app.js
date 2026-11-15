@@ -160,7 +160,7 @@ function dibujo(t, w) {
   DB.collection('plan').onSnapshot(q => { S.planes = {}; q.docs.forEach(d => S.planes[d.id] = d.data()); if (S.nom) render(); });
   DB.collection('ordenes').onSnapshot(q => { S.ords = {}; q.docs.forEach(d => S.ords[d.id] = d.data()); if (window.DEMO) precargarFotos(); if (S.nom && !(S.pant === 3 && S.hoja)) render(); });   // mientras se llena una hoja no se repinta (no se pierde lo que se toca)
   DB.collection('formatos').onSnapshot(q => { S.fmtEd = {}; q.docs.forEach(d => S.fmtEd[d.id] = d.data()); if (S.nom) render(); });
-  ['refac', 'baleros', 'horometros'].forEach(k => DB.doc('param/' + k).onSnapshot(s => { S.param[k] = (s.exists && s.data()) || {}; if (S.nom && S.pant === 4) render(); }));
+  ['refac', 'baleros', 'horometros', 'vidas', 'placas'].forEach(k => DB.doc('param/' + k).onSnapshot(s => { S.param[k] = (s.exists && s.data()) || {}; if (S.nom && S.pant === 4) render(); }));
   DB.collection('avisos').onSnapshot(q => { S.avisos = {}; q.docs.forEach(d => S.avisos[d.id] = d.data()); if (S.nom) render(); });
   DB.collection('acceso').onSnapshot(q => { S.acc = {}; q.docs.forEach(d => S.acc[d.id] = d.data()); });
   DB.collection('claves').onSnapshot(q => { S.claves = {}; q.docs.forEach(d => S.claves[d.id] = d.data()); if (S.nom && S.pant === 1 && S.sub1 === 'config') render(); }, () => {});
@@ -475,9 +475,9 @@ function vLlenar() {
   let h = '<div class="fila" style="margin-bottom:12px;justify-content:space-between"><button class="bt" data-volver>‹ Regresar</button><div class="fila">' + (o.estado ? '<span class="chip ' + EST[estadoT(t)][1] + '">' + EST[estadoT(t)][0] + '</span>' : '') + (calDe(t) != null ? '<span class="nota ' + notaCls(calDe(t)) + '">Calificación ' + calDe(t) + '</span>' : '') + '<button class="bt s" data-pdforden="' + t.k + '">⬇️ PDF</button></div></div>';
   // encabezado como el Excel
   h += '<div class="caja xlcab"><div class="xltit"><div><b>BITÁCORA DE MANTENIMIENTO PREVENTIVO</b><span>' + esc(fmt ? fmt.tipo : t.eq) + '</span></div><div class="xllogo">LÍNEA ITALIA</div></div>' +
-    '<table class="xlh"><tr><td><small>NOMBRE DEL TÉCNICO</small>' + esc(nombreTec(t.tec)) + '</td><td><small>FRECUENCIA</small>' + esc((FR[fr] || fr).toUpperCase()) + (aprox ? ' <span class="chip wa">plan: ' + esc(FR[t.fr] || t.fr) + '</span>' : '') + '</td><td><small>No. ORDEN DE TRABAJO</small>' + esc(t.ot || '—') + '</td></tr>' +
+    '<table class="xlh"><tr><td><small>NOMBRE DEL TÉCNICO</small>' + esc(nombreTec(t.tec)) + '</td><td><small>FRECUENCIA</small>' + esc((FR[fr] || fr).toUpperCase()) + (aprox ? ' <span class="chip wa">plan: ' + esc(FR[t.fr] || t.fr) + '</span>' : '') + '</td><td><small>PLANTA</small>LÍNEA ITALIA</td></tr>' +
     '<tr><td><small>FECHA PROGRAMADA</small>' + fLarga(t.f) + '</td><td><small>HORA DE INICIO</small>' + (o.ini ? fechaHora(o.ini) : '—') + '</td><td><small>HORA DE TERMINACIÓN</small>' + (o.fin ? fechaHora(o.fin) : (o.ini ? '<span class="reloj" id="reloj">—</span>' : '—')) + '</td></tr>' +
-    '<tr><td colspan="2"><small>EQUIPO</small><span class="fila" style="gap:8px"><span style="width:54px;height:44px;display:inline-grid;place-items:center">' + dibujo(t) + '</span><b>' + esc(t.eq) + '</b></span></td><td><small>CATEGORÍA</small>' + esc((CAT[t.cat] || [t.cat])[0]) + '</td></tr></table>' +
+    '<tr><td colspan="2"><small>EQUIPO</small><span class="fila" style="gap:8px"><span style="width:54px;height:44px;display:inline-grid;place-items:center">' + dibujo(t) + '</span><b>' + esc(t.eq) + '</b></span></td><td><small>CATEGORÍA</small>' + esc((CAT[t.cat] || [t.cat])[0]) + '</td></tr>' + celdasPlaca(t, !editable) + '</table>' +
     '<div class="loto">🦺 <b>ANTES DE INICIAR: BLOQUEO Y ETIQUETADO (LOTO)</b> de energía eléctrica, aire y partes en movimiento; EPP completo.</div>' +
     (alertas.length ? '<div class="fila" style="margin-top:8px">' + alertas.map(a => '<span class="chip ' + a.cls + '">' + esc(a.txt) + '</span>').join('') + '</div>' : '') +
     (editable && !o.ini ? '<div class="aviso inf" style="margin:12px 0 0"><span class="i">▶️</span><div style="flex:1"><b>Toca "Iniciar" cuando empieces.</b> Se guarda la hora de inicio y el tiempo real.</div><button class="bt p" data-iniciar>▶ Iniciar</button></div>' : '') + '</div>';
@@ -605,7 +605,9 @@ async function pdfHoja(t, fmt, fr, soloBlob) {
   d.autoTable({ startY: 18, margin: { left: M, right: M }, theme: 'grid', styles: { fontSize: 7.8, cellPadding: 1.4, lineColor: [150, 150, 150] }, body: [
     ['NOMBRE DEL TÉCNICO:', t ? nombreTec(t.tec) : '', 'FRECUENCIA:', (FR[fr] || fr || '').toUpperCase()],
     ['CATEGORÍA:', fmt ? fmt.tipo : '', 'PLANTA:', 'LÍNEA ITALIA'],
-    ['FECHA PROGRAMADA:', t ? fLarga(t.f) : '', 'No. ORDEN DE TRABAJO:', t ? (t.ot || '') : ''],
+    ['FECHA PROGRAMADA:', t ? fLarga(t.f) : '', 'MARCA:', placaDe(t).marca],
+    ['MODELO:', placaDe(t).modelo, 'No. DE SERIE:', placaDe(t).serie],
+    ['CAPACIDAD:', placaDe(t).cap, '', ''],
     ['HORA DE INICIO:', o.ini ? fechaHora(o.ini) : '', 'HORA DE TERMINACIÓN:', o.fin ? fechaHora(o.fin) : ''],
     ['EQUIPO:', t ? t.eq : (fmt ? fmt.aplica : ''), 'TIEMPO REAL / CALIF.:', (o.min ? o.min + ' min' : '') + (o.cal != null ? ' · ' + o.cal : '')]
   ], columnStyles: { 0: { fontStyle: 'bold', cellWidth: 36 }, 2: { fontStyle: 'bold', cellWidth: 40 } } });
@@ -1000,7 +1002,7 @@ async function llenarExcel(dirHojas, t, fr, cacheWb) {
   const pon = (row, col, txt) => { const c = ws.getCell(row, col); c.value = txt; };
   const marca = (row, col, color) => { const c = ws.getCell(row, col); c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: color } }; c.font = Object.assign({}, c.font || {}, { bold: true, color: { argb: 'FFFFFFFF' } }); };
   pon(2, 1, 'NOMBRE DEL TECNICO: ' + nombreTec(t.tec)); pon(4, 1, 'FECHA: ' + (o.fin ? new Date(o.fin).toLocaleDateString('es-MX') : '') + ' (prog. ' + deIso(t.f).toLocaleDateString('es-MX') + ')');
-  pon(4, 3, 'HORA DE INICIO : ' + hhmm(o.ini)); pon(4, 6, 'HORA DE TERMINACION : ' + hhmm(o.fin)); pon(5, 9, 'No. ORDEN DE TRABAJO: ' + (t.ot || '')); pon(5, 3, t.eq);
+  pon(4, 3, 'HORA DE INICIO : ' + hhmm(o.ini)); pon(4, 6, 'HORA DE TERMINACION : ' + hhmm(o.fin)); pon(5, 3, t.eq); { const P = placaDe(t); pon(5, 5, 'MODELO : ' + P.modelo); pon(6, 5, 'No DE SERIE : ' + P.serie); pon(6, 9, 'MARCA: ' + P.marca); pon(6, 1, 'CAPACIDAD : ' + P.cap); }
   (fmt.frec[fr] || []).forEach(s => s.items.forEach(it => {
     if (!it.r) return; const x = r[itemId(it)] || {};
     if (it.med) { const c1 = [3, 4, 6], c2 = [10, 11, 12]; (it.campos || []).forEach((c, i) => pon(it.r, c1[i], c + ' ' + ((x.v || [])[i] || ''))); (it.campos2 || []).forEach((c, i) => pon(it.r, c2[i], c + ' ' + ((x.v || [])[(it.campos || []).length + i] || ''))); return; }
@@ -1120,7 +1122,8 @@ function paginaHoja(t, fmt, fr) {
     '<div class="inf"><div style="grid-column:span 7"><b>NOMBRE DEL TÉCNICO:</b>' + v(t ? nombreTec(t.tec) : '') + '</div><div style="grid-column:span 5"><b>FRECUENCIA:</b><span style="font-weight:bold">' + esc((FR[fr] || fr || '').toUpperCase()) + '</span></div>' +
     '<div style="grid-column:span 9"><b>CATEGORÍA:</b><span style="font-weight:bold">' + esc(fmt ? fmt.tipo : '') + '</span></div><div style="grid-column:span 3"><b>PLANTA:</b>LÍNEA ITALIA</div>' +
     '<div style="grid-column:span 3"><b>FECHA:</b>' + v(o.fin ? new Date(o.fin).toLocaleDateString('es-MX') : '') + (t ? '<br><b>PROGRAMADA:</b>' + v(deIso(t.f).toLocaleDateString('es-MX')) : '') + '</div><div style="grid-column:span 3"><b>HORA DE INICIO:</b>' + v(o.ini ? hhmm(o.ini) : '') + '</div><div style="grid-column:span 3"><b>HORA DE TERMINACIÓN:</b>' + v(o.fin ? hhmm(o.fin) : '') + '</div><div style="grid-column:span 3"><b>TIEMPO REAL:</b>' + v(o.min ? o.min + ' min' : '') + '</div>' +
-    '<div style="grid-column:span 6"><b>EQUIPO:</b>' + v(t ? t.eq : '') + '</div><div style="grid-column:span 3"><b>No. ORDEN DE TRABAJO:</b>' + v(t ? t.ot : '') + '</div><div style="grid-column:span 3"><b>CALIFICACIÓN:</b>' + v(o.cal != null ? String(o.cal) : '') + '</div></div>' +
+    '<div style="grid-column:span 6"><b>EQUIPO:</b>' + v(t ? t.eq : '') + '</div><div style="grid-column:span 3"><b>MARCA:</b>' + v(placaDe(t).marca) + '</div><div style="grid-column:span 3"><b>CALIFICACIÓN:</b>' + v(o.cal != null ? String(o.cal) : '') + '</div>' +
+    '<div style="grid-column:span 4"><b>MODELO:</b>' + v(placaDe(t).modelo) + '</div><div style="grid-column:span 4"><b>No. DE SERIE:</b>' + v(placaDe(t).serie) + '</div><div style="grid-column:span 4"><b>CAPACIDAD:</b>' + v(placaDe(t).cap) + '</div></div>' +
     '<div class="lt">ANTES DE INICIAR: BLOQUEO Y ETIQUETADO (LOTO) DEL INTERRUPTOR PRINCIPAL, PURGAR EL AIRE DE LA MÁQUINA Y USAR EPP. CUMPLIR LAS NORMAS Y POLÍTICAS DE SEGURIDAD Y SALUD APLICABLES A LA ACTIVIDAD</div>' +
     (fmt && fmt.aplica ? '<div class="apl">APLICA A: ' + esc(fmt.aplica) + '</div>' : '');
   h += '<table><tr><th colspan="5">ACTIVIDADES DE VERIFICACIÓN</th><th colspan="3">ACTIVIDADES DE CONSERVACIÓN</th></tr>';
@@ -1942,3 +1945,51 @@ function vCalifTecs() {
   return h + '</div>';
 }
 document.addEventListener('click', e => { const c = e.target.closest('[data-caltec]'); if (c) { S.calTec = S.calTec === c.dataset.caltec ? '' : c.dataset.caltec; render(); if (S.calTec) setTimeout(() => { const d = document.querySelector('.ct-det'); if (d) d.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 60); } });
+
+
+// ============================================================ v17 · DATOS DE PLACA EN LA HOJA (como el Excel original): MARCA, MODELO, No. DE SERIE y CAPACIDAD
+// Salen de la base de equipos (copia en equipos-pm.js, por número de equipo). Si falta alguno, el técnico lo captura de la placa
+// al llenar la hoja (se guarda en la orden). No se llevan No. de orden de trabajo ni No. Oracle.
+// cruce plan ↔ base de equipos: por código (PB02, TC01, EBT-29…) o por nombre, marca y categoría; si queda en duda, no se pone nada
+let _cruce = null;
+function cruceEquipos() {
+  if (_cruce) return _cruce;
+  const M = {}; Object.values(window.PM_PLAN || {}).flat().forEach(t => M[t.eq] = t);
+  const nk = s => norm(String(s || '')).replace(/[^a-z0-9]/g, ''), cand = [], B = window.EQ_BASE || [];
+  Object.values(M).forEach(t => {
+    const [nom, suf = ''] = t.eq.split(' · '), words = norm(nom).split(/[^a-z0-9]+/).filter(w => w.length >= 3 && !/^\d+$/.test(w)), nums = norm(nom).match(/\b\d+\b/g) || [];
+    B.filter(e => e.cat === t.cat).forEach(e => {
+      let s = 0; const txt = norm([e.nombre, e.corto, e.marca, e.modelo, e.fab].join(' '));
+      if (suf && /[a-z]/i.test(suf) && (nk(suf) === nk(e.eco) || nk(suf) === nk(e.clave))) s += 100;
+      if (suf && /^\d+$/.test(suf) && String(e.eco) === suf) s += 3;
+      words.forEach(w => { if (txt.includes(w)) s += 2; });
+      const en = norm(e.nombre).match(/\b\d+\b/g) || []; nums.forEach(n => { if (en.includes(n)) s += 1.5; });
+      if (nk(nom) === nk(e.nombre)) s += 10;
+      if (s >= 2) cand.push({ t, e, s });
+    });
+  });
+  cand.sort((a, b) => b.s - a.s); const usT = new Set(), usE = new Set(), R = {};
+  cand.forEach(c => {
+    if (usT.has(c.t.eq) || usE.has(c.e.id)) return;
+    if (c.s < 3 && cand.some(o => o !== c && o.t.eq === c.t.eq && o.s === c.s && !usE.has(o.e.id))) { usT.add(c.t.eq); return; }   // empate: en duda
+    usT.add(c.t.eq); usE.add(c.e.id); R[c.t.eq] = c.e;
+  });
+  return (_cruce = R);
+}
+const eqDe = t => (t && cruceEquipos()[t.eq]) || null;
+function placaDe(t) {
+  const e = eqDe(t) || {}, o = (t && S.ords[t.k]) || {}, m = Object.assign({}, t ? ((S.param.placas || {})[kEq(t.eq)] || {}) : {}, o.placa || {});
+  const cap = e.cap || [e.kw ? e.kw + ' kW' : (e.w ? e.w + ' W' : ''), e.vo ? e.vo + ' V' : '', e.amp ? e.amp + ' A' : ''].filter(Boolean).join(' · ');
+  const val = (k, v) => String(m[k] != null && m[k] !== '' ? m[k] : (v || '')).trim();
+  return { marca: val('marca', e.marca || e.fab), modelo: val('modelo', e.modelo), serie: val('serie', e.serie), cap: val('cap', cap) };
+}
+const PLACA_L = [['marca', 'MARCA'], ['modelo', 'MODELO'], ['serie', 'No. DE SERIE'], ['cap', 'CAPACIDAD']];
+function celdasPlaca(t, dis) {
+  const P = placaDe(t);
+  return '<tr>' + PLACA_L.slice(0, 2).map(([k, l]) => '<td><small>' + l + '</small>' + (dis ? esc(P[k] || '—') : '<input class="in" data-placa="' + k + '" value="' + esc(P[k]) + '" placeholder="Copiar de la placa">') + '</td>').join('') + '<td></td></tr>' +
+    '<tr>' + PLACA_L.slice(2).map(([k, l]) => '<td><small>' + l + '</small>' + (dis ? esc(P[k] || '—') : '<input class="in" data-placa="' + k + '" value="' + esc(P[k]) + '" placeholder="Copiar de la placa">') + '</td>').join('') + '<td></td></tr>';
+}
+document.addEventListener('change', async e => {
+  const c = e.target.closest('[data-placa]'); if (!c || !S.hojaT) return;
+  const o = S.ords[S.hojaT.k] || {}, k = c.dataset.placa, v = c.value.trim(); await guardarOrden({ placa: Object.assign({}, o.placa || {}, { [k]: v }) }); const pm = (S.param.placas || {})[kEq(S.hojaT.eq)] || {}; await upd('param/placas', { [kEq(S.hojaT.eq)]: Object.assign({}, pm, { [k]: v, t: new Date().toISOString(), por: S.nom }) }); toast('Dato de placa guardado para esta máquina.');
+});
