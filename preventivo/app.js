@@ -751,7 +751,7 @@ function vConfig() {
       '<p class="peq mu">Última lectura: ' + (S.aj.excelLeido ? fechaHora(S.aj.excelLeido) + ' · Excel modificado ' + fechaHora(S.aj.excelMod) : (window.PM_PLAN_MOD ? 'semilla de prueba del ' + fechaHora(window.PM_PLAN_MOD) : 'nunca')) + '</p><div class="fila"><button class="bt p" data-conexcel>📗 Conectar / leer Excel ahora</button></div></div>' +
       '<div class="caja"><h2>📘 Hojas de instrucciones (Excel originales)</h2><p>Los cambios a las hojas (preguntas retiradas por el supervisor, textos editados, actividades nuevas) se aplican <b>directo al Excel original</b> de la carpeta HOJAS DE INSTRUCCIONES POR CATEGORIA, sin copias. Conecta la carpeta una vez en esta PC.</p><p class="peq mu">Cambios pendientes: <b>' + (S.aj.colaExcel || []).filter(o => !o.ok).length + '</b> · aplicados: ' + (S.aj.colaExcel || []).filter(o => o.ok).length + '</p><div class="fila"><button class="bt p" data-aplexcel>📘 Conectar carpeta y aplicar cambios</button></div></div>' +
       '<div class="caja"><h2>📁 Cierre de mes</h2><p>Genera una subcarpeta con el nombre del mes dentro de <b>MANTENIMIENTO MENSUAL</b>: por técnico, cada hoja en <b>Excel llenado</b> con el mismo acomodo del original, su PDF y la carpeta de fotos de evidencia (quién la hizo, tiempo real, fecha programada y real), más el resumen del mes.</p><div class="fila">' + selMes() + '<button class="bt p" data-cierre>📁 Generar carpeta del mes</button></div></div>' +
-      (window.DEMO ? '<div class="caja"><h2>🧪 Datos de prueba</h2><p class="peq mu">Todo lo que se captura en modo prueba vive en este navegador.</p><button class="bt bad" data-borrardemo>Borrar datos de prueba</button></div>' : '');
+      cajaReinicio() + (window.DEMO ? '<div class="caja"><h2>🧪 Datos de prueba</h2><p class="peq mu">Todo lo que se captura en modo prueba vive en este navegador.</p><button class="bt bad" data-borrardemo>Borrar datos de prueba</button></div>' : '');
   }
   return h;
 }
@@ -2141,3 +2141,39 @@ function vParam() {
   h += ({ vida: pVida, alm: pAlm, refac: pRefac, baleros: pBaleros, horo: pHoro, mat: pMaterial, hist: pHistorial }[S.sub4])();
   $('#app').innerHTML = h; animar();
 }
+
+
+// ============================================================ v21 · ARRANQUE EN CERO: borrar los preventivos capturados como prueba (solo jefe/gerencia)
+// Baja un respaldo JSON, borra órdenes y sus fotos, y quita del Organigrama la calificación que mandó Preventivo (mes actual y anterior).
+// NO borra: personal, contraseñas, plan, hojas, vida del proveedor, datos de placa ni baleros/horómetros.
+function cajaReinicio() {
+  const n = Object.keys(S.ords).length, r = S.aj.reinicio;
+  return '<div class="caja"><h2>🧹 Arrancar en cero <span class="r">' + (r ? 'último: ' + fechaHora(r.t) + ' · ' + esc(titulo(r.porN || '')) : '') + '</span></h2>' +
+    '<p>Borra <b>todas las órdenes llenadas (' + n + ')</b> con sus fotos, firmas y calificaciones, y quita del Organigrama la calificación que mandó esta app. Úsalo para quitar lo capturado como prueba.</p>' +
+    '<p class="peq mu">No se borra: personal, contraseñas, plan del mes, hojas de instrucciones, vida del proveedor, datos de placa, baleros ni horómetros. Antes de borrar se baja un respaldo (.json) a esta computadora.</p>' +
+    '<button class="bt bad" data-reinicio' + (n ? '' : ' disabled') + '>🧹 Borrar preventivos de prueba y arrancar en cero</button></div>';
+}
+async function reiniciarCero() {
+  const L = Object.entries(S.ords); if (!L.length) return toast('No hay órdenes que borrar.');
+  if (!confirm('Se van a borrar ' + L.length + ' órdenes con sus fotos, firmas y calificaciones. NO se puede deshacer (se baja un respaldo antes). ¿Continuar?')) return;
+  if ((prompt('Para confirmar escribe: CERO') || '').trim().toUpperCase() !== 'CERO') return toast('Cancelado.');
+  try { const b = new Blob([JSON.stringify({ app: 'preventivo', t: new Date().toISOString(), ordenes: S.ords }, null, 1)], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'respaldo-preventivos-prueba-' + HOY + '.json'; document.body.appendChild(a); a.click(); a.remove(); } catch (e) {}
+  toast('Borrando ' + L.length + ' órdenes…'); let ok = 0, mal = 0, fot = 0;
+  for (const [k, o] of L) {
+    for (const id of fotosDeOrden(o)) { try { await DB.doc('fotos/' + id).delete(); delete cacheFoto[id]; fot++; } catch (e) {} }
+    try { await DB.doc('ordenes/' + k).delete(); ok++; } catch (e) { mal++; }
+  }
+  // Organigrama: quitar lo que mandó Preventivo
+  if (!window.DEMO && typeof firebase !== 'undefined') {
+    const fs = firebase.firestore(), d = new Date(), meses = [iso(d).slice(0, 7), iso(new Date(d.getFullYear(), d.getMonth() - 1, 1)).slice(0, 7)];
+    for (const mes of meses) { try {
+      const s = await fs.doc('apps/organigrama/meses/' + mes).get(); if (!s.exists) continue; const ord = (s.data() || {}).ord || {}, args = [];
+      Object.entries(ord).forEach(([id, x]) => { if (x && x.fuente === 'preventivo') ['cal', 'cumpl', 'calidad', 'fuente', 'prog', 'cump', 't'].forEach(c => args.push(new firebase.firestore.FieldPath('ord', id, c), firebase.firestore.FieldValue.delete())); });
+      if (args.length) await fs.doc('apps/organigrama/meses/' + mes).update(...args);
+    } catch (e) {} }
+  }
+  await upd('config/ajustes', { organigrama: { _: '' }, reinicio: { t: new Date().toISOString(), por: S.nom, porN: yoP().n || '', n: ok } });
+  toast('Listo: ' + ok + ' órdenes y ' + fot + ' fotos borradas' + (mal ? ' · ' + mal + ' no se pudieron borrar' : '') + '. Arrancamos en cero.');
+  render();
+}
+document.addEventListener('click', e => { if (e.target.closest('[data-reinicio]')) reiniciarCero(); });
