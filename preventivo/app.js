@@ -1932,7 +1932,7 @@ function vCalifTecs() {
   const R = Object.entries(S.pers).filter(([, p]) => p.tec && p.a !== false).map(([nom, p]) => { const T = L.filter(t => t.tec === p.tec); return { nom, p, T, I: indicadores(T) }; }).filter(x => x.T.length)
     .sort((a, b) => b.I.calif - a.I.calif || b.I.cumpl - a.I.cumpl);
   const prom = k => promN(R.map(x => x.I[k])), G = califGeneralJasso(S.mes).M, sup = Object.entries(S.pers).find(([, p]) => p.califica && !p.otorga);
-  let h = '<div class="dash"><div class="dash-top"><div><small>LÍNEA ITALIA · MANTENIMIENTO PREVENTIVO · ' + esc(nomMes(S.mes).toUpperCase()) + '</small><h2>👷 Calificaciones del equipo</h2></div><span class="chip" style="margin-left:auto">calificación = (entrega + calidad) ÷ 2</span></div>' +
+  let h = '<div class="dash"><div class="dash-top"><div><small>LÍNEA ITALIA · MANTENIMIENTO PREVENTIVO · ' + esc(nomMes(S.mes).toUpperCase()) + '</small><h2>👷 Calificaciones del equipo</h2></div><span class="chip" style="margin-left:auto">calificación = (entrega + calidad) ÷ 2</span><button class="bt p" data-cartelcal style="margin-left:10px">📄 PDF para publicar</button></div>' +
     '<div class="jg-top"><div class="jg-gen">' + dona(prom('calif'), null, 200, '', '', true) + '<b>Promedio del equipo</b><span>' + R.length + ' técnicos con preventivos este mes</span></div><div class="jg-partes">' +
     '<div class="jg-p">' + dona(prom('cumpl'), '#3D9BFF', 120, '', '') + '<div><b>📦 Entrega de preventivos</b><span>promedio de cumplimiento de los técnicos</span></div></div>' +
     '<div class="jg-p">' + dona(prom('calidad'), '#2ECC71', 120, '', '') + '<div><b>🛠️ Calidad del trabajo</b><span>promedio de lo que califica el supervisor (0 · 50 · 100)</span></div></div>' +
@@ -2242,3 +2242,63 @@ function ponerFondo() {
   f.querySelector('.fsvg').innerHTML = n ? escenaPM(n) : '';
 }
 { const _renderSinFondo = render; render = function () { const r = _renderSinFondo.apply(this, arguments); try { ponerFondo(); } catch (e) {} return r; }; }
+
+
+// ============================================================ v23 · CARTEL DE CALIFICACIONES (PDF / imprimir) para que el supervisor lo publique en el pizarrón
+// Hoja 1: "Así vamos" con promedio del equipo y ranking de técnicos (gráficas circulares). Hoja 2: detalle por técnico y supervisor por semana.
+function donaPdf(v, col, tam, grueso) {
+  const r = (tam - grueso) / 2, c = 2 * Math.PI * r, p = v == null ? 0 : Math.max(0, Math.min(100, v)), cc = col || (v == null ? '#9AA7B4' : v >= 85 ? '#1E8E5A' : v >= 60 ? '#D69500' : '#D32F2F');
+  return '<svg width="' + tam + '" height="' + tam + '" viewBox="0 0 ' + tam + ' ' + tam + '"><circle cx="' + tam / 2 + '" cy="' + tam / 2 + '" r="' + r + '" fill="none" stroke="#E4E9EF" stroke-width="' + grueso + '"/>' +
+    (p > 0 ? '<circle cx="' + tam / 2 + '" cy="' + tam / 2 + '" r="' + r + '" fill="none" stroke="' + cc + '" stroke-width="' + grueso + '" stroke-linecap="round" stroke-dasharray="' + (c * p / 100).toFixed(1) + ' ' + c.toFixed(1) + '" transform="rotate(-90 ' + tam / 2 + ' ' + tam / 2 + ')"/>' : '') +
+    '<text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" font-family="Arial" font-weight="700" font-size="' + Math.round(tam * 0.27) + '" fill="#14212E">' + (v == null ? '—' : v) + '</text></svg>';
+}
+const nivelCal = v => v == null ? ['Sin datos', '#9AA7B4'] : v >= 85 ? ['Excelente', '#1E8E5A'] : v >= 70 ? ['Satisfactorio', '#2F78C4'] : v >= 60 ? ['Mínimo aceptable', '#D69500'] : ['No aceptable', '#D32F2F'];
+function datosCartel(mes) {
+  const L = tareasMes(mes);
+  const R = Object.entries(S.pers).filter(([, p]) => p.tec && p.a !== false).map(([nom, p]) => { const T = L.filter(t => t.tec === p.tec); return { nom, p, T, I: indicadores(T) }; }).filter(x => x.T.length)
+    .sort((a, b) => b.I.calif - a.I.calif || b.I.cumpl - a.I.cumpl);
+  const sup = Object.entries(S.pers).find(([, p]) => p.califica && !p.otorga);
+  return { R, prom: k => promN(R.map(x => x.I[k])), G: califGeneralJasso(mes), sup };
+}
+function htmlCartelCalif(mes) {
+  const D = datosCartel(mes), R = D.R, medal = ['🥇', '🥈', '🥉'], hoy = new Date().toLocaleString('es-MX', { dateStyle: 'long', timeStyle: 'short' });
+  const cab = (sub) => '<div style="display:flex;align-items:center;gap:14px;border-bottom:4px solid #F5A623;padding-bottom:10px;margin-bottom:14px"><div style="background:#14284B;color:#fff;font:700 13px Arial;padding:10px 12px;border-radius:8px;letter-spacing:.5px">LÍNEA<br>ITALIA</div><div style="flex:1"><div style="font:700 11px Arial;color:#5B6B7B;letter-spacing:1px">MANTENIMIENTO PREVENTIVO · ' + esc(nomMes(mes).toUpperCase()) + '</div><div style="font:800 28px Arial;color:#14284B">' + sub + '</div></div><div style="text-align:right;font:11px Arial;color:#5B6B7B">Corte al<br><b style="color:#14212E">' + esc(hoy) + '</b></div></div>';
+  const pie = '<div style="position:absolute;left:32px;right:32px;bottom:18px;display:flex;justify-content:space-between;font:10px Arial;color:#5B6B7B;border-top:1px solid #D8E0E8;padding-top:6px"><span>🦺 Antes de cualquier preventivo: bloqueo y etiquetado (LOTO) y EPP completo.</span><span>Calificación = (entrega + calidad) ÷ 2</span></div>';
+  // hoja 1 · cartel
+  let h = '<div class="pg">' + cab('🏆 Así vamos en preventivo') +
+    '<div style="display:flex;gap:18px;align-items:center;background:#F3F6FA;border-radius:14px;padding:14px 18px;margin-bottom:16px">' + donaPdf(D.prom('calif'), null, 150, 18) +
+    '<div style="flex:1"><div style="font:800 20px Arial;color:#14284B">Promedio del equipo</div><div style="font:13px Arial;color:#5B6B7B;margin:2px 0 10px">' + R.length + ' técnicos con preventivos este mes</div>' +
+    '<div style="display:flex;gap:18px">' + [['📦 Entrega', D.prom('cumpl'), '#2F78C4'], ['🛠️ Calidad', D.prom('calidad'), '#1E8E5A'], ['🧑‍💼 Supervisor', D.G.M.gen, '#7A3FC2'], ['⭐ Líderes', D.G.M.lid, '#D69500']].map(([l, v, c]) => '<div style="text-align:center">' + donaPdf(v, c, 78, 10) + '<div style="font:700 11px Arial;color:#14212E;margin-top:2px">' + l + '</div></div>').join('') + '</div></div></div>';
+  h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' + R.map((x, i) => { const I = x.I, nv = nivelCal(I.calif);
+    return '<div style="display:flex;align-items:center;gap:12px;border:1.5px solid #D8E0E8;border-left:7px solid ' + nv[1] + ';border-radius:12px;padding:8px 12px;break-inside:avoid">' +
+      '<div style="font:800 22px Arial;width:34px;text-align:center;color:#14284B">' + (medal[i] || (i + 1)) + '</div>' + donaPdf(I.calif, null, 76, 10) +
+      '<div style="flex:1;min-width:0"><div style="font:800 15px Arial;color:#14212E;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(titulo(x.p.n).split(' ').slice(0, 2).join(' ')) + '</div>' +
+      '<div style="font:700 11px Arial;color:' + nv[1] + ';margin:1px 0 5px">' + nv[0] + '</div>' +
+      [['Entrega', I.cumpl, '#2F78C4'], ['Calidad', I.calidad, '#1E8E5A']].map(([l, v, c]) => '<div style="display:flex;align-items:center;gap:6px;font:10.5px Arial;color:#5B6B7B;margin-top:2px"><span style="width:46px">' + l + '</span><span style="flex:1;height:8px;background:#E4E9EF;border-radius:4px;overflow:hidden"><span style="display:block;height:100%;width:' + (v || 0) + '%;background:' + c + '"></span></span><b style="width:34px;text-align:right;color:#14212E">' + (v == null ? '—' : v + '%') + '</b></div>').join('') +
+      '<div style="font:10px Arial;color:#5B6B7B;margin-top:3px">' + I.hechas + ' de ' + I.n + ' hechos' + (I.venc ? ' · <b style="color:#D32F2F">' + I.venc + ' vencidos</b>' : '') + '</div></div></div>'; }).join('') + '</div>' +
+    (R.length ? '' : '<p style="font:14px Arial;color:#5B6B7B">No hay técnicos con preventivos este mes.</p>') +
+    '<div style="display:flex;gap:10px;margin-top:14px;font:11px Arial">' + [['#1E8E5A', 'Excelente 85–100'], ['#2F78C4', 'Satisfactorio 70–84'], ['#D69500', 'Mínimo aceptable 60–69'], ['#D32F2F', 'No aceptable 0–59']].map(([c, t]) => '<span style="display:flex;align-items:center;gap:5px"><i style="width:12px;height:12px;border-radius:3px;background:' + c + ';display:inline-block"></i>' + t + '</span>').join('') + '</div>' + pie + '</div>';
+  // hoja 2 · detalle
+  const th = 'style="background:#14284B;color:#fff;font:700 10.5px Arial;padding:6px 5px;text-align:center"', td = 'style="border-bottom:1px solid #D8E0E8;font:11px Arial;padding:6px 5px;text-align:center"';
+  h += '<div class="pg">' + cab('📋 Detalle de calificaciones') +
+    '<table style="width:100%;border-collapse:collapse"><tr><th ' + th + '>#</th><th ' + th + '>Nómina</th><th style="background:#14284B;color:#fff;font:700 10.5px Arial;padding:6px 5px;text-align:left">Técnico</th><th ' + th + '>Programados</th><th ' + th + '>Hechos</th><th ' + th + '>Vencidos</th><th ' + th + '>Entrega</th><th ' + th + '>Calidad</th><th ' + th + '>Hojas calificadas</th><th ' + th + '>Calificación</th><th ' + th + '>Nivel</th></tr>' +
+    R.map((x, i) => { const I = x.I, nv = nivelCal(I.calif); return '<tr><td ' + td + '>' + (i + 1) + '</td><td ' + td + '>' + esc(x.nom) + '</td><td style="border-bottom:1px solid #D8E0E8;font:700 11px Arial;padding:6px 5px">' + esc(titulo(x.p.n)) + '</td><td ' + td + '>' + I.n + '</td><td ' + td + '>' + I.hechas + '</td><td ' + td + '>' + I.venc + '</td><td ' + td + '>' + I.cumpl + '%</td><td ' + td + '>' + (I.calidad == null ? '—' : I.calidad + '%') + '</td><td ' + td + '>' + I.cals + '</td><td style="border-bottom:1px solid #D8E0E8;font:800 14px Arial;padding:6px 5px;text-align:center;color:' + nv[1] + '">' + I.calif + '</td><td style="border-bottom:1px solid #D8E0E8;font:700 10.5px Arial;padding:6px 5px;text-align:center;color:' + nv[1] + '">' + nv[0] + '</td></tr>'; }).join('') +
+    '<tr><td colspan="6" style="font:800 12px Arial;padding:8px 5px;text-align:right;background:#F3F6FA">PROMEDIO DEL EQUIPO</td><td style="font:700 12px Arial;text-align:center;background:#F3F6FA">' + (D.prom('cumpl') ?? '—') + '%</td><td style="font:700 12px Arial;text-align:center;background:#F3F6FA">' + (D.prom('calidad') == null ? '—' : D.prom('calidad') + '%') + '</td><td style="background:#F3F6FA"></td><td style="font:800 15px Arial;text-align:center;background:#F3F6FA">' + (D.prom('calif') ?? '—') + '</td><td style="background:#F3F6FA"></td></tr></table>';
+  const M = D.G.M; h += '<div style="margin-top:20px;font:800 16px Arial;color:#14284B">🧑‍💼 Supervisor · ' + esc(D.sup ? titulo(D.sup[1].n) : '') + ' <span style="font:700 14px Arial;color:' + nivelCal(M.gen)[1] + '">· calificación general ' + (M.gen ?? '—') + ' (' + nivelCal(M.gen)[0] + ')</span></div>' +
+    '<table style="width:100%;border-collapse:collapse;margin-top:8px"><tr><th ' + th + '>Semana</th><th ' + th + '>Cumplimiento técnicos</th><th ' + th + '>Entregas a tiempo</th><th ' + th + '>Firmas a tiempo</th><th ' + th + '>Líderes</th><th ' + th + '>General</th></tr>' +
+    D.G.sem.map(s => '<tr><td ' + td + '>' + fCorta(s.lun) + ' – ' + fCorta(s.sab) + (s.encurso ? ' (en curso)' : '') + '</td>' + ['cumpl', 'entr', 'firm', 'lid'].map(k => '<td ' + td + '>' + (s[k] == null ? '—' : s[k] + '%') + '</td>').join('') + '<td style="border-bottom:1px solid #D8E0E8;font:800 13px Arial;padding:6px 5px;text-align:center;color:' + nivelCal(s.gen)[1] + '">' + (s.gen ?? '—') + '</td></tr>').join('') +
+    '<tr><td style="font:800 12px Arial;padding:8px 5px;text-align:right;background:#F3F6FA">MES</td>' + ['cumpl', 'entr', 'firm', 'lid'].map(k => '<td style="font:700 12px Arial;text-align:center;background:#F3F6FA">' + (M[k] == null ? '—' : M[k] + '%') + '</td>').join('') + '<td style="font:800 15px Arial;text-align:center;background:#F3F6FA">' + (M.gen ?? '—') + '</td></tr></table>' +
+    '<div style="margin-top:14px;font:10.5px Arial;color:#5B6B7B;line-height:1.5"><b>Cómo se calcula:</b> Entrega = preventivos hechos ÷ los que ya tocaban. Calidad = promedio de lo que califica el supervisor en cada hoja (0 · 50 · 100). Calificación del técnico = (entrega + calidad) ÷ 2. Supervisor = promedio de cumplimiento de técnicos, entregas a tiempo, firmas a tiempo y calificación de líderes de producción (máquinas tipo A).</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:30px;margin-top:60px;font:11px Arial;text-align:center">' + ['Supervisor de mantenimiento', 'Jefe de mantenimiento', 'Gerencia'].map(t => '<div style="border-top:1.5px solid #14212E;padding-top:5px">' + t + '</div>').join('') + '</div>' + pie + '</div>';
+  return h;
+}
+function abrirCartelCalif() {
+  const html = htmlCartelCalif(S.mes), nom = 'Calificaciones preventivo ' + nomMes(S.mes) + '.pdf';
+  $('#hoja').style.maxWidth = '900px';
+  $('#hoja').innerHTML = '<style>' + CSS_HOJA + '</style><div class="fila" style="justify-content:space-between;position:sticky;top:-18px;background:#fff;z-index:2;padding:6px 0 10px"><h2 style="margin:0;color:#14284B">👁 Vista previa · Calificaciones ' + esc(nomMes(S.mes)) + '</h2><div class="fila"><button class="bt" id="vImp">🖨 Imprimir</button><button class="bt p" id="vPdf">⬇️ Descargar PDF</button><button class="bt s" data-cerrar>✕</button></div></div><div id="vPags" style="background:#E9EDF2;padding:14px;border-radius:12px;overflow:auto">' + html + '</div>';
+  $('#modal').classList.add('on');
+  const c = $('#vPags'), z = Math.min(1, (c.clientWidth - 28) / 816); c.querySelectorAll('.pg').forEach(p => p.style.zoom = z);
+  $('#vImp').onclick = () => imprimirHTML(html, nom);
+  $('#vPdf').onclick = async () => { toast('Generando PDF…'); const b = await pdfDeHTML(html); if (!b) { toast('Sin internet para armar el PDF: usa 🖨 Imprimir → Guardar como PDF.'); return; } const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = nom; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000); toast('PDF descargado: ' + nom); };
+}
+document.addEventListener('click', e => { if (e.target.closest('[data-cartelcal]')) abrirCartelCalif(); });
