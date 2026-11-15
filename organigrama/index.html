@@ -338,14 +338,15 @@ async function cargarNube() {
  try {
   const g = await db.doc('config/general').get(), ms = await db.collection('meses').get();
   if (g.exists) { const x = g.data(); S.personal = x.personal || S.personal; S.cats = x.cats || S.cats; S.crit = { ...CRIT_DEF, ...(x.crit || {}) }; S.proyectos = x.proyectos || []; }
-  S.meses = {}; ms.docs.forEach(d => { S.meses[d.id] = d.data(); });
+  S.meses = {}; ms.docs.forEach(d => { S.meses[d.id] = compMes(d.data()); });
   S = migrar(S); Object.entries(piezas()).forEach(([r, d]) => { if (r !== 'config/general' || g.exists) CACHE[r] = JSON.stringify(d); });
   cargado = true; estadoNube(g.exists ? '✔ Datos en la nube' : 'Primera vez en la nube: carga tu respaldo con "Cargar respaldo"'); render(); renderAccesos();
   if (!g.exists) guardar();
  } catch (e) { estadoNube('⚠ No se pudieron leer los datos (' + (e.code || e.message) + ')', true); }
 }
 function mesKey() { return $('#mes').value; }
-function M(k) { k = k || mesKey(); if (!S.meses[k]) S.meses[k] = { ord: {}, ev: {}, paros: [], ejemplo: false }; return S.meses[k]; }
+function M(k) { k = k || mesKey(); if (!S.meses[k]) S.meses[k] = { ord: {}, ev: {}, paros: [], ejemplo: false }; return compMes(S.meses[k]); }
+function compMes(m) { m.ord = m.ord || {}; m.ev = m.ev || {}; m.paros = m.paros || []; return m; }   // un mes creado desde Mantenimiento Preventivo solo trae 'ord'
 const C = () => S.crit;
 const plan = () => S.personal.filter(p => p.plan);
 const persona = id => S.personal.find(p => p.id === id);
