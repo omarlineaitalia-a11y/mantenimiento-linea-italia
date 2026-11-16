@@ -112,8 +112,33 @@
       '<table class="oT"><tr><th>Refacción</th><th>Pide</th><th>Salió</th><th>Hay</th><th></th></tr>' + (o.lineas || []).map((l, i) => { const it = l.otro ? null : itemDe(l), hay = it ? ex(it) : 0, falta = (+l.q || 0) - (+l.qs || 0);
         if (l.otro) return '<tr><td>🧴 <b>' + esc(l.n) + '</b><br><small>fuera de catálogo</small></td><td class="mono">' + fmt(l.q) + '</td><td class="mono">' + fmt(l.qs || 0) + '</td><td>—</td><td>' + (puede && falta > 0 ? '<button type="button" class="oSurt" data-osurt="' + o.id + '|' + i + '">✔ Entregado</button>' : (falta <= 0 ? '✅' : '')) + '</td></tr>';
         return '<tr><td><b class="mono">' + esc(l.c) + '</b> ' + esc(l.n) + (it ? '<br><small>' + esc(ubTxt(it)) + '</small>' : '') + '</td><td class="mono">' + fmt(l.q) + '</td><td class="mono">' + fmt(l.qs || 0) + '</td><td class="mono" style="color:' + (hay >= falta ? '#1E8E5A' : '#C62828') + '">' + fmt(hay) + '</td><td>' + (puede && falta > 0 ? '<button type="button" class="oSurt" data-osurt="' + o.id + '|' + i + '"' + (hay > 0 ? '' : ' disabled title="Sin existencia"') + '>📤 Sacar</button>' : (falta <= 0 ? '✅' : '')) + '</td></tr>'; }).join('') + '</table>' +
-      (puede ? '<div class="oAcc"><button type="button" data-otodo="' + o.id + '">📤 Sacar todo lo que hay</button>' + (A ? '<button type="button" data-ocanc="' + o.id + '">Cancelar orden</button>' : '') + '</div>' : '') + '</div>';
+      (puede ? '<div class="oAcc"><button type="button" data-otodo="' + o.id + '">📤 Sacar todo lo que hay</button>' + (A ? '<button type="button" data-ocanc="' + o.id + '">Cancelar orden</button>' : '') + '</div>' : '') +
+      devolucionesHtml(o) + '</div>';
   }
+  // ↩️ devoluciones: lo que salió con la orden y no se usó regresa al almacén (entrada ligada a la misma orden y origen)
+  function devolucionesHtml(o) {
+    if (o.estado === 'cancelada' || !(S.isAdmin || String(o.tec) === String((S.yo || {}).nomina))) return '';
+    const L = (o.lineas || []).map((l, i) => ({ l, i, neto: (+l.qs || 0) - (+l.qd || 0) })).filter(x => !x.l.otro && x.neto > 0);
+    const dev = (o.lineas || []).filter(l => +l.qd > 0);
+    if (!L.length && !dev.length) return '';
+    return '<div class="oDev"><b>↩️ Devolver lo que no se usó</b>' + (dev.length ? '<small>Devuelto: ' + dev.map(l => fmt(l.qd) + ' × ' + esc(l.c)).join(', ') + '</small>' : '') +
+      '<div class="oDevB">' + L.map(x => '<button type="button" data-odev="' + o.id + '|' + x.i + '">↩️ ' + esc(x.l.c) + ' <small>(salieron ' + fmt(x.neto) + ')</small></button>').join('') + '</div></div>';
+  }
+  async function devolver(o, i, q) {
+    const l = o.lineas[i], it = itemDe(l); if (!it) return toast('La refacción ya no está en el catálogo.');
+    const neto = (+l.qs || 0) - (+l.qd || 0); q = Math.min(q, neto); if (!(q > 0)) return;
+    await db.doc('catalogo/' + it.doc).update({ items: { [it.k]: { ent: (Number(it.ent) || 0) + q } } });
+    await db.collection('movimientos').add({ t: new Date().toISOString(), f: hoy(), tipo: 'E', c: it.c, n: it.n, doc: it.doc, k: it.k, q, nom: String(o.tecN || '').toUpperCase(), nomina: o.tec, area: o.area || 'Mantenimiento', maq: String((o.origen || {}).maq || '').toUpperCase(), prov: '', fac: '', nota: 'Devolución · ' + o.folio + ' · no se usó', por: S.uid || '', pn: (S.yo && S.yo.nomina) || '', cu: Number(it.cu) || 0, origen: Object.assign({}, o.origen || {}), orden: o.folio, dev: true });
+    const Ln = o.lineas.map((x, j) => j === i ? Object.assign({}, x, { qd: (+x.qd || 0) + q }) : x);
+    await db.doc('ordenes/' + o.id).update({ lineas: Ln, tMod: new Date().toISOString() });
+    return q;
+  }
+  document.addEventListener('click', async e => {
+    const b = e.target.closest('[data-odev]'); if (!b) return; const [id, i] = b.dataset.odev.split('|'), o = ORD.L.find(x => x.id === id); if (!o) return;
+    const l = o.lineas[+i], neto = (+l.qs || 0) - (+l.qd || 0), r = prompt('¿Cuántas piezas de ' + l.c + ' · ' + l.n + ' regresan al almacén? (salieron ' + neto + ')', String(neto)); if (r === null) return;
+    const q = Number(r); if (!(q > 0)) return; b.disabled = true;
+    try { const d = await devolver(o, +i, q); if (d) toast('↩️ Devolución registrada: ' + fmt(d) + ' × ' + l.c + ' regresan al almacén · ' + o.folio); } catch (x) { b.disabled = false; toast('No se pudo registrar (' + (x.code || x.message) + ').'); }
+  });
   // ---- nueva orden
   function pintarForm() {
     const box = document.getElementById('oForm'); if (!box) return; const B = ORD.borr, A = S.isAdmin;

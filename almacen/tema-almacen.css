@@ -167,3 +167,5 @@ input,select,textarea{border-radius:10px!important}
 @keyframes lFlujo{0%,100%{background-position:0% 0}50%{background-position:100% 0}}@keyframes lBrillo{0%{left:-60%}60%,100%{left:130%}}
 #login .lcard .foot{color:#8FA3B8!important;text-align:center}#login .lcard .msg{color:#FFB4AB!important;text-align:center}
 .soloOrden{display:flex;flex-direction:column;gap:8px;background:linear-gradient(135deg,#EEF8F2,#E8F1FC);border:2px solid #1E8E5A;border-radius:14px;padding:14px}.soloOrden b{color:#0E2A47;font-size:16px}.soloOrden span{color:#5A6676;font-size:13.5px}.soloOrdenB{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+
+.oDev{margin-top:10px;border-top:1px dashed #C9D3DD;padding-top:8px;display:flex;flex-direction:column;gap:6px}.oDev b{color:#0E2A47;font-size:13.5px}.oDev small{color:#5A6676}.oDevB{display:flex;flex-wrap:wrap;gap:6px}.oDevB button{background:#fff;border:1px solid #1F6FD1;color:#1F6FD1;border-radius:9px;padding:4px 10px;cursor:pointer;font-weight:600;font-size:12.5px}.oDevB button:hover{background:#E8F1FC}
