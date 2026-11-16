@@ -172,8 +172,46 @@
   }
   function qrDeLiga() { const r = textoQR(location.hash); if (r.tipo !== 'txt') { const espera = () => { if (typeof S !== 'undefined' && S.items && Object.keys(S.items).length) aplicarQR(r); else setTimeout(espera, 700); }; espera(); } }
   window.addEventListener('hashchange', qrDeLiga);
+  // ---------- lista de Existencias: ordenar tocando la columna (ascendente / descendente)
+  const COLS = [null, 'c', 'n', 'ub', 'ex', 'est'];
+  function envolverLista() {
+    if (typeof filtrados === 'function' && !filtrados._tema) {
+      const base = filtrados; window.filtrados = function () { let r = base.apply(this, arguments); if (S.ordCol === 'est') { const rk = { neg: 0, agot: 1, bajo: 2, ok: 3, sin: 4 }; r = r.slice().sort((a, b) => (rk[estado(a)] ?? 5) - (rk[estado(b)] ?? 5)); } if (S.ordDesc) r = r.slice().reverse(); return r; }; window.filtrados._tema = true;
+    }
+    if (typeof renderLista === 'function' && !renderLista._tema) {
+      const base = renderLista; window.renderLista = function () { const r = base.apply(this, arguments); try { flechas(); } catch (e) {} return r; }; window.renderLista._tema = true;
+    }
+  }
+  function colActual() { const o = (document.getElementById('fOrd') || {}).value || 'ub'; return S.ordCol === 'est' ? 'est' : (o === 'exA' || o === 'exD') ? 'ex' : o; }
+  function flechas() {
+    const h = document.querySelector('#lista .row.head'); if (!h) return; const act = colActual(), desc = !!S.ordDesc ^ ((document.getElementById('fOrd') || {}).value === 'exD');
+    [...h.children].forEach((s, i) => { const k = COLS[i]; if (!k) return; s.classList.add('ordCol'); s.dataset.ord = k; s.dataset.flecha = k === act ? (desc ? ' ▼' : ' ▲') : ' ⇅'; s.classList.toggle('on', k === act); });
+  }
+  document.addEventListener('click', e => {
+    const s = e.target.closest('#lista .row.head [data-ord]'); if (!s) return; const k = s.dataset.ord, act = colActual(), sel = document.getElementById('fOrd'); if (!sel) return;
+    if (k === act) S.ordDesc = !S.ordDesc; else S.ordDesc = false;
+    S.ordCol = k === 'est' ? 'est' : '';
+    sel.value = k === 'ex' ? 'exA' : k === 'est' ? 'ub' : k;
+    sel.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  // ---------- portada de la pantalla de entrada: almacén ilustrado
+  function escenaLogin() {
+    let s = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice"><defs><linearGradient id="c" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#16395F"/><stop offset=".65" stop-color="#0B1F35"/><stop offset="1" stop-color="#071629"/></linearGradient>' +
+      '<radialGradient id="l" cx=".7" cy=".2" r=".7"><stop offset="0" stop-color="#3FC1C9" stop-opacity=".25"/><stop offset="1" stop-color="#3FC1C9" stop-opacity="0"/></radialGradient></defs><rect width="1600" height="900" fill="url(#c)"/><rect width="1600" height="900" fill="url(#l)"/>';
+    s += '<g stroke="#2A4466" stroke-width="4" fill="none" opacity=".7">'; for (let x = 0; x <= 1600; x += 200) s += '<path d="M' + x + ' 40L' + (x + 100) + ' 120L' + (x + 200) + ' 40M' + x + ' 40H' + (x + 200) + 'M' + (x + 100) + ' 120V40"/>'; s += '<path d="M0 120H1600"/></g>';
+    for (let x = 160; x < 1600; x += 320) s += '<path d="M' + (x - 26) + ' 160H' + (x + 26) + 'L' + (x + 16) + ' 146H' + (x - 16) + 'Z" fill="#2A4466"/><path d="M' + (x - 26) + ' 160L' + (x - 120) + ' 560H' + (x + 120) + 'L' + (x + 26) + ' 160Z" fill="#F5D88A" opacity=".06"/>';
+    const col = ['#F5A623', '#2F86E8', '#1E8E5A', '#C9D8E8', '#E08E0B', '#3D9BFF'];
+    const rack = (x, y, w, h, k) => { let r = '<g opacity="' + k + '"><rect x="' + x + '" y="' + y + '" width="10" height="' + h + '" fill="#9FB9D6"/><rect x="' + (x + w - 10) + '" y="' + y + '" width="10" height="' + h + '" fill="#9FB9D6"/>'; const n = 4, hh = h / n;
+      for (let i = 0; i < n; i++) { const yy = y + i * hh; r += '<rect x="' + x + '" y="' + (yy + hh - 8) + '" width="' + w + '" height="8" fill="#C9D8E8"/>'; let cx = x + 16; let j = 0; while (cx < x + w - 50) { const bw = 34 + ((i * 7 + j * 13) % 4) * 12, bh = hh * (.45 + ((i + j) % 3) * .12); r += '<rect x="' + cx + '" y="' + (yy + hh - 8 - bh) + '" width="' + bw + '" height="' + bh + '" rx="4" fill="' + col[(i * 3 + j) % col.length] + '"/><rect x="' + (cx + bw / 2 - 5) + '" y="' + (yy + hh - 8 - bh) + '" width="10" height="9" fill="#fff" opacity=".4"/>'; cx += bw + 10; j++; } }
+      return r + '</g>'; };
+    s += rack(60, 300, 380, 420, .55) + rack(1160, 300, 380, 420, .55) + rack(470, 380, 300, 330, .35) + rack(830, 380, 300, 330, .35);
+    s += '<g stroke="#1E3350" stroke-width="2" opacity=".7"><path d="M0 720H1600M0 800H1600"/>'; for (let x = -800; x <= 2400; x += 160) s += '<path d="M800 720L' + x + ' 900"/>'; s += '</g>';
+    s += '<g transform="translate(1260 650)" opacity=".85"><rect x="-80" y="-40" width="130" height="70" rx="12" fill="#F5A623"/><rect x="-70" y="-110" width="70" height="72" rx="8" fill="none" stroke="#F5A623" stroke-width="8"/><path d="M60 -150V40H120" stroke="#C9D8E8" stroke-width="10" fill="none"/><rect x="66" y="-60" width="60" height="44" rx="4" fill="#2F86E8"/><circle cx="-50" cy="40" r="22" fill="#0B1F35" stroke="#9FB9D6" stroke-width="6"/><circle cx="20" cy="40" r="22" fill="#0B1F35" stroke="#9FB9D6" stroke-width="6"/></g>';
+    return 'url("data:image/svg+xml;charset=utf-8,' + encodeURIComponent(s + '</svg>') + '")';
+  }
+  function portada() { const l = document.getElementById('login'); if (!l) return; l.dataset.portada = '1'; l.style.setProperty('background-image', 'linear-gradient(180deg,rgba(7,22,41,.15),rgba(7,22,41,.45)),' + escenaLogin(), 'important'); l.style.setProperty('background-size', 'cover', 'important'); l.style.setProperty('background-position', 'center', 'important'); }
   function iniciar() {
-    montar(); pintar(); obsLista(); envolver('renderValor', donaValor); envolver('renderGasto', donaGasto); obsMaq(); decorar(); botonQR(); qrDeLiga();
+    montar(); pintar(); obsLista(); envolver('renderValor', donaValor); envolver('renderGasto', donaGasto); obsMaq(); decorar(); botonQR(); qrDeLiga(); envolverLista(); portada(); setTimeout(portada, 1500); if (typeof applyCfg === 'function' && !applyCfg._tema) { const bc = applyCfg; window.applyCfg = function () { const r = bc.apply(this, arguments); try { portada(); } catch (x) {} return r; }; window.applyCfg._tema = true; }
     if (typeof renderAll === 'function' && !renderAll._tema) { const base = renderAll; renderAll = function () { const r = base.apply(this, arguments); try { montar(); pintar(); } catch (e) {} return r; }; renderAll._tema = true; }
     setInterval(() => { try { pintar(); } catch (e) {} }, 15000);
   }

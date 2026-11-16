@@ -139,3 +139,9 @@ input,select,textarea{border-radius:10px!important}
 .retI{display:flex;gap:9px;align-items:center;border:1px solid #D6DDE4;border-radius:12px;padding:8px 10px;cursor:pointer;background:#fff}.retI:has(input:checked){border-color:#1E8E5A;background:#EEF8F2}
 .retI span{display:flex;flex-direction:column}.retI small{color:#5A6676}.retI input{width:20px;height:20px}
 .codBtn{background:linear-gradient(135deg,#2ECC71,#1E8E5A)!important;color:#fff!important;border:0!important;font-weight:800;box-shadow:0 4px 12px rgba(30,142,90,.4);font-size:15px!important}
+
+/* ---------- lista más amplia y ordenable ---------- */
+.wrap{max-width:1600px!important}
+#lista .row.head .ordCol{cursor:pointer;user-select:none;white-space:nowrap}#lista .row.head .ordCol::after{content:attr(data-flecha);opacity:.55;font-size:11px}#lista .row.head .ordCol.on{color:#F5D27A}#lista .row.head .ordCol.on::after{opacity:1}
+@media (min-width:1000px){.row{grid-template-columns:64px 130px minmax(0,1fr) 260px 110px 140px!important}#lista .row:not(.head){padding:12px 16px!important;font-size:15px}}
+#login .card,#login form{box-shadow:0 20px 50px rgba(0,0,0,.45)!important}
