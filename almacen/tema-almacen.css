@@ -145,3 +145,24 @@ input,select,textarea{border-radius:10px!important}
 #lista .row.head .ordCol{cursor:pointer;user-select:none;white-space:nowrap}#lista .row.head .ordCol::after{content:attr(data-flecha);opacity:.55;font-size:11px}#lista .row.head .ordCol.on{color:#F5D27A}#lista .row.head .ordCol.on::after{opacity:1}
 @media (min-width:1000px){.row{grid-template-columns:64px 130px minmax(0,1fr) 260px 110px 140px!important}#lista .row:not(.head){padding:12px 16px!important;font-size:15px}}
 #login .card,#login form{box-shadow:0 20px 50px rgba(0,0,0,.45)!important}
+
+/* ---------- recuadro de entrada futurista (vidrio, borde luminoso, botón con brillo) ---------- */
+#login .lcard{position:relative;width:min(440px,100%);background:rgba(10,26,48,.62)!important;border:1px solid rgba(63,193,201,.45)!important;border-radius:24px!important;
+  -webkit-backdrop-filter:blur(14px) saturate(140%);backdrop-filter:blur(14px) saturate(140%);box-shadow:0 0 0 1px rgba(255,255,255,.06) inset,0 0 40px rgba(63,193,201,.25),0 24px 60px rgba(0,0,0,.55)!important;overflow:hidden}
+#login .lcard::before{content:"";position:absolute;inset:-2px;border-radius:26px;padding:2px;background:linear-gradient(130deg,#3FC1C9,transparent 35%,transparent 65%,#F5A623);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none;animation:lGira 6s linear infinite}
+@keyframes lGira{0%{filter:hue-rotate(0)}100%{filter:hue-rotate(360deg)}}
+#login .lcard .lh{background:transparent!important;text-align:center;padding:26px 24px 10px!important}
+#login .lcard .lh img{margin:0 auto 12px!important;box-shadow:0 0 22px rgba(63,193,201,.45)}
+#login .lcard .lh p{color:#9FE3E7!important;letter-spacing:.22em!important}
+#login .lcard .lh h2{color:#fff!important;font-size:26px!important;text-shadow:0 0 18px rgba(63,193,201,.55)}
+#login .lcard form{padding:14px 26px 26px!important;gap:16px!important}
+#login .lcard label.f{color:#B8CBE0!important;font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+#login .lcard .big{background:rgba(255,255,255,.06)!important;color:#fff!important;border:1px solid rgba(159,227,231,.35)!important;border-radius:14px!important;caret-color:#3FC1C9;transition:border-color .2s,box-shadow .2s,background .2s}
+#login .lcard .big::placeholder{color:rgba(184,203,224,.45)}
+#login .lcard .big:focus{outline:none;border-color:#3FC1C9!important;background:rgba(63,193,201,.08)!important;box-shadow:0 0 0 4px rgba(63,193,201,.18),0 0 24px rgba(63,193,201,.35)}
+#login .lcard button.primary{position:relative;overflow:hidden;height:54px;border-radius:14px!important;font-size:17px!important;font-weight:800;letter-spacing:.14em;text-transform:uppercase;
+  background:linear-gradient(120deg,#1F6FD1,#3FC1C9 55%,#1F6FD1)!important;background-size:200% 100%!important;box-shadow:0 0 0 1px rgba(255,255,255,.12) inset,0 10px 28px rgba(31,111,209,.55),0 0 26px rgba(63,193,201,.45)!important;animation:lFlujo 4s ease infinite}
+#login .lcard button.primary::after{content:"";position:absolute;top:0;left:-60%;width:40%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.45),transparent);transform:skewX(-20deg);animation:lBrillo 2.8s ease-in-out infinite}
+#login .lcard button.primary:hover{transform:translateY(-2px);box-shadow:0 14px 34px rgba(31,111,209,.65),0 0 36px rgba(63,193,201,.6)!important}
+@keyframes lFlujo{0%,100%{background-position:0% 0}50%{background-position:100% 0}}@keyframes lBrillo{0%{left:-60%}60%,100%{left:130%}}
+#login .lcard .foot{color:#8FA3B8!important;text-align:center}#login .lcard .msg{color:#FFB4AB!important;text-align:center}
