@@ -94,3 +94,20 @@ input,select,textarea{border-radius:10px!important}
 #maqDet .dIlW{flex:none;width:170px;border-radius:16px;background:linear-gradient(160deg,#F4F7FA,#E3EAF2);padding:6px}
 #maqDet .dIl{display:block;width:100%;height:auto}
 @media (max-width:640px){#maqDet .dIlW{width:110px}}
+
+/* ---------- 📷 lector QR ---------- */
+.qrBtn{background:linear-gradient(135deg,#F5A623,#E08E0B)!important;color:#14212E!important;border:0!important;font-weight:700;box-shadow:0 4px 12px rgba(245,166,35,.4)}
+#qrModal{position:fixed;inset:0;z-index:100050;background:rgba(5,12,22,.78);display:grid;place-items:center;padding:16px}
+#qrModal[hidden]{display:none!important}
+#qrModal .qrBox{width:min(520px,100%);background:#0E2A47;color:#EAF2FB;border-radius:20px;padding:14px;box-shadow:0 20px 50px rgba(0,0,0,.5)}
+#qrModal .qrHead{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:17px}
+#qrModal .qrHead button{background:rgba(255,255,255,.12);color:#fff;border:0;border-radius:10px;width:36px;height:36px;font-size:16px;cursor:pointer}
+#qrModal .qrVid{position:relative;border-radius:14px;overflow:hidden;background:#000;aspect-ratio:4/3}
+#qrModal video{width:100%;height:100%;object-fit:cover;display:block}
+#qrModal .qrMarco{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none}
+#qrModal .qrMarco i{width:62%;aspect-ratio:1;border:3px solid #F5A623;border-radius:18px;box-shadow:0 0 0 999px rgba(0,0,0,.35);animation:qrPulso 1.6s ease-in-out infinite}
+@keyframes qrPulso{50%{border-color:#3FC1C9;transform:scale(1.03)}}
+#qrModal p{margin:10px 2px;color:#B8CBE0;font-size:14px}
+#qrModal .qrMan{display:flex;gap:8px}#qrModal .qrMan input{flex:1;min-width:0;padding:10px;border-radius:10px;border:1px solid #2C3B4F;background:#071629;color:#fff}
+/* estantes con dibujo de anaquel */
+#estantes .shelf .shIlW{background:linear-gradient(160deg,#F7F9FB,#E6ECF3)}

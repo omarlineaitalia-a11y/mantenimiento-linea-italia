@@ -110,14 +110,69 @@
     if (!window.ICON_R) return;
     document.querySelectorAll('#estantes .shelf, #maqGrid .shelf').forEach(b => {
       if (b.dataset.il) return; const sec = b.closest('.catsec'), cat = sec ? (sec.querySelector('h2 .mono') || {}).textContent : 'GEN';
-      const nom = (b.querySelector('.sh-name') || {}).textContent || b.textContent; const svg = dibujo(icMaq(nom, cat), CCOLM[cat] || '#1F6FD1'); if (!svg) return;
+      const nom = (b.querySelector('.sh-name') || {}).textContent || b.textContent; const svg = b.closest('#estantes') ? anaquel(icMaq(nom, cat), CCOLM[cat] || '#1F6FD1') : dibujo(icMaq(nom, cat), CCOLM[cat] || '#1F6FD1'); if (!svg) return;
       b.dataset.il = '1'; b.insertAdjacentHTML('afterbegin', '<span class="shIlW">' + svg + '</span>');
     });
     const dh = document.querySelector('#maqDet .dhead'); if (dh && !dh.dataset.il) { const cat = ((dh.querySelector('.eyebrow') || {}).textContent || 'GEN').split('·')[0].trim(), nom = (dh.querySelector('h2') || {}).textContent || ''; const svg = dibujo(icMaq(nom, cat), CCOLM[cat] || '#1F6FD1', 'dIl'); if (svg) { dh.dataset.il = '1'; dh.insertAdjacentHTML('afterbegin', '<span class="dIlW">' + svg + '</span>'); } }
   }
   const obsMaq = () => ['estantes', 'maqGrid', 'maqDet'].forEach(id => { const el = document.getElementById(id); if (el && !el._obsMq) { el._obsMq = true; new MutationObserver(decorar).observe(el, { childList: true }); } });
+  // ---------- estante = dibujo de un anaquel del color de su categoría, con la máquina que surte en la repisa de en medio
+  function anaquel(icon, col) {
+    const ic = (window.ICON_R && ICON_R[icon]) ? '<svg x="34" y="34" width="52" height="32" viewBox="0 0 120 100" style="color:' + col + '">' + ICON_R[icon] + '</svg>' : '';
+    const caja = (x, y, w, h, c) => '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" rx="2" fill="' + c + '"/><rect x="' + (x + w / 2 - 3) + '" y="' + y + '" width="6" height="' + Math.min(5, h) + '" fill="#fff" opacity=".45"/>';
+    return '<svg class="shIl" viewBox="0 0 120 100" aria-hidden="true"><ellipse cx="60" cy="95" rx="50" ry="4" fill="url(#gPiso)"/>' +
+      '<rect x="14" y="6" width="5" height="88" rx="1.5" fill="' + col + '"/><rect x="101" y="6" width="5" height="88" rx="1.5" fill="' + col + '"/>' +
+      [30, 66, 90].map(y => '<rect x="12" y="' + y + '" width="96" height="4" rx="1" fill="url(#gMetal)" stroke="#8E98A3" stroke-width=".5"/>').join('') +
+      '<rect x="12" y="6" width="96" height="3" rx="1" fill="' + col + '" opacity=".7"/>' +
+      caja(22, 14, 18, 16, '#F5A623') + caja(43, 18, 14, 12, col) + caja(60, 12, 20, 18, '#C9D8E8') + caja(83, 17, 15, 13, '#1E8E5A') +
+      ic + caja(22, 74, 24, 16, col) + caja(50, 76, 18, 14, '#F5A623') + caja(72, 72, 26, 18, '#C9D8E8') + '</svg>';
+  }
+  // ---------- 📷 lector de QR (cámara de la tablet o celular). El QR del estante guarda la ubicación: …/almacen/#ub=A1-N3-P02
+  let qrStream = null, qrLoop = 0, qrDet = null;
+  function cargarJsQR() { return window.jsQR ? Promise.resolve() : new Promise((ok, mal) => { const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js'; s.onload = ok; s.onerror = mal; document.head.appendChild(s); }); }
+  function textoQR(t) { t = String(t || '').trim(); const m = t.match(/[#&?]ub=([^&]+)/i); if (m) return { tipo: 'ub', v: decodeURIComponent(m[1]).toUpperCase() }; const c = t.match(/[#&?]c=([^&]+)/i); if (c) return { tipo: 'c', v: decodeURIComponent(c[1]).toUpperCase() }; return { tipo: 'txt', v: t.toUpperCase() }; }
+  function aplicarQR(r) {
+    const b = document.querySelector('nav.tabs button[data-tab="exist"]'); if (b) b.click();
+    const q = document.getElementById('q'); if (!q) return;
+    q.value = r.v.replace(/-N(\d+)/, ' N$1').replace(/-P(\d+)/, ' P$1').replace(/-/g, ' ').trim(); q.dispatchEvent(new Event('input', { bubbles: true }));
+    try { toast((r.tipo === 'ub' ? '📍 Ubicación ' : '🔎 ') + r.v); } catch (e) {}
+    setTimeout(() => { const l = document.getElementById('lista'); if (l) l.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 200);
+  }
+  function cerrarQR() { cancelAnimationFrame(qrLoop); if (qrStream) qrStream.getTracks().forEach(t => t.stop()); qrStream = null; const m = document.getElementById('qrModal'); if (m) m.hidden = true; }
+  async function abrirQR() {
+    let m = document.getElementById('qrModal');
+    if (!m) { m = document.createElement('div'); m.id = 'qrModal'; m.innerHTML = '<div class="qrBox"><div class="qrHead"><b>📷 Escanear QR</b><button type="button" id="qrCerrar">✕</button></div><div class="qrVid"><video id="qrVideo" playsinline muted></video><div class="qrMarco"><i></i></div></div><p id="qrMsg">Apunta la cámara al QR del estante o de la refacción.</p><div class="qrMan"><input id="qrTxt" placeholder="…o escribe la ubicación o el código (ej. A1-N3-P02)"><button type="button" class="primary" id="qrIr">Buscar</button></div></div>'; document.body.appendChild(m);
+      m.addEventListener('click', e => { if (e.target === m || e.target.id === 'qrCerrar') cerrarQR(); if (e.target.id === 'qrIr') { const v = document.getElementById('qrTxt').value.trim(); if (v) { cerrarQR(); aplicarQR(textoQR(v.includes('ub=') ? v : '#ub=' + v)); } } }); }
+    m.hidden = false; const msg = document.getElementById('qrMsg'), v = document.getElementById('qrVideo');
+    try {
+      qrStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+      v.srcObject = qrStream; await v.play();
+    } catch (e) { msg.textContent = '⚠️ No se pudo abrir la cámara (' + (e.name || e.message) + '). Da permiso de cámara al navegador, o escribe la ubicación abajo.'; return; }
+    if ('BarcodeDetector' in window) { try { qrDet = new BarcodeDetector({ formats: ['qr_code'] }); } catch (e) { qrDet = null; } }
+    if (!qrDet) { try { await cargarJsQR(); } catch (e) { msg.textContent = '⚠️ Sin internet para el lector. Escribe la ubicación abajo.'; return; } }
+    const cv = document.createElement('canvas'), cx = cv.getContext('2d', { willReadFrequently: true });
+    const paso = async () => {
+      if (!qrStream) return;
+      if (v.readyState >= 2) {
+        let txt = '';
+        try {
+          if (qrDet) { const r = await qrDet.detect(v); if (r && r[0]) txt = r[0].rawValue; }
+          else { cv.width = v.videoWidth; cv.height = v.videoHeight; cx.drawImage(v, 0, 0); const img = cx.getImageData(0, 0, cv.width, cv.height), r = jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' }); if (r) txt = r.data; }
+        } catch (e) {}
+        if (txt) { if (navigator.vibrate) navigator.vibrate(80); cerrarQR(); aplicarQR(textoQR(txt)); return; }
+      }
+      qrLoop = requestAnimationFrame(paso);
+    };
+    qrLoop = requestAnimationFrame(paso);
+  }
+  function botonQR() {
+    const acc = document.querySelector('header.hero .hero-actions'); if (!acc || document.getElementById('btnQR')) return;
+    const b = document.createElement('button'); b.type = 'button'; b.id = 'btnQR'; b.className = 'qrBtn'; b.innerHTML = '📷 Escanear QR'; b.addEventListener('click', abrirQR); acc.insertBefore(b, acc.firstChild);
+  }
+  function qrDeLiga() { const r = textoQR(location.hash); if (r.tipo !== 'txt') { const espera = () => { if (typeof S !== 'undefined' && S.items && Object.keys(S.items).length) aplicarQR(r); else setTimeout(espera, 700); }; espera(); } }
+  window.addEventListener('hashchange', qrDeLiga);
   function iniciar() {
-    montar(); pintar(); obsLista(); envolver('renderValor', donaValor); envolver('renderGasto', donaGasto); obsMaq(); decorar();
+    montar(); pintar(); obsLista(); envolver('renderValor', donaValor); envolver('renderGasto', donaGasto); obsMaq(); decorar(); botonQR(); qrDeLiga();
     if (typeof renderAll === 'function' && !renderAll._tema) { const base = renderAll; renderAll = function () { const r = base.apply(this, arguments); try { montar(); pintar(); } catch (e) {} return r; }; renderAll._tema = true; }
     setInterval(() => { try { pintar(); } catch (e) {} }, 15000);
   }
