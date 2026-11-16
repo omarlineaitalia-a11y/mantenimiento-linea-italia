@@ -1160,13 +1160,41 @@ function serieMensual() {
     return o;
   }).filter(o => Object.keys(o.med).length);
 }
+// ---- etiquetas grandes sobre las barras: que el número se lea de un vistazo (gráficas "bobitas") ----
+// pone el valor arriba de cada barra de un dataset simple (no apiladas, no líneas)
+function etiBarra(fmt, color) {
+  return { id: 'etiBarra', afterDatasetsDraw(c) {
+    const g = c.ctx; g.save(); g.font = 'bold 14px Segoe UI, Arial'; g.textAlign = 'center'; g.textBaseline = 'bottom';
+    c.data.datasets.forEach((ds, di) => {
+      if (ds.type === 'line') return; const meta = c.getDatasetMeta(di); if (meta.hidden) return;
+      meta.data.forEach((bar, i) => { const v = ds.data[i]; if (v == null || v === 0) return;
+        g.fillStyle = color || (Array.isArray(ds.backgroundColor) ? (ds.backgroundColor[i] || '#14212E') : '#14212E');
+        g.fillText(fmt(v), bar.x, bar.y - 5); });
+    });
+    g.restore();
+  } };
+}
+// pone el TOTAL de la columna apilada arriba de cada mes
+function etiTotalMes(fmt) {
+  return { id: 'etiTotalMes', afterDatasetsDraw(c) {
+    const g = c.ctx; g.save(); g.font = 'bold 13px Segoe UI, Arial'; g.textAlign = 'center'; g.textBaseline = 'bottom'; g.fillStyle = '#14212E';
+    const n = c.data.labels.length;
+    for (let i = 0; i < n; i++) {
+      let total = 0, topY = Infinity, x = null;
+      c.data.datasets.forEach((ds, di) => { if (ds.type === 'line') return; const meta = c.getDatasetMeta(di); if (meta.hidden) return;
+        const el = meta.data[i], v = ds.data[i]; if (v == null) return; total += v; if (el.y < topY) { topY = el.y; } if (x == null) x = el.x; });
+      if (total > 0 && isFinite(topY) && x != null) g.fillText(fmt(total), x, topY - 5);
+    }
+    g.restore();
+  } };
+}
 // gráfica mensual con la línea de arranque del programa de ahorro (sirve en pantalla y en el PDF)
 function graficaMensual(canvas, S, opciones) {
   const ini = inicioAhorro().slice(0, 7), iIni = S.findIndex(o => o.mes >= ini), etiquetas = S.map(o => MES[Number(o.mes.slice(5)) - 1] + ' ' + o.mes.slice(2, 4));
   const lineaInicio = { id: 'inicio', afterDraw(c) { if (iIni < 0) return; const x = c.scales.x.getPixelForValue(iIni) - (c.scales.x.width / S.length) / 2, a = c.chartArea, g = c.ctx; g.save(); g.strokeStyle = '#1E8E5A'; g.lineWidth = 2; g.setLineDash([6, 4]); g.beginPath(); g.moveTo(x, a.top); g.lineTo(x, a.bottom); g.stroke(); g.setLineDash([]); g.fillStyle = '#1E8E5A'; g.font = 'bold 12px Segoe UI, Arial'; g.fillText('Inicio de acciones de ahorro (' + fF(inicioAhorro()) + ')', Math.min(x + 6, a.right - 250), a.top + 14); g.restore(); } };
-  return new Chart(canvas, { type: 'bar', plugins: [lineaInicio], data: { labels: etiquetas, datasets: D.medidores.map(m => ({ label: m.id + ' (kWh)', data: S.map(o => o.med[m.id] ? Math.round(o.med[m.id].kwh) : null), backgroundColor: S.map((o, i) => iIni >= 0 && i >= iIni ? m.color : m.color + '66'), stack: 'k', yAxisID: 'y' }))
+  return new Chart(canvas, { type: 'bar', plugins: [lineaInicio, etiTotalMes(v => num(Math.round(v)) + ' kWh')], data: { labels: etiquetas, datasets: D.medidores.map(m => ({ label: m.id + ' (kWh)', data: S.map(o => o.med[m.id] ? Math.round(o.med[m.id].kwh) : null), backgroundColor: S.map((o, i) => iIni >= 0 && i >= iIni ? m.color : m.color + '66'), stack: 'k', yAxisID: 'y' }))
     .concat([{ type: 'line', label: 'Costo total con IVA ($)', data: S.map(o => Math.round(o.pesos)), borderColor: '#14212E', backgroundColor: '#14212E', yAxisID: 'y2', tension: .3, pointRadius: 3 }]) },
-    options: Object.assign({ maintainAspectRatio: false, scales: { y: { stacked: true, title: { display: true, text: 'kWh por mes' } }, x: { stacked: true }, y2: { position: 'right', grid: { display: false }, title: { display: true, text: 'Pesos' } } }, plugins: { legend: { position: 'bottom' } } }, opciones || {}) });
+    options: Object.assign({ maintainAspectRatio: false, scales: { y: { stacked: true, grace: '12%', title: { display: true, text: 'kWh por mes' } }, x: { stacked: true }, y2: { position: 'right', grace: '12%', grid: { display: false }, title: { display: true, text: 'Pesos' } } }, plugins: { legend: { position: 'bottom' } } }, opciones || {}) });
 }
 // recibos de CFE que faltan para tener el historial completo (del último capturado hasta el último periodo cerrado)
 function recibosFaltantes() {
@@ -1237,8 +1265,9 @@ function vAhorro() {
   $('#aPdfDir').onclick = pdfDireccion;
   if (window.Chart) graficas.push(graficaMensual($('#gMes'), serieMensual()));
   if (window.Chart) {
-    graficas.push(new Chart($('#gDia'), { type: 'bar', data: { labels: ['Dom (lunes)', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'], datasets: [{ label: 'kWh promedio (3 medidores)', data: porDia.map(a => a.length ? Math.round(a.reduce((x, y) => x + y, 0) / a.length) : 0), backgroundColor: '#1F6FD1' }] }, options: { maintainAspectRatio: false, plugins: { legend: { display: false } } } }));
-    graficas.push(new Chart($('#gAh'), { type: 'bar', data: { labels: E.map(x => x.m.id), datasets: [{ label: 'Pronóstico', data: E.map(x => Math.round(x.e.proy.total)), backgroundColor: E.map(x => x.m.color) }] }, options: { maintainAspectRatio: false, plugins: { legend: { display: false } } } }));
+    const datDia = porDia.map(a => a.length ? Math.round(a.reduce((x, y) => x + y, 0) / a.length) : 0), maxDia = Math.max(...datDia);
+    graficas.push(new Chart($('#gDia'), { type: 'bar', plugins: [etiBarra(v => num(v), '#14212E')], data: { labels: ['Dom (lunes)', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'], datasets: [{ label: 'kWh promedio (3 medidores)', data: datDia, backgroundColor: datDia.map(v => v > 0 && v === maxDia ? '#D64545' : '#1F6FD1') }] }, options: { maintainAspectRatio: false, scales: { y: { beginAtZero: true, grace: '15%' } }, plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => num(c.parsed.y) + ' kWh promedio' } } } } }));
+    graficas.push(new Chart($('#gAh'), { type: 'bar', plugins: [etiBarra(v => din0(v))], data: { labels: E.map(x => x.m.id), datasets: [{ label: 'Pronóstico', data: E.map(x => Math.round(x.e.proy.total)), backgroundColor: E.map(x => x.m.color) }] }, options: { maintainAspectRatio: false, scales: { y: { beginAtZero: true, grace: '15%' } }, plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => 'Pronóstico: ' + din0(c.parsed.y) } } } } }));
   }
 }
 
