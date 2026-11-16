@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Organigrama y Desempeño</title>
+<link rel="manifest" href="manifest.json"><link rel="icon" href="icono-192.png?v=1"><link rel="apple-touch-icon" href="icono-192.png?v=1"><meta name="theme-color" content="#0E2A47"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Organigrama LI">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 <script>window.LI_APP="organigrama";</script>
@@ -1126,5 +1127,21 @@ document.addEventListener('change', async e => {
 const _renderV6 = render;
 render = function () { _renderV6.apply(this, arguments); if (tab === 'herr') renderHerr(); };
 </script>
-</body>
+<button id="btnInstalarOrg" type="button" hidden style="position:fixed;right:14px;bottom:14px;z-index:99998;border:0;border-radius:999px;padding:12px 18px;background:#F5A623;color:#14212E;font:700 15px 'Segoe UI',system-ui,sans-serif;box-shadow:0 6px 18px rgba(0,0,0,.35);cursor:pointer">📲 Instalar app en este equipo</button>
+<script>
+(function () {
+  var b = document.getElementById('btnInstalarOrg'), pedir = null;
+  var instalada = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true || window.self !== window.top;
+  var ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if (instalada) return;
+  window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); pedir = e; b.hidden = false; });
+  window.addEventListener('appinstalled', function () { pedir = null; b.hidden = true; alert('Listo: "Organigrama LI" quedó instalada con su ícono.'); });
+  if (ios) { b.hidden = false; b.textContent = '📲 Instalar en iPhone / iPad'; }
+  b.onclick = async function () {
+    if (pedir) { pedir.prompt(); try { await pedir.userChoice; } catch (e) {} pedir = null; b.hidden = true; return; }
+    if (ios) alert('En iPhone / iPad:\n1. Abre esta página en Safari.\n2. Toca Compartir (cuadro con flecha ↑).\n3. "Agregar a inicio" → Agregar.');
+  };
+  if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(function () {});
+})();
+</script></body>
 </html>
