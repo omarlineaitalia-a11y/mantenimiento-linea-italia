@@ -2070,6 +2070,7 @@ function almCaja(t, o, puede) {
   let h = '<div class="caja"><h2>📦 Refacciones del Almacén <span class="r">' + (ALM.ok ? '<span class="chip ok">en línea</span>' : '') + '</span></h2>';
   if (ALM.err) return h + '<div class="aviso inf"><span class="i">📦</span><div>No se pudo leer el Almacén LI (' + esc(ALM.err) + '). Tu nómina debe estar dada de alta en el Almacén para ver existencias y sacar refacciones.</div></div></div>';
   if (!ALM.ok) return h + '<p class="peq mu">Conectando con el Almacén…</p></div>';
+  if (o.ini && t.tec === tecDe(S.nom)) h += '<div class="fila" style="margin:-4px 0 12px"><button class="bt p" data-pedmat>📋 Pedir material al almacén (genera código)</button><span class="peq mu">Arma la lista de lo que necesitas (refacciones, silicón, cinta…) y te da un código PV-0000 para recogerlo en el almacén.</span></div>';
   const usadas = o.alm || [];
   if (usadas.length) h += '<p class="peq" style="margin:0 0 6px"><b>Usadas en este preventivo</b> (salida ya registrada en el Almacén):</p><table class="tbl"><tr><th>Código</th><th>Descripción</th><th class="n">Cant.</th><th class="n">Costo</th><th>Hora</th></tr>' +
     usadas.map(u => '<tr><td>' + esc(u.c) + '</td><td>' + esc(u.n) + '</td><td class="n">' + u.q + '</td><td class="n">' + dineroA(u.q * (u.cu || 0)) + '</td><td>' + fechaHora(u.t) + '</td></tr>').join('') + '</table>';
@@ -2302,3 +2303,6 @@ function abrirCartelCalif() {
   $('#vPdf').onclick = async () => { toast('Generando PDF…'); const b = await pdfDeHTML(html); if (!b) { toast('Sin internet para armar el PDF: usa 🖨 Imprimir → Guardar como PDF.'); return; } const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = nom; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000); toast('PDF descargado: ' + nom); };
 }
 document.addEventListener('click', e => { if (e.target.closest('[data-cartelcal]')) abrirCartelCalif(); });
+
+// v24 · 📋 Pedir material al almacén desde la hoja (orden PV-0000 ligada a este preventivo; se surte en la computadora del almacén)
+document.addEventListener('click', e => { if (!e.target.closest('[data-pedmat]') || !S.hojaT || !window.PedidoMaterial) return; const t = S.hojaT; PedidoMaterial.abrir({ origen: { tipo: 'prev', id: t.k, txt: 'Preventivo · ' + t.eq + ' · ' + nomMes(t.mes), maq: t.eq }, nomina: S.nom, nombre: (yoP().n || ''), app: 'preventivo' }); });

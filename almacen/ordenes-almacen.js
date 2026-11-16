@@ -7,7 +7,7 @@
   'use strict';
   const FU = { t: 0, lista: [], err: [], cargando: null }, ORD = { L: [], sub: false, borr: null, ver: '' };
   // ---------- quién puede RETIRAR material (Ing. Omar): técnicos de mantenimiento, jefe, gerente, Humberto y su auxiliar, director
-  const RET_DEF = ['1162', '4237', '4573', '4643', '4647', '4695', '4698', '4767', '4768', '4781', '3626'];
+  const RET_DEF = ['1162', '4237', '4573', '4643', '4647', '4695', '4698', '4767', '4768', '4781', '3626', '2000'];   // 2000 = Marisela Martínez (mantenimiento)
   const RET = { n: null };
   const puedeRetirar = nom => { nom = String(nom || '').trim(); const L = RET.n || RET_DEF.reduce((a, k) => (a[k] = true, a), {}); return !!L[nom]; };
   const codigoRx = /^(PA|RQ|AG|PV|OM)-?\d{4}$/i;
