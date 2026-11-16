@@ -40,7 +40,7 @@
     [/manguera|conexi[oó]n|v[aá]lvula|neum[aá]tic|cilindro|piston|pist[oó]n|codo|cople|niple|tubo|abrazadera/i, '🔧', '#2F86E8'], [/aceite|grasa|lubric|refrigerante|anticongelante/i, '🛢️', '#8E5A1F'],
     [/cuchilla|broca|fresa|sierra|disco|lija|navaja|buril/i, '🪚', '#C62828'], [/pintura|thinner|silic[oó]n|pegamento|cinta/i, '🎨', '#D35AA0']];
   function iconosLista() {
-    document.querySelectorAll('#lista span.thumb').forEach(sp => { if (sp.dataset.ic) return; const row = sp.closest('.row'); const tx = row ? row.textContent : ''; const t = TIPOS.find(([rx]) => rx.test(tx)) || [null, '📦', '#0E2A47'];
+    document.querySelectorAll('span.thumb').forEach(sp => { if (sp.dataset.ic) return; const row = sp.closest('.row'); const tx = row ? row.textContent : ''; const t = TIPOS.find(([rx]) => rx.test(tx)) || [null, '📦', '#0E2A47'];
       sp.dataset.ic = '1'; sp.textContent = t[1]; sp.title = 'Sin foto todavía'; sp.style.cssText = 'display:grid;place-items:center;font-size:22px;background:linear-gradient(145deg,' + t[2] + '22,' + t[2] + '44);border:1px solid ' + t[2] + '55;color:inherit'; });
   }
   const obsLista = () => { const l = document.getElementById('lista'); if (l && !l._obsIc) { l._obsIc = true; new MutationObserver(iconosLista).observe(l, { childList: true }); iconosLista(); } };
@@ -87,8 +87,37 @@
   }
   function envolver(nombre, fn) { try { const base = window[nombre]; if (typeof base !== 'function' || base._tema) return; const nuevo = function () { const r = base.apply(this, arguments); try { fn(); } catch (e) {} return r; }; nuevo._tema = true; window[nombre] = nuevo; } catch (e) {} }
 
+  // ---------- dibujos de máquinas (los mismos de la Base de Datos: iconos.js + iconos-maquinas.js)
+  const CCOLM = { MTA: '#1F6FD1', MTB: '#EB6834', EA: '#1BAF7A', HM: '#7A3FC2', GEN: '#5A6676' }, CICO = { MTA: 'mta', MTB: 'mtb', EA: 'ea', HM: 'mtc', GEN: 'ag' };
+  const normT = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  function icMaq(nombre, cat) {
+    const n = normT(nombre);
+    if (/inversor|tablero|subestacion|transformador/.test(n)) return 'ebt';
+    if (/compresor|extractor|secador|vaporizador|colector/.test(n)) return 'ea';
+    if (/laser|gweike|g-weike|bimex/.test(n)) return 'laser';
+    if (/dobladora|plegadora/.test(n)) return 'dobladora';
+    if (/soldar|soldadora|punteadora/.test(n)) return 'soldadora';
+    if (/enchapadora|canteadora|homag|stefani|cubrecanto/.test(n)) return 'enchapadora';
+    if (/horno|tunel|curado/.test(n)) return 'horno';
+    if (/prensa|troquel|cizalla|guillotina/.test(n)) return 'mtb';
+    if (/taladro/.test(n)) return (cat === 'MTB' || /banco|pedestal|columna/.test(n)) ? 'taladroBanco' : 'mtc';
+    if (/montacarga|patin|carrito/.test(n)) return 'em';
+    return CICO[cat] || 'mta';
+  }
+  const dibujo = (k, col, cls) => (window.ICON_R && ICON_R[k]) ? '<svg class="' + (cls || 'shIl') + '" viewBox="0 0 120 100" style="color:' + col + '" aria-hidden="true">' + ICON_R[k] + '</svg>' : '';
+  function decorar() {
+    try { iconosLista(); } catch (e) {}
+    if (!window.ICON_R) return;
+    document.querySelectorAll('#estantes .shelf, #maqGrid .shelf').forEach(b => {
+      if (b.dataset.il) return; const sec = b.closest('.catsec'), cat = sec ? (sec.querySelector('h2 .mono') || {}).textContent : 'GEN';
+      const nom = (b.querySelector('.sh-name') || {}).textContent || b.textContent; const svg = dibujo(icMaq(nom, cat), CCOLM[cat] || '#1F6FD1'); if (!svg) return;
+      b.dataset.il = '1'; b.insertAdjacentHTML('afterbegin', '<span class="shIlW">' + svg + '</span>');
+    });
+    const dh = document.querySelector('#maqDet .dhead'); if (dh && !dh.dataset.il) { const cat = ((dh.querySelector('.eyebrow') || {}).textContent || 'GEN').split('·')[0].trim(), nom = (dh.querySelector('h2') || {}).textContent || ''; const svg = dibujo(icMaq(nom, cat), CCOLM[cat] || '#1F6FD1', 'dIl'); if (svg) { dh.dataset.il = '1'; dh.insertAdjacentHTML('afterbegin', '<span class="dIlW">' + svg + '</span>'); } }
+  }
+  const obsMaq = () => ['estantes', 'maqGrid', 'maqDet'].forEach(id => { const el = document.getElementById(id); if (el && !el._obsMq) { el._obsMq = true; new MutationObserver(decorar).observe(el, { childList: true }); } });
   function iniciar() {
-    montar(); pintar(); obsLista(); envolver('renderValor', donaValor); envolver('renderGasto', donaGasto);
+    montar(); pintar(); obsLista(); envolver('renderValor', donaValor); envolver('renderGasto', donaGasto); obsMaq(); decorar();
     if (typeof renderAll === 'function' && !renderAll._tema) { const base = renderAll; renderAll = function () { const r = base.apply(this, arguments); try { montar(); pintar(); } catch (e) {} return r; }; renderAll._tema = true; }
     setInterval(() => { try { pintar(); } catch (e) {} }, 15000);
   }
