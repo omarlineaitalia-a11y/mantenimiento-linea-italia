@@ -166,3 +166,4 @@ input,select,textarea{border-radius:10px!important}
 #login .lcard button.primary:hover{transform:translateY(-2px);box-shadow:0 14px 34px rgba(31,111,209,.65),0 0 36px rgba(63,193,201,.6)!important}
 @keyframes lFlujo{0%,100%{background-position:0% 0}50%{background-position:100% 0}}@keyframes lBrillo{0%{left:-60%}60%,100%{left:130%}}
 #login .lcard .foot{color:#8FA3B8!important;text-align:center}#login .lcard .msg{color:#FFB4AB!important;text-align:center}
+.soloOrden{display:flex;flex-direction:column;gap:8px;background:linear-gradient(135deg,#EEF8F2,#E8F1FC);border:2px solid #1E8E5A;border-radius:14px;padding:14px}.soloOrden b{color:#0E2A47;font-size:16px}.soloOrden span{color:#5A6676;font-size:13.5px}.soloOrdenB{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}

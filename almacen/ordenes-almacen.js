@@ -46,11 +46,21 @@
     cargarFuentes().then(() => { const s = document.getElementById('mvOrigen'); if (!s) return; s.innerHTML = opcionesOrigen('', true); const m = document.getElementById('mvOrigenMsg'); if (m) m.textContent = FU.err.length ? '⚠️ No se pudo leer: ' + FU.err.join(', ') + ' (la cuenta de este equipo debe estar dada de alta ahí).' : (FU.lista.length ? '' : 'No hay paros, requerimientos ni preventivos abiertos. Pide primero la orden en Control de Paros o en el preventivo.'); });
     w.addEventListener('change', () => { const o = ORIG_MAP[(document.getElementById('mvOrigen') || {}).value]; if (!o) return; const mq = document.getElementById('mvMaq'), ar = document.getElementById('mvArea'); if (mq && !mq.value && o.maq) mq.value = String(o.maq).toUpperCase(); if (ar && !ar.value && o.area) ar.value = o.area; });
   }
-  function envolverDrawer() { if (typeof renderDrawer !== 'function' || renderDrawer._ord) return; const base = renderDrawer; window.renderDrawer = function () { const r = base.apply(this, arguments); try { inyectarOrigen(); } catch (e) {} return r; }; window.renderDrawer._ord = true; }
+  // Opción 1 (Ing. Omar, 16-nov-2026): NO hay salida directa desde la ficha; todo material sale solo con código de orden (PA/RQ/AG/PV).
+  function sinSalidaDirecta() {
+    const f = document.getElementById('fMov'); if (!f || S.tipo !== 'S' || f.dataset.bloq) return; f.dataset.bloq = '1';
+    const seg = f.querySelector('.seg'), segH = seg ? seg.outerHTML : '';   // el selector Salida / Entrada se conserva (las entradas siguen igual)
+    f.innerHTML = '<h3>' + (segH ? 'Registrar movimiento' : '📤 Salida de material') + '</h3>' + segH + '<div class="soloOrden"><b>El material sale solo con código de orden</b><span>El técnico genera su orden desde <b>Control de Paros</b>, el <b>Preventivo</b> o aquí en <b>Órdenes de material</b>, siempre ligada a un paro, requerimiento, área general o preventivo.</span>' +
+      '<div class="soloOrdenB"><button type="button" class="codBtn" id="soCod">🔢 Código de orden</button><button type="button" class="primary" id="soNueva">➕ Nueva orden de material</button></div></div>';
+    f.querySelector('#soCod').addEventListener('click', () => { const v = prompt('Código de la orden de material (ej. PA-4821):', ''); if (v && v.trim()) { if (typeof closeItem === 'function') closeItem(); abrirOrdenCodigo(v); } });
+    f.querySelector('#soNueva').addEventListener('click', () => { if (typeof closeItem === 'function') closeItem(); const b = document.querySelector('nav.tabs button[data-tab="ord"]'); if (b) b.click(); setTimeout(() => { const n = document.getElementById('oNueva'); if (n) n.click(); }, 200); });
+  }
+  function envolverDrawer() { if (typeof renderDrawer !== 'function' || renderDrawer._ord) return; const base = renderDrawer; window.renderDrawer = function () { const r = base.apply(this, arguments); try { sinSalidaDirecta(); } catch (e) {} return r; }; window.renderDrawer._ord = true; }
   function envolverGuardar() {
     if (typeof guardarMov !== 'function' || guardarMov._ord) return; const base = guardarMov;
     window.guardarMov = async function () {
-      if (S.tipo === 'S') {
+      if (S.tipo === 'S') { const msg = document.getElementById('mMov'); if (msg) { msg.className = 'msg err'; msg.textContent = '⛔ El material sale solo con código de orden.'; } return; }
+      if (false) {
         const v = (document.getElementById('mvOrigen') || {}).value, o = ORIG_MAP[v], msg = document.getElementById('mMov');
         if (!o) { if (msg) { msg.className = 'msg err'; msg.textContent = '⛔ Elige para qué es la refacción: un paro, requerimiento, área general, preventivo u orden de material. Sin eso no se puede sacar material del almacén.'; } return; }
         const quien = S.isAdmin ? ((document.getElementById('mvNomina') || {}).value || '') : ((S.yo || {}).nomina || '');
