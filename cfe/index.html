@@ -254,7 +254,7 @@ const MED_DEF = [
   { id: 'PT477E', nombre: 'Servicio 220 V', kva: 112.5, volt: 220, tarifa: 'GDMTO', mult: 1, contratada: 68, conectada: 68, vuelta: 100000, corte: 15, bt: true, netmet: false, color: '#1E8E5A', servicio: '', multDem: 1, marca: 'Elster A3RAL',
     pantallas: [['kvarh', '35'], ['kwMax', '6'], ['lec', '5']] }
 ];
-const AJ_DEF = { hora: '10:00', avisoMin: 30, retencionFotos: 35, diasPago: 13, kwp: 72, pr: 0.78, inclinacion: 22, azimut: 180, orientacion: 'Sur (azimut 180°), inclinación 22°', strings: '8 strings (4 por inversor, 1 por MPPT) de ≈ 740 V y 7 A', perdidaSucio: 0.12, limpiezas: [{ fecha: '2026-10-31', estado: 'sucio', nota: 'Reportado por Ing. Omar: paneles con polvo' }] };
+const AJ_DEF = { hora: '10:00', avisoMin: 30, retencionFotos: 35, diasPago: 13, kwp: 80.66, numPaneles: '148 × JA Solar 545 W', instalacion: '2023-08-16', pr: 0.78, inclinacion: 22, azimut: 180, orientacion: 'Sur (azimut 180°), inclinación 22°', strings: '8 strings (4 por inversor, 1 por MPPT) de ≈ 740 V y 7 A', perdidaSucio: 0.12, limpiezas: [{ fecha: '2026-10-31', estado: 'sucio', nota: 'Reportado por Ing. Omar: paneles con polvo' }] };
 let D = { usuarios: {}, ajustes: Object.assign({}, AJ_DEF), medidores: JSON.parse(JSON.stringify(MED_DEF)), tarifas: {}, lecturas: [], recibos: [], acciones: [], cargas: [] };
 let DB = null, YO = null, tab = 'lecturas', carpeta = null;
 const listo = {}, ULT = {}; COLS.forEach(c => ULT[c] = {}); let ULT_CFG = {};
@@ -744,8 +744,8 @@ function vTablero() {
   if (window.Chart) {
     E.forEach(({ m, e }) => { const c = $('#g' + m.id); if (!c || e.sin) return; graficas.push(new Chart(c, { type: 'doughnut', data: { labels: ['Base', 'Intermedia', 'Punta'], datasets: [{ data: [e.proy.eB || 0, e.proy.eI, e.proy.eP || 0], backgroundColor: ['#3BA55C', '#F2B33D', '#D64545'] }] }, options: { maintainAspectRatio: false, plugins: { legend: { position: 'right' }, title: { display: true, text: 'Costo de energía por horario' } }, animation: { animateRotate: true, duration: 1200 } } })); });
     const fechas = [...new Set(D.medidores.flatMap(m => consumoDiario(m).map(x => x.fecha)))].sort().slice(-30);
-    graficas.push(new Chart($('#gDiario'), { type: 'bar', data: { labels: fechas.map(fC), datasets: D.medidores.map(m => { const cd = consumoDiario(m); return { label: m.id, data: fechas.map(f => { const x = cd.find(y => y.fecha === f); return x ? Math.round(x.kwh) : null; }), backgroundColor: m.color }; }) }, options: { maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true } }, animation: { duration: 1000 } } }));
-    graficas.push(new Chart($('#gProno'), { type: 'line', data: { datasets: D.medidores.map(m => ({ label: m.id, data: serieProno(m).map(x => ({ x: fC(x.fecha), y: Math.round(x.total) })), borderColor: m.color, backgroundColor: m.color, tension: .3 })) }, options: { maintainAspectRatio: false, parsing: true, scales: { x: { type: 'category', labels: fechas.map(fC) } }, animation: { duration: 1200 } } }));
+    graficas.push(new Chart($('#gDiario'), { type: 'bar', plugins: [etiTotalMes(v => num(Math.round(v)), 16)], data: { labels: fechas.map(fC), datasets: D.medidores.map(m => { const cd = consumoDiario(m); return { label: m.id, data: fechas.map(f => { const x = cd.find(y => y.fecha === f); return x ? Math.round(x.kwh) : null; }), backgroundColor: m.color }; }) }, options: { maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true, grace: '12%' } }, plugins: { tooltip: { callbacks: { footer: items => 'Total del día: ' + num(items.reduce((s, it) => s + (it.parsed.y || 0), 0)) + ' kWh' } } }, animation: { duration: 1000 } } }));
+    graficas.push(new Chart($('#gProno'), { type: 'line', plugins: [etiFinLinea(v => din0(v))], data: { datasets: D.medidores.map(m => ({ label: m.id, data: serieProno(m).map(x => ({ x: fC(x.fecha), y: Math.round(x.total) })), borderColor: m.color, backgroundColor: m.color, borderWidth: 2.5, pointRadius: 2, tension: .3 })) }, options: { maintainAspectRatio: false, parsing: true, layout: { padding: { right: 54 } }, scales: { x: { type: 'category', labels: fechas.map(fC) }, y: { grace: '10%', ticks: { callback: v => '$' + num(v) } } }, plugins: { tooltip: { callbacks: { label: c => c.dataset.label + ': ' + din0(c.parsed.y) } } }, animation: { duration: 1200 } } }));
   }
   $$('[data-pdf]').forEach(b => b.onclick = () => pdfRecibo(medDe(b.dataset.pdf)));
   $('#tXls').onclick = () => excel(true);
@@ -934,7 +934,7 @@ async function clima() {
   } catch (e) { try { CLIMA = CLIMA || JSON.parse(localStorage.getItem('cfe_clima') || 'null'); } catch (x) {} }
   return CLIMA;
 }
-const kwp = () => Number(D.ajustes.kwp) || 72, prSol = () => Number(D.ajustes.pr) || 0.78;
+const kwp = () => Number(D.ajustes.kwp) || 80.66, prSol = () => Number(D.ajustes.pr) || 0.78;
 const esperadoDia = rad => rad * kwp() * prSol();            // kWh que deberían generar los paneles ese día
 const iconoClima = (nubes, cod) => cod >= 61 ? '🌧️' : nubes > 80 ? '☁️' : nubes > 45 ? '⛅' : nubes > 15 ? '🌤️' : '☀️';
 // generación real por día con las lecturas de los inversores (E-Total), repartida entre los días que cubre cada lectura
@@ -1044,7 +1044,7 @@ async function vPaneles() {
   const genMes = G.filter(g => g.hasta.slice(0, 7) === hoy.slice(0, 7)).reduce((s, g) => s + g.kwh, 0), precio = t ? t.I * 1.16 : 2.1;
   const esp30 = c ? c.dias.filter(x => x.fecha < hoy).slice(-30).reduce((s, x) => s + esperadoDia(x.rad), 0) : null;
   const falt = [['Inversores: 2 × Solis S5-GC30K-LV de 30 kW, 220 V (placa, 31-oct)', true], ['Strings: ' + (D.ajustes.strings || '8 strings'), true], ['Orientación e inclinación: ' + (D.ajustes.orientacion || '—') + ' (comprobado con la curva de producción del 31-oct)', !!D.ajustes.orientacion], ['Lectura diaria de los inversores (Total Energy del 1 y del 2)', G.length > 0],
-    ['Número de paneles y watts de cada uno: contarlos en la azotea y foto a la placa de un panel (Pmax, Voc, Vmp)', !!D.ajustes.numPaneles], ['¿Qué pasó con el Inversor 1? (marca 0 kWh en septiembre y su contador empezó en octubre)', !!D.ajustes.inv1Nota], ['Fecha de instalación y del contrato NETMET con CFE (para medir el ahorro desde el inicio)', !!D.ajustes.instalacion], ['Reporte mensual de SolisCloud en Excel (si hay acceso)', false]];
+    ['Número de paneles: ' + (D.ajustes.numPaneles || '—') + (D.ajustes.numPaneles ? ' = 80.66 kWp' : ''), !!D.ajustes.numPaneles], ['¿Qué pasó con el Inversor 1? (marca 0 kWh en septiembre y su contador empezó en octubre)', !!D.ajustes.inv1Nota], ['Fecha de instalación y del contrato NETMET con CFE (para medir el ahorro desde el inicio)', !!D.ajustes.instalacion], ['Reporte mensual de SolisCloud en Excel (si hay acceso)', false]];
   // ---- las tres respuestas: ¿funcionan al 100 %?, ¿cuánto ahorramos?, ¿de cuánto sería el recibo sin paneles? ----
   const mV = medDe('V366EB'), eV = mV && estimar(mV), sV = eV && !eV.sin ? ahorroPaneles(mV, eV) : null, inv = estadoInversores(), ep = estadoPaneles();
   const veredSol = pctProm == null ? ['i', '⏳', 'Todavía no sé', 'Necesito la lectura de los inversores dos días seguidos (⚡ Tomar lecturas › ☀️ Inversores).']
@@ -1069,10 +1069,10 @@ async function vPaneles() {
       (c ? c.dias.filter(x => x.fecha >= hoy).slice(0, 4).map(x => '<div style="text-align:center"><span style="font-size:28px">' + iconoClima(x.nubes, x.cod) + '</span><b>' + num(esperadoDia(x.rad)) + ' kWh</b><span>' + DIAS[aFecha(x.fecha).getDay()].slice(0, 3) + ' ' + fC(x.fecha) + ' · ' + num(x.nubes, 0) + ' % nubes</span></div>').join('') : '<div>Sin pronóstico</div>') + '</div>' +
       '<div style="height:220px;margin-top:10px"><canvas id="gSol"></canvas></div><p class="small muted">Barras: lo que debían generar con el sol de cada día (' + kwp() + ' kW × radiación × ' + num(prSol() * 100, 0) + ' % de rendimiento típico). Puntos: lo que marcaron los inversores.</p></div>' +
     '<div class="card"><h2>📋 Datos que me faltan de los paneles</h2>' + falt.map(([t2, ok]) => '<div class="row" style="margin-bottom:6px"><span class="tag ' + (ok ? 'v' : 'a') + '">' + (ok ? '✓' : 'falta') + '</span><span class="small">' + t2 + '</span></div>').join('') +
-      '<form id="solCfg" class="form" style="margin-top:10px"><label class="f">Potencia de paneles (kWp; medido ≈ 72 el 30-oct)<input name="k" type="number" step="any" value="' + kwp() + '"></label><label class="f">Rendimiento típico (0.75–0.82)<input name="p" type="number" step="0.01" value="' + prSol() + '"></label>' +
+      '<form id="solCfg" class="form" style="margin-top:10px"><label class="f">Potencia de paneles (kWp · placa 80.66 = 148 × 545 W)<input name="k" type="number" step="any" value="' + kwp() + '"></label><label class="f">Rendimiento típico (0.75–0.82)<input name="p" type="number" step="0.01" value="' + prSol() + '"></label>' +
       '<label class="f">Número de paneles × watts<input name="n" value="' + esc(D.ajustes.numPaneles || '') + '" placeholder="Ej. 110 × 550 W"></label><label class="f">Inclinación (°)<input name="inc" type="number" step="1" value="' + (Number(D.ajustes.inclinacion) || 22) + '"></label><label class="f">Orientación (azimut °, 180 = sur)<input name="az" type="number" step="1" value="' + (Number(D.ajustes.azimut) || 180) + '"></label>' +
       '<label class="f">Instalación / alta NETMET<input name="ins" type="date" value="' + esc(D.ajustes.instalacion || '') + '"></label><label class="f">Inversor 1: ¿qué pasó en septiembre?<input name="i1" value="' + esc(D.ajustes.inv1Nota || '') + '" placeholder="Ej. se cambió por garantía el 2-oct"></label><div class="full"><button class="btn pri" type="submit">Guardar datos de paneles</button></div></form>' +
-      '<p class="small muted">Dos inversores Solis S5-GC30K-LV (30 kW c/u, 4 MPPT, hasta 8 strings), 220 V, en la subestación (Inversor 1 sin etiqueta, Inversor 2 rotulado), instalados en 2024; verificado con fotos el 31-oct-2026. Conectados a V366EB (recibo con NETMET).</p></div></div>' +
+      '<p class="small muted">148 paneles JA Solar de 545 W = <b>80.66 kWp</b>. Dos inversores Solis S5-GC30K-LV (30 kW c/u → 60 kW CA, 4 MPPT, hasta 8 strings), 220 V, en la subestación (Inversor 1 sin etiqueta, Inversor 2 rotulado). Entrega de obra <b>16-ago-2023</b>; verificado con fotos el 31-oct-2026. Conectados a V366EB (recibo con NETMET). Como los inversores topan en 60 kW, en el mediodía muy soleado la generación se limita; el rendimiento típico (' + num(prSol() * 100, 0) + ' %) ya lo considera.</p></div></div>' +
     '<div class="grid2" style="margin-top:16px"><div class="card"><h2>🔌 Transformador V366EB: CFE + paneles</h2>' + (() => { const m = medDe('V366EB'), e = m && estimar(m); return e && !e.sin ? balanceSolar(m, e) : '<div class="vacio"><span class="e">📭</span>Faltan lecturas de V366EB en este periodo para hacer el balance.</div>'; })() + '</div>' +
     '<div class="card"><h2>🧽 Limpieza de los paneles</h2>' + (() => {
       const ep = estadoPaneles(), L = limpiezas(), ultL = [...L].reverse().find(x => x.estado === 'limpio'), sucio = ep.estado === 'sucio';
@@ -1095,7 +1095,7 @@ async function vPaneles() {
     D.acciones = D.acciones.filter(a => !(a.tipo === 'limpiezaSolar' && a.desde === hoyISO())).concat([{ id: nuevoId('a'), tipo: 'limpiezaSolar', titulo: 'Limpieza de paneles solares (V366EB)', de: '09:00', a: '14:30', horas: 5.5, periodo: 'I', kw: kwRec, dias: 30, detalle: 'Se recupera la generación que se perdía por polvo', desde: hoyISO(), activo: true }]);
     guardar(); toast('✨ Limpieza registrada: entra en los ahorros'); };
   $('#pPerd').onchange = e => { D.ajustes.perdidaSucio = Math.max(0, Math.min(40, Number(e.target.value) || 0)) / 100; guardar(); };
-  $('#solCfg').onsubmit = e => { e.preventDefault(); const F = e.target; D.ajustes.kwp = Number(F.k.value) || 72; D.ajustes.pr = Number(F.p.value) || 0.78; D.ajustes.numPaneles = F.n.value.trim();
+  $('#solCfg').onsubmit = e => { e.preventDefault(); const F = e.target; D.ajustes.kwp = Number(F.k.value) || 80.66; D.ajustes.pr = Number(F.p.value) || 0.78; D.ajustes.numPaneles = F.n.value.trim();
     D.ajustes.inclinacion = Number(F.inc.value) || 22; D.ajustes.azimut = Number(F.az.value) || 180; D.ajustes.orientacion = (D.ajustes.azimut === 180 ? 'Sur' : 'Azimut') + ' (' + D.ajustes.azimut + '°), inclinación ' + D.ajustes.inclinacion + '°';
     D.ajustes.instalacion = F.ins.value; D.ajustes.inv1Nota = F.i1.value.trim(); climaT = 0; guardar(); toast('☀️ Datos de paneles guardados'); };
   if (window.Chart && c) { const ds = c.dias.filter(x => x.fecha <= hoy).slice(-21);
@@ -1174,9 +1174,10 @@ function etiBarra(fmt, color) {
     g.restore();
   } };
 }
-// pone el TOTAL de la columna apilada arriba de cada mes
-function etiTotalMes(fmt) {
+// pone el TOTAL de la columna apilada arriba de cada mes (maxN: no rotular si hay más barras que eso, para no saturar)
+function etiTotalMes(fmt, maxN) {
   return { id: 'etiTotalMes', afterDatasetsDraw(c) {
+    if (maxN && c.data.labels.length > maxN) return;
     const g = c.ctx; g.save(); g.font = 'bold 13px Segoe UI, Arial'; g.textAlign = 'center'; g.textBaseline = 'bottom'; g.fillStyle = '#14212E';
     const n = c.data.labels.length;
     for (let i = 0; i < n; i++) {
@@ -1185,6 +1186,19 @@ function etiTotalMes(fmt) {
         const el = meta.data[i], v = ds.data[i]; if (v == null) return; total += v; if (el.y < topY) { topY = el.y; } if (x == null) x = el.x; });
       if (total > 0 && isFinite(topY) && x != null) g.fillText(fmt(total), x, topY - 5);
     }
+    g.restore();
+  } };
+}
+// rotula el último punto (el más reciente) de cada línea: útil para ver "cuánto vamos" de un vistazo
+function etiFinLinea(fmt) {
+  return { id: 'etiFinLinea', afterDatasetsDraw(c) {
+    const g = c.ctx; g.save(); g.font = 'bold 13px Segoe UI, Arial'; g.textBaseline = 'middle';
+    c.data.datasets.forEach((ds, di) => {
+      if (ds.type && ds.type !== 'line') return; const meta = c.getDatasetMeta(di); if (meta.hidden || !meta.data.length) return;
+      let i = meta.data.length - 1; while (i >= 0 && (ds.data[i] == null || (ds.data[i] && ds.data[i].y == null))) i--;
+      if (i < 0) return; const pt = meta.data[i], v = ds.data[i] && typeof ds.data[i] === 'object' ? ds.data[i].y : ds.data[i]; if (v == null) return;
+      g.fillStyle = ds.borderColor || '#14212E'; g.textAlign = 'left'; g.fillText(fmt(v), Math.min(pt.x + 6, c.chartArea.right - 60), pt.y);
+    });
     g.restore();
   } };
 }
