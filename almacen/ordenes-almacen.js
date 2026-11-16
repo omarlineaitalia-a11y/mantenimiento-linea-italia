@@ -52,7 +52,7 @@
     const seg = f.querySelector('.seg'), segH = seg ? seg.outerHTML : '';   // el selector Salida / Entrada se conserva (las entradas siguen igual)
     f.innerHTML = '<h3>' + (segH ? 'Registrar movimiento' : '📤 Salida de material') + '</h3>' + segH + '<div class="soloOrden"><b>El material sale solo con código de orden</b><span>El técnico genera su orden en <b>Control de Paros</b> (paro, requerimiento o área general) o en el <b>Preventivo</b>, y aquí se teclea su código.</span>' +
       '<div class="soloOrdenB"><button type="button" class="codBtn" id="soCod">🔢 Código de orden</button></div></div>';
-    f.querySelector('#soCod').addEventListener('click', () => { const v = prompt('Código de la orden de material (ej. PA-4821):', ''); if (v && v.trim()) { if (typeof closeItem === 'function') closeItem(); abrirOrdenCodigo(v); } });
+    f.querySelector('#soCod').addEventListener('click', async () => { const v = await preguntarApp({ titulo: 'Código de orden', texto: 'Teclea el código que trae el técnico o escanea su QR.', placeholder: 'PA-4821', tipo: 'codigo', si: 'Abrir orden', conQR: true }); if (v && v.trim()) { if (typeof closeItem === 'function') closeItem(); abrirOrdenCodigo(v); } });
   }
   function envolverDrawer() { if (typeof renderDrawer !== 'function' || renderDrawer._ord) return; const base = renderDrawer; window.renderDrawer = function () { const r = base.apply(this, arguments); try { sinSalidaDirecta(); } catch (e) {} return r; }; window.renderDrawer._ord = true; }
   function envolverGuardar() {
@@ -112,7 +112,7 @@
         if (l.otro) return '<tr><td>🧴 <b>' + esc(l.n) + '</b><br><small>fuera de catálogo</small></td><td class="mono">' + fmt(l.q) + '</td><td class="mono">' + fmt(l.qs || 0) + '</td><td>—</td><td>' + (puede && falta > 0 ? '<button type="button" class="oSurt" data-osurt="' + o.id + '|' + i + '">✔ Entregado</button>' : (falta <= 0 ? '✅' : '')) + '</td></tr>';
         return '<tr><td><b class="mono">' + esc(l.c) + '</b> ' + esc(l.n) + (it ? '<br><small>' + esc(ubTxt(it)) + '</small>' : '') + '</td><td class="mono">' + fmt(l.q) + '</td><td class="mono">' + fmt(l.qs || 0) + '</td><td class="mono" style="color:' + (hay >= falta ? '#1E8E5A' : '#C62828') + '">' + fmt(hay) + '</td><td>' + (puede && falta > 0 ? '<button type="button" class="oSurt" data-osurt="' + o.id + '|' + i + '"' + (hay > 0 ? '' : ' disabled title="Sin existencia"') + '>📤 Sacar</button>' : (falta <= 0 ? '✅' : '')) + '</td></tr>'; }).join('') + '</table>' +
       (puede ? '<div class="oAcc"><button type="button" data-otodo="' + o.id + '">📤 Sacar todo lo que hay</button>' + (A ? '<button type="button" data-ocanc="' + o.id + '">Cancelar orden</button>' : '') + '</div>' : '') +
-      devolucionesHtml(o) + '</div>';
+      devolucionesHtml(o) + '<div class="oAcc"><button type="button" data-opdf="' + o.id + '">📄 PDF de la orden</button></div></div>';
   }
   // ↩️ devoluciones: lo que salió con la orden y no se usó regresa al almacén (entrada ligada a la misma orden y origen)
   function devolucionesHtml(o) {
@@ -123,6 +123,7 @@
     return '<div class="oDev"><b>↩️ Devolver lo que no se usó</b>' + (dev.length ? '<small>Devuelto: ' + dev.map(l => fmt(l.qd) + ' × ' + esc(l.c)).join(', ') + '</small>' : '') +
       '<div class="oDevB">' + L.map(x => '<button type="button" data-odev="' + o.id + '|' + x.i + '">↩️ ' + esc(x.l.c) + ' <small>(salieron ' + fmt(x.neto) + ')</small></button>').join('') + '</div></div>';
   }
+  document.addEventListener('click', e => { const b = e.target.closest('[data-opdf]'); if (!b) return; const o = ORD.L.find(x => x.id === b.dataset.opdf); if (o && window.PedidoMaterial && PedidoMaterial.imprimir) PedidoMaterial.imprimir(o); });
   async function devolver(o, i, q) {
     const l = o.lineas[i], it = itemDe(l); if (!it) return toast('La refacción ya no está en el catálogo.');
     const neto = (+l.qs || 0) - (+l.qd || 0); q = Math.min(q, neto); if (!(q > 0)) return;
@@ -134,7 +135,7 @@
   }
   document.addEventListener('click', async e => {
     const b = e.target.closest('[data-odev]'); if (!b) return; const [id, i] = b.dataset.odev.split('|'), o = ORD.L.find(x => x.id === id); if (!o) return;
-    const l = o.lineas[+i], neto = (+l.qs || 0) - (+l.qd || 0), r = prompt('¿Cuántas piezas de ' + l.c + ' · ' + l.n + ' regresan al almacén? (salieron ' + neto + ')', String(neto)); if (r === null) return;
+    const l = o.lineas[+i], neto = (+l.qs || 0) - (+l.qd || 0), r = await preguntarApp({ titulo: 'Devolver al almacén', texto: l.c + ' · ' + l.n + ' — salieron ' + neto + '. ¿Cuántas piezas regresan?', valor: String(neto), tipo: 'numero', icono: '↩️', si: 'Devolver' }); if (r === null) return;
     const q = Number(r); if (!(q > 0)) return; b.disabled = true;
     try { const d = await devolver(o, +i, q); if (d) toast('↩️ Devolución registrada: ' + fmt(d) + ' × ' + l.c + ' regresan al almacén · ' + o.folio); } catch (x) { b.disabled = false; toast('No se pudo registrar (' + (x.code || x.message) + ').'); }
   });
@@ -180,7 +181,7 @@
     if ((b = t.closest('[data-oquit]'))) { ORD.borr.lineas.splice(+b.dataset.oquit, 1); pintarForm(); return; }
     if ((b = t.closest('[data-osurt]'))) { const [id, i] = b.dataset.osurt.split('|'), o = ORD.L.find(x => x.id === id); if (!o) return; const l = o.lineas[+i], falta = (+l.q || 0) - (+l.qs || 0);
       if (l.otro) { if (!confirm('¿Se entregó ' + fmt(falta) + ' de ' + l.n + '?')) return; b.disabled = true; try { await surtir(o, +i); toast('✔ Entregado: ' + l.n + ' · ' + o.folio); } catch (x) { b.disabled = false; toast('No se pudo guardar (' + (x.code || x.message) + ').'); } return; }
-      const r = prompt('¿Cuántas piezas de ' + l.c + ' sacas? (faltan ' + falta + ')', String(falta)); if (r === null) return; const q = Number(r); if (!(q > 0)) return; b.disabled = true;
+      const r = await preguntarApp({ titulo: 'Sacar del almacén', texto: l.c + ' · ' + l.n + ' — faltan ' + falta + '. ¿Cuántas piezas entregas?', valor: String(falta), tipo: 'numero', icono: '📤', si: 'Sacar' }); if (r === null) return; const q = Number(r); if (!(q > 0)) return; b.disabled = true;
       try { const s = await surtir(o, +i, Math.min(q, falta)); if (s) toast('📤 Salida registrada: ' + fmt(s) + ' × ' + l.c + ' · ' + o.folio); } catch (x) { toast('No se pudo registrar (' + (x.code || x.message) + ').'); b.disabled = false; } return; }
     if ((b = t.closest('[data-otodo]'))) { const o = ORD.L.find(x => x.id === b.dataset.otodo); if (!o || !confirm('¿Sacar del almacén todo lo que hay de esta orden ' + o.folio + '?')) return; b.disabled = true; let n = 0;
       for (let i = 0; i < o.lineas.length; i++) { const cur = ORD.L.find(x => x.id === o.id) || o; const l = cur.lineas[i]; if ((+l.q || 0) - (+l.qs || 0) <= 0) continue; try { const s = await surtir(cur, i); if (s) { n++; cur.lineas[i] = Object.assign({}, l, { qs: (+l.qs || 0) + s }); } } catch (x) {} }
@@ -232,7 +233,7 @@
     // botón grande en el encabezado: teclear el código que trae el técnico (PA-4821…)
     const ponerBoton = () => { const acc = document.querySelector('header.hero .hero-actions'); if (!acc) return setTimeout(ponerBoton, 500); if (document.getElementById('btnCodOrd')) return;
       const b = document.createElement('button'); b.type = 'button'; b.id = 'btnCodOrd'; b.className = 'codBtn'; b.innerHTML = '🔢 Código de orden';
-      b.addEventListener('click', () => { const v = prompt('Código de la orden de material que trae el técnico (ej. PA-4821):', ''); if (v && v.trim()) abrirOrdenCodigo(v); });
+      b.addEventListener('click', async () => { const v = await preguntarApp({ titulo: 'Código de orden', texto: 'Teclea el código que trae el técnico o escanea su QR.', placeholder: 'PA-4821', tipo: 'codigo', si: 'Abrir orden', conQR: true }); if (v && v.trim()) abrirOrdenCodigo(v); });
       acc.insertBefore(b, acc.firstChild); };
     ponerBoton();
     const espera = () => { if (typeof db !== 'undefined' && db) { envolverDB(); suscribirOrdenes(); suscribirRetiro(); } else setTimeout(espera, 600); }; espera();
