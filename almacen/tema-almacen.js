@@ -14,7 +14,7 @@
   function montar() {
     const hero = document.querySelector('header.hero'), kp = hero && hero.querySelector('section.kpis'); if (!hero) return;
     if (kp) hero.insertAdjacentElement('afterend', kp);
-    if (!document.getElementById('aHero')) { const d = document.createElement('section'); d.id = 'aHero'; d.className = 'aHero'; d.innerHTML = '<div class="hc"><span class="eti" id="aEti"><i></i><span>Almacén en vivo</span></span><h2 id="aTit">Cargando el almacén…</h2><p class="sub" id="aSub">Conectando con la base de datos</p><div class="barra" id="aBar"></div><div class="ley" id="aLey"></div></div><div class="ilus">' + ilus + '</div>'; hero.insertAdjacentElement('afterend', d); }
+    if (!document.getElementById('aHero')) { const d = document.createElement('section'); d.id = 'aHero'; d.className = 'aHero'; d.innerHTML = '<div class="aDona" id="aDona"></div><div class="hc"><span class="eti" id="aEti"><i></i><span>Almacén en vivo</span></span><h2 id="aTit">Cargando el almacén…</h2><p class="sub" id="aSub">Conectando con la base de datos</p><div class="barra" id="aBar"></div><div class="ley" id="aLey"></div></div><div class="ilus">' + ilus + '</div>'; hero.insertAdjacentElement('afterend', d); }
     const tags = { kTot: ['#1F6FD1', '🔩'], kCon: ['#1E8E5A', '✅'], kEst: ['#7A3FC2', '🗄️'], kUb: ['#E0A100', '📍'] };
     Object.entries(tags).forEach(([id, [c, ic]]) => { const b = document.getElementById(id), k = b && b.closest('.kpi'); if (k && !k.querySelector('.ic')) { k.style.setProperty('--c', c); k.insertAdjacentHTML('beforeend', '<span class="ic">' + ic + '</span>'); } });
     const al = document.getElementById('kAl'); if (al && !al.querySelector('.ic')) al.insertAdjacentHTML('beforeend', '<span class="ic">🚨</span>');
@@ -31,6 +31,7 @@
     s.textContent = L.length.toLocaleString('es-MX') + ' refacciones · ' + (c.ok + c.bajo).toLocaleString('es-MX') + ' con existencia · ' + al + ' alerta(s)' + (valor ? ' · valor ' + valor.toLocaleString('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }) : '');
     const tot = Math.max(1, c.ok + c.bajo + c.agot + c.neg + c.sin), seg = [['#2ECC71', c.ok, 'disponibles'], ['#F2B233', c.bajo, 'bajo mínimo'], ['#F2546A', c.agot + c.neg, 'agotadas / revisar'], ['#6B7F94', c.sin, 'sin existencia']];
     b.innerHTML = seg.map(([col, n]) => '<i style="width:' + (n / tot * 100) + '%;background:' + col + '"></i>').join('');
+    const dh = document.getElementById('aDona'); if (dh) dh.innerHTML = dona(surt, surt >= 95 ? '#2ECC71' : surt >= 85 ? '#F2B233' : '#F2546A', 132, null, true) + '<small>surtido</small>'; donasKpi(c, L);
     l.innerHTML = seg.map(([col, n, tx]) => '<span><i style="background:' + col + '"></i><b>' + n.toLocaleString('es-MX') + '</b> ' + tx + '</span>').join('');
   }
   // "sin foto" → dibujo según el tipo de refacción
@@ -42,8 +43,52 @@
     document.querySelectorAll('#lista span.thumb').forEach(sp => { if (sp.dataset.ic) return; const row = sp.closest('.row'); const tx = row ? row.textContent : ''; const t = TIPOS.find(([rx]) => rx.test(tx)) || [null, '📦', '#0E2A47'];
       sp.dataset.ic = '1'; sp.textContent = t[1]; sp.title = 'Sin foto todavía'; sp.style.cssText = 'display:grid;place-items:center;font-size:22px;background:linear-gradient(145deg,' + t[2] + '22,' + t[2] + '44);border:1px solid ' + t[2] + '55;color:inherit'; });
   }
-  const obsLista = () => { const l = document.getElementById('lista'); if (l && !l._obsIc) { l._obsIc = true; new MutationObserver(iconosLista).observe(l, { childList: true }); iconosLista(); } };  function iniciar() {
-    montar(); pintar(); obsLista();
+  const obsLista = () => { const l = document.getElementById('lista'); if (l && !l._obsIc) { l._obsIc = true; new MutationObserver(iconosLista).observe(l, { childList: true }); iconosLista(); } };
+  // ---------- gráficas circulares (promedio en medio)
+  const PAL = ['#1F6FD1', '#1E8E5A', '#F5A623', '#7A3FC2', '#3FC1C9', '#C62828', '#D35AA0', '#8E5A1F', '#5A6676', '#2F86E8'];
+  function dona(pct, col, tam, txt, osc) {
+    const g = Math.max(7, Math.round(tam * .12)), r = (tam - g) / 2, c = 2 * Math.PI * r, p = Math.max(0, Math.min(100, pct || 0)), fg = osc ? '#fff' : '#0E2A47', bg = osc ? 'rgba(255,255,255,.14)' : '#E4E9EF';
+    return '<svg width="' + tam + '" height="' + tam + '" viewBox="0 0 ' + tam + ' ' + tam + '" aria-hidden="true"><circle cx="' + tam / 2 + '" cy="' + tam / 2 + '" r="' + r + '" fill="none" stroke="' + bg + '" stroke-width="' + g + '"/>' +
+      (p > 0 ? '<circle cx="' + tam / 2 + '" cy="' + tam / 2 + '" r="' + r + '" fill="none" stroke="' + col + '" stroke-width="' + g + '" stroke-linecap="round" stroke-dasharray="' + (c * p / 100).toFixed(1) + ' ' + c.toFixed(1) + '" transform="rotate(-90 ' + tam / 2 + ' ' + tam / 2 + ')"></circle>' : '') +
+      '<text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" font-family="IBM Plex Sans,Arial" font-weight="700" font-size="' + Math.round(tam * .24) + '" fill="' + fg + '">' + (txt != null ? txt : Math.round(p) + '%') + '</text></svg>';
+  }
+  function donaMulti(segs, tam, centro, sub) {
+    const tot = segs.reduce((a, s) => a + s.v, 0) || 1, g = Math.round(tam * .14), r = (tam - g) / 2, c = 2 * Math.PI * r; let acc = 0;
+    return '<svg width="' + tam + '" height="' + tam + '" viewBox="0 0 ' + tam + ' ' + tam + '" aria-hidden="true"><circle cx="' + tam / 2 + '" cy="' + tam / 2 + '" r="' + r + '" fill="none" stroke="#E4E9EF" stroke-width="' + g + '"/>' +
+      segs.map(s => { const l = c * s.v / tot, o = c * acc / tot; acc += s.v; return '<circle cx="' + tam / 2 + '" cy="' + tam / 2 + '" r="' + r + '" fill="none" style="stroke:' + s.c + '" stroke-width="' + g + '" stroke-dasharray="' + Math.max(0, l - 1.5).toFixed(1) + ' ' + c.toFixed(1) + '" stroke-dashoffset="' + (-o).toFixed(1) + '" transform="rotate(-90 ' + tam / 2 + ' ' + tam / 2 + ')"><title>' + s.l + '</title></circle>'; }).join('') +
+      '<text x="50%" y="46%" text-anchor="middle" dominant-baseline="central" font-family="IBM Plex Sans,Arial" font-weight="800" font-size="' + Math.round(tam * .13) + '" fill="#0E2A47">' + centro + '</text><text x="50%" y="62%" text-anchor="middle" font-family="IBM Plex Sans,Arial" font-size="' + Math.round(tam * .07) + '" fill="#5A6676">' + (sub || '') + '</text></svg>';
+  }
+  const leyenda = (segs, fv) => { const tot = segs.reduce((a, s) => a + s.v, 0) || 1; return '<div class="dLeg">' + segs.map(s => '<span><i style="background:' + s.c + '"></i>' + s.l + ' <b>' + fv(s.v) + '</b> <small>' + Math.round(s.v / tot * 100) + '%</small></span>').join('') + '</div>'; };
+  const sinCent = v => money(v).replace(/\.\d+$/, '');
+  function donasKpi(c, L) {
+    const tot = L.length || 1, ub = L.filter(it => it.niv && it.pos).length, con = c.ok + c.bajo;
+    [['kCon', con / tot * 100, '#1E8E5A'], ['kUb', ub / tot * 100, '#E0A100']].forEach(([id, p, col]) => {
+      const k = document.getElementById(id), box = k && k.closest('.kpi'); if (!box) return;
+      const ic = box.querySelector('.ic'); if (ic) ic.style.display = 'none';
+      let d = box.querySelector('.dk'); if (!d) { d = document.createElement('span'); d.className = 'dk'; box.appendChild(d); }
+      d.innerHTML = dona(p, col, 58);
+    });
+  }
+  function donaValor() {
+    const st = document.getElementById('vStack'); if (!st || typeof valorDe !== 'function') return; const by = {};
+    Object.values(S.items).forEach(it => { const v = valorDe(it); if (v > 0) { const k = it.cat || 'GEN'; by[k] = (by[k] || 0) + v; } });
+    const segs = Object.keys(CATS).filter(k => by[k]).map((k, i) => ({ v: by[k], c: PAL[i % PAL.length], l: k + ' · ' + CATS[k] })), tot = segs.reduce((a, s) => a + s.v, 0);
+    let w = document.getElementById('vDona'); if (!w) { w = document.createElement('div'); w.id = 'vDona'; w.className = 'dWrap'; st.before(w); }
+    w.innerHTML = segs.length ? donaMulti(segs, 190, sinCent(tot), 'valor total') + leyenda(segs, sinCent) : (() => { const con = Object.values(S.items).filter(it => ex(it) > 0), cc = con.filter(it => Number(it.cu) > 0).length, p = con.length ? cc / con.length * 100 : 0; return dona(p, '#F5A623', 150) + '<div class="dLeg"><span><b style="font-size:16px">' + cc + ' de ' + con.length + '</b></span><span>refacciones con existencia ya tienen costo capturado.</span><span><small>En cuanto se capturen los costos, aquí sale el valor del almacén por categoría.</small></span></div>'; })();
+  }
+  function donaGasto() {
+    const ga = document.getElementById('gArea'); if (!ga || typeof salidasCosteadas !== 'function') return; const met = S.g.met, y0 = new Date(new Date().getFullYear(), 0, 1), by = {};
+    salidasCosteadas().filter(m => m.d >= y0).forEach(m => { const a = m.area || 'Sin área'; by[a] = (by[a] || 0) + (met === 'imp' ? m.imp : Number(m.q) || 0); });
+    const L = Object.entries(by).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]), top = L.slice(0, 7), resto = L.slice(7).reduce((a, [, v]) => a + v, 0);
+    const segs = top.map(([l, v], i) => ({ v, l, c: PAL[i % PAL.length] })); if (resto) segs.push({ v: resto, l: 'Otras áreas', c: '#9AA7B4' });
+    const fv = met === 'imp' ? sinCent : (v => fmt(v) + ' pzas'), tot = segs.reduce((a, s) => a + s.v, 0);
+    let w = document.getElementById('gDona'); if (!w) { w = document.createElement('div'); w.id = 'gDona'; w.className = 'dWrap'; ga.before(w); }
+    w.innerHTML = segs.length ? donaMulti(segs, 170, fv(tot), met === 'imp' ? 'gasto del año' : 'piezas del año') + leyenda(segs, fv) : '';
+  }
+  function envolver(nombre, fn) { try { const base = window[nombre]; if (typeof base !== 'function' || base._tema) return; const nuevo = function () { const r = base.apply(this, arguments); try { fn(); } catch (e) {} return r; }; nuevo._tema = true; window[nombre] = nuevo; } catch (e) {} }
+
+  function iniciar() {
+    montar(); pintar(); obsLista(); envolver('renderValor', donaValor); envolver('renderGasto', donaGasto);
     if (typeof renderAll === 'function' && !renderAll._tema) { const base = renderAll; renderAll = function () { const r = base.apply(this, arguments); try { montar(); pintar(); } catch (e) {} return r; }; renderAll._tema = true; }
     setInterval(() => { try { pintar(); } catch (e) {} }, 15000);
   }
