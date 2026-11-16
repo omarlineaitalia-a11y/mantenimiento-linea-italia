@@ -132,6 +132,7 @@
   function cargarJsQR() { return window.jsQR ? Promise.resolve() : new Promise((ok, mal) => { const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js'; s.onload = ok; s.onerror = mal; document.head.appendChild(s); }); }
   function textoQR(t) { t = String(t || '').trim(); const m = t.match(/[#&?]ub=([^&]+)/i); if (m) return { tipo: 'ub', v: decodeURIComponent(m[1]).toUpperCase() }; const c = t.match(/[#&?]c=([^&]+)/i); if (c) return { tipo: 'c', v: decodeURIComponent(c[1]).toUpperCase() }; return { tipo: 'txt', v: t.toUpperCase() }; }
   function aplicarQR(r) {
+    if (window.esCodigoOrden && window.esCodigoOrden(r.v)) { window.abrirOrdenCodigo(r.v); return; }
     const b = document.querySelector('nav.tabs button[data-tab="exist"]'); if (b) b.click();
     const q = document.getElementById('q'); if (!q) return;
     q.value = r.v.replace(/-N(\d+)/, ' N$1').replace(/-P(\d+)/, ' P$1').replace(/-/g, ' ').trim(); q.dispatchEvent(new Event('input', { bubbles: true }));

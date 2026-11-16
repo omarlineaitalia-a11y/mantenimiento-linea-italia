@@ -5,7 +5,13 @@
  * Solo LEE Control de Paros y Mantenimiento Preventivo; no los modifica. */
 (function () {
   'use strict';
-  const FU = { t: 0, lista: [], err: [], cargando: null }, ORD = { L: [], sub: false, borr: null };
+  const FU = { t: 0, lista: [], err: [], cargando: null }, ORD = { L: [], sub: false, borr: null, ver: '' };
+  // ---------- quién puede RETIRAR material (Ing. Omar): técnicos de mantenimiento, jefe, gerente, Humberto y su auxiliar, director
+  const RET_DEF = ['1162', '4237', '4573', '4643', '4647', '4695', '4698', '4767', '4768', '4781', '3626'];
+  const RET = { n: null };
+  const puedeRetirar = nom => { nom = String(nom || '').trim(); const L = RET.n || RET_DEF.reduce((a, k) => (a[k] = true, a), {}); return !!L[nom]; };
+  const codigoRx = /^(PA|RQ|AG|PV|OM)-?\d{4}$/i;
+  const normCod = s => { const m = String(s || '').trim().toUpperCase().match(/^([A-Z]{2})-?(\d{4})$/); return m ? m[1] + '-' + m[2] : String(s || '').trim().toUpperCase(); };
   let ORIGEN_ACTUAL = null;
   const TIPOS = { paro: ['🛑', 'Paro / falla de máquina', '#C62828'], req: ['📐', 'Requerimiento', '#1F6FD1'], ag: ['🏢', 'Áreas generales', '#D35AA0'], prev: ['🛠️', 'Preventivo', '#1E8E5A'], orden: ['📋', 'Orden de material', '#E0A100'] };
   const fCorta = iso => { if (!iso) return ''; const d = new Date(iso); return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' }); };
@@ -47,6 +53,8 @@
       if (S.tipo === 'S') {
         const v = (document.getElementById('mvOrigen') || {}).value, o = ORIG_MAP[v], msg = document.getElementById('mMov');
         if (!o) { if (msg) { msg.className = 'msg err'; msg.textContent = '⛔ Elige para qué es la refacción: un paro, requerimiento, área general, preventivo u orden de material. Sin eso no se puede sacar material del almacén.'; } return; }
+        const quien = S.isAdmin ? ((document.getElementById('mvNomina') || {}).value || '') : ((S.yo || {}).nomina || '');
+        if (!puedeRetirar(quien)) { if (msg) { msg.className = 'msg err'; msg.textContent = '⛔ La nómina ' + (quien || '—') + ' no está autorizada para retirar material. Solo técnicos de mantenimiento, jefe, gerente, nuevos proyectos y dirección (Personal y accesos → 🔐 Retira material).'; } return; }
         ORIGEN_ACTUAL = { tipo: o.tipo, id: o.id, txt: o.txt };
         const n = document.getElementById('mvN'); if (n && !n.value) n.value = o.txt.slice(0, 90);
       }
@@ -80,7 +88,9 @@
     const sec = document.getElementById('v-ord'); if (!sec) return; const yo = S.yo || {}, A = S.isAdmin;
     const vis = ORD.L.filter(o => A || String(o.tec) === String(yo.nomina)), ab = vis.filter(o => ['abierta', 'parcial'].includes(o.estado)), resto = vis.filter(o => !['abierta', 'parcial'].includes(o.estado)).slice(0, 30);
     let h = '<div class="oHero"><div><b>📋 Órdenes de material</b><span>Ninguna refacción sale sin estar ligada a un <b>paro</b>, <b>requerimiento</b>, <b>área general</b> o <b>preventivo</b>. Arma aquí la lista de material y se surte desde la orden.</span></div><button type="button" class="primary" id="oNueva">➕ Nueva orden de material</button></div>';
+    h += '<div class="oCod"><label>🔢 Código de orden<input id="oCodIn" placeholder="Ej. PA-4821" value="' + esc(ORD.ver) + '" autocomplete="off" class="mono"></label><button type="button" class="primary" id="oCodIr">Buscar orden</button>' + (ORD.ver ? '<button type="button" id="oCodX">✕ Ver todas</button>' : '') + '<span class="foot">El técnico genera la orden en Paros, Preventivo o aquí; teclea su código o escanea su QR.</span></div>';
     h += '<div id="oForm"></div>';
+    if (ORD.ver) { const o = ORD.L.find(x => x.folio === ORD.ver); h += o ? '<h3 class="oTit">Orden ' + esc(o.folio) + '</h3><div class="oGrid">' + tarjeta(o) + '</div>' : '<div class="banner">No existe la orden ' + esc(ORD.ver) + '. Revisa el código.</div>'; sec.innerHTML = h; if (ORD.borr) pintarForm(); return; }
     h += '<h3 class="oTit">Por surtir <span>' + ab.length + '</span></h3><div class="oGrid">' + (ab.length ? ab.map(tarjeta).join('') : '<div class="empty">No hay órdenes por surtir.</div>') + '</div>';
     if (resto.length) h += '<h3 class="oTit">Recientes</h3><div class="oGrid">' + resto.map(tarjeta).join('') + '</div>';
     sec.innerHTML = h; if (ORD.borr) pintarForm();
@@ -89,7 +99,8 @@
     const st = EST_O[o.estado] || EST_O.abierta, og = o.origen || {}, tp = TIPOS[og.tipo] || TIPOS.orden, A = S.isAdmin, puede = (A || String(o.tec) === String((S.yo || {}).nomina)) && ['abierta', 'parcial'].includes(o.estado);
     return '<div class="oCard" style="--c:' + tp[2] + '"><div class="oH"><b class="mono">' + esc(o.folio) + '</b><span class="oEst" style="background:' + st[1] + '">' + st[0] + '</span></div>' +
       '<div class="oOr">' + tp[0] + ' ' + esc(og.txt || '') + '</div><div class="oMeta">👷 ' + esc(o.tecN || o.tec || '') + ' · ' + fCorta(o.t) + (o.nota ? ' · ' + esc(o.nota) : '') + '</div>' +
-      '<table class="oT"><tr><th>Refacción</th><th>Pide</th><th>Salió</th><th>Hay</th><th></th></tr>' + (o.lineas || []).map((l, i) => { const it = itemDe(l), hay = it ? ex(it) : 0, falta = (+l.q || 0) - (+l.qs || 0);
+      '<table class="oT"><tr><th>Refacción</th><th>Pide</th><th>Salió</th><th>Hay</th><th></th></tr>' + (o.lineas || []).map((l, i) => { const it = l.otro ? null : itemDe(l), hay = it ? ex(it) : 0, falta = (+l.q || 0) - (+l.qs || 0);
+        if (l.otro) return '<tr><td>🧴 <b>' + esc(l.n) + '</b><br><small>fuera de catálogo</small></td><td class="mono">' + fmt(l.q) + '</td><td class="mono">' + fmt(l.qs || 0) + '</td><td>—</td><td>' + (puede && falta > 0 ? '<button type="button" class="oSurt" data-osurt="' + o.id + '|' + i + '">✔ Entregado</button>' : (falta <= 0 ? '✅' : '')) + '</td></tr>';
         return '<tr><td><b class="mono">' + esc(l.c) + '</b> ' + esc(l.n) + (it ? '<br><small>' + esc(ubTxt(it)) + '</small>' : '') + '</td><td class="mono">' + fmt(l.q) + '</td><td class="mono">' + fmt(l.qs || 0) + '</td><td class="mono" style="color:' + (hay >= falta ? '#1E8E5A' : '#C62828') + '">' + fmt(hay) + '</td><td>' + (puede && falta > 0 ? '<button type="button" class="oSurt" data-osurt="' + o.id + '|' + i + '"' + (hay > 0 ? '' : ' disabled title="Sin existencia"') + '>📤 Sacar</button>' : (falta <= 0 ? '✅' : '')) + '</td></tr>'; }).join('') + '</table>' +
       (puede ? '<div class="oAcc"><button type="button" data-otodo="' + o.id + '">📤 Sacar todo lo que hay</button>' + (A ? '<button type="button" data-ocanc="' + o.id + '">Cancelar orden</button>' : '') + '</div>' : '') + '</div>';
   }
@@ -103,14 +114,20 @@
       (A ? '<label class="f">Técnico que saca el material *<select id="oTec">' + tecs.map(([k, p]) => '<option value="' + esc(k) + '"' + (k === String((S.yo || {}).nomina) ? ' selected' : '') + '>' + esc(p.n) + ' · ' + esc(k) + '</option>').join('') + '</select></label>' : '<div class="ro">Saca: <b>' + esc((S.yo || {}).n || '') + '</b></div>') +
       '<div class="oAdd"><input id="oBus" list="oDl" placeholder="Busca la refacción por código o nombre (ej. 6205, banda)"><input id="oQ" type="number" min="1" step="any" value="1" class="mono"><button type="button" id="oAddL">Agregar</button></div><datalist id="oDl">' +
       Object.values(S.items).filter(it => ex(it) > 0).slice(0, 1500).map(it => '<option value="' + esc(it.c + ' · ' + it.n) + '">').join('') + '</datalist>' +
-      '<table class="oT"><tr><th>Refacción</th><th>Cantidad</th><th>Hay</th><th></th></tr>' + (B.lineas.length ? B.lineas.map((l, i) => { const it = itemDe(l); return '<tr><td><b class="mono">' + esc(l.c) + '</b> ' + esc(l.n) + '</td><td class="mono">' + fmt(l.q) + '</td><td class="mono">' + fmt(it ? ex(it) : 0) + '</td><td><button type="button" data-oquit="' + i + '">✕</button></td></tr>'; }).join('') : '<tr><td colspan="4" class="foot">Agrega el material que vas a necesitar.</td></tr>') + '</table>' +
+      '<div class="oAdd"><select id="oMaq"><option value="">🏭 …o busca por máquina</option>' + Object.values(maquinas()).filter(m => m.items && m.items.length).sort((a, b) => a.n.localeCompare(b.n, 'es', { numeric: true })).map(m => '<option value="' + esc(m.k) + '"' + (B.maq === m.k ? ' selected' : '') + '>' + esc(m.n) + ' (' + m.items.length + ')</option>').join('') + '</select></div>' +
+      (B.maq && maquinas()[B.maq] ? '<div class="oMaqL">' + maquinas()[B.maq].items.slice().sort((a, b) => ex(b) - ex(a)).map(it => '<button type="button" class="oPick" data-opick="' + esc(it.doc + '/' + it.k) + '"' + (ex(it) > 0 ? '' : ' disabled') + '><b class="mono">' + esc(it.c) + '</b> ' + esc(it.n) + ' <small>hay ' + fmt(ex(it)) + '</small></button>').join('') + '</div>' : '') +
+      '<div class="oAdd"><input id="oOtro" placeholder="🧴 Material fuera de catálogo (ej. silicón rojo, cinta de aislar)"><input id="oOtroQ" type="number" min="1" step="any" value="1" class="mono"><button type="button" id="oAddO">Agregar otro</button></div>' +
+      '<table class="oT"><tr><th>Refacción</th><th>Cantidad</th><th>Hay</th><th></th></tr>' + (B.lineas.length ? B.lineas.map((l, i) => { const it = l.otro ? null : itemDe(l); return '<tr><td>' + (l.otro ? '🧴 <b>' + esc(l.n) + '</b> <small>fuera de catálogo</small>' : '<b class="mono">' + esc(l.c) + '</b> ' + esc(l.n)) + '</td><td class="mono">' + fmt(l.q) + '</td><td class="mono">' + (l.otro ? '—' : fmt(it ? ex(it) : 0)) + '</td><td><button type="button" data-oquit="' + i + '">✕</button></td></tr>'; }).join('') : '<tr><td colspan="4" class="foot">Agrega el material que vas a necesitar.</td></tr>') + '</table>' +
       '<label class="f">Nota (opcional)<input id="oNota" placeholder="Ej. cambio de rodamientos del husillo"></label>' +
       '<div style="display:flex;gap:10px;flex-wrap:wrap"><button type="submit" class="primary">Guardar orden</button><button type="button" id="oCanc">Cancelar</button></div><p class="msg" id="oMsg"></p></form>';
     cargarFuentes().then(() => { const s = document.getElementById('oOrigen'); if (!s) return; s.innerHTML = opcionesOrigen(B.origen || '', false); const m = document.getElementById('oOrMsg'); if (m) m.textContent = FU.err.length ? '⚠️ No se pudo leer: ' + FU.err.join(', ') + '.' : (FU.lista.length ? '' : 'No hay paros, requerimientos ni preventivos abiertos: primero se levanta en Control de Paros o se inicia el preventivo.'); });
   }
   function buscarItem(txt) { const c = String(txt || '').split(' · ')[0].trim().toUpperCase(); return Object.entries(S.items).find(([, it]) => String(it.c).toUpperCase() === c) || null; }
   async function surtir(o, i, qPed) {
-    const l = o.lineas[i], it = itemDe(l); if (!it) return toast('La refacción ya no está en el catálogo.');
+    if (!puedeRetirar(o.tec)) return toast('⛔ ' + (o.tecN || o.tec) + ' no está autorizado para retirar material (Personal y accesos → 🔐 Retira material).');
+    const l = o.lineas[i];
+    if (l.otro) { const L0 = o.lineas.map((x, j) => j === i ? Object.assign({}, x, { qs: +x.q || 0, tEnt: new Date().toISOString(), porEnt: (S.yo || {}).nomina || '' }) : x); await db.doc('ordenes/' + o.id).update({ lineas: L0, estado: estadoOrden(Object.assign({}, o, { lineas: L0 })), tMod: new Date().toISOString() }); return +l.q || 0; }
+    const it = itemDe(l); if (!it) return toast('La refacción ya no está en el catálogo.');
     const falta = (+l.q || 0) - (+l.qs || 0), hay = ex(it), q = Math.min(qPed == null ? falta : qPed, hay); if (!(q > 0)) return toast('Sin existencia de ' + l.c + '.');
     const e = typeof estadoLimite === 'function' ? estadoLimite(it, o.tec, q) : null; if (e && e.excede) return toast('⛔ Límite excedido de material: ' + (o.tecN || o.tec) + ' ya retiró ' + fmt(e.usado) + ' de ' + fmt(e.lim) + ' ' + e.per + '.');
     await db.doc('catalogo/' + it.doc).update({ items: { [it.k]: { sal: (Number(it.sal) || 0) + q } } });
@@ -128,6 +145,7 @@
       const ya = ORD.borr.lineas.find(l => l.doc === doc && l.k === k); if (ya) ya.q += q; else ORD.borr.lineas.push({ doc, k, c: it.c, n: it.n, q, qs: 0 }); pintarForm(); setTimeout(() => { const n = document.getElementById('oNota'); if (n) n.value = ORD.borr.nota || ''; const tc = document.getElementById('oTec'); if (tc && ORD.borr.tec) tc.value = ORD.borr.tec; }, 0); return; }
     if ((b = t.closest('[data-oquit]'))) { ORD.borr.lineas.splice(+b.dataset.oquit, 1); pintarForm(); return; }
     if ((b = t.closest('[data-osurt]'))) { const [id, i] = b.dataset.osurt.split('|'), o = ORD.L.find(x => x.id === id); if (!o) return; const l = o.lineas[+i], falta = (+l.q || 0) - (+l.qs || 0);
+      if (l.otro) { if (!confirm('¿Se entregó ' + fmt(falta) + ' de ' + l.n + '?')) return; b.disabled = true; try { await surtir(o, +i); toast('✔ Entregado: ' + l.n + ' · ' + o.folio); } catch (x) { b.disabled = false; toast('No se pudo guardar (' + (x.code || x.message) + ').'); } return; }
       const r = prompt('¿Cuántas piezas de ' + l.c + ' sacas? (faltan ' + falta + ')', String(falta)); if (r === null) return; const q = Number(r); if (!(q > 0)) return; b.disabled = true;
       try { const s = await surtir(o, +i, Math.min(q, falta)); if (s) toast('📤 Salida registrada: ' + fmt(s) + ' × ' + l.c + ' · ' + o.folio); } catch (x) { toast('No se pudo registrar (' + (x.code || x.message) + ').'); b.disabled = false; } return; }
     if ((b = t.closest('[data-otodo]'))) { const o = ORD.L.find(x => x.id === b.dataset.otodo); if (!o || !confirm('¿Sacar del almacén todo lo que hay de esta orden ' + o.folio + '?')) return; b.disabled = true; let n = 0;
@@ -140,14 +158,44 @@
     if (!og) { msg.className = 'msg err'; msg.textContent = '⛔ Elige el paro, requerimiento, área general o preventivo al que va el material.'; return; }
     if (!B.lineas.length) { msg.className = 'msg err'; msg.textContent = 'Agrega al menos una refacción.'; return; }
     const tec = (document.getElementById('oTec') || {}).value || String((S.yo || {}).nomina || ''), p = (S.pers || {})[tec] || {}, d = new Date();
-    const folio = 'OM-' + String(d.getFullYear()).slice(2) + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0') + '-' + Math.random().toString(36).slice(2, 5).toUpperCase();
+    const pref = { paro: 'PA', req: 'RQ', ag: 'AG', prev: 'PV' }[og.tipo] || 'OM'; let folio; do { folio = pref + '-' + String(Math.floor(1000 + Math.random() * 9000)); } while (ORD.L.some(x => x.folio === folio));
+    if (!puedeRetirar(tec)) { msg.className = 'msg err'; msg.textContent = '⛔ La nómina ' + tec + ' no está autorizada para retirar material (Personal y accesos → 🔐 Retira material).'; return; }
     try { await db.collection('ordenes').add({ folio, origen: { tipo: og.tipo, id: og.id, txt: og.txt, maq: og.maq || '' }, area: og.area || '', tec, tecN: p.n || (S.yo || {}).n || '', lineas: B.lineas, nota: (document.getElementById('oNota') || {}).value || '', estado: 'abierta', t: d.toISOString(), por: (S.yo || {}).nomina || '' });
-      ORD.borr = null; toast('📋 Orden ' + folio + ' creada. Ya puedes sacar el material.'); } catch (x) { msg.className = 'msg err'; msg.textContent = 'No se pudo guardar (' + (x.code || x.message) + ').'; }
+      ORD.borr = null; ORD.ver = folio; toast('📋 Orden ' + folio + ' creada. Ese es el código para retirar el material.'); renderOrd(); } catch (x) { msg.className = 'msg err'; msg.textContent = 'No se pudo guardar (' + (x.code || x.message) + ').'; }
   });
+  // ---------- código de orden (tecleado o escaneado), búsqueda por máquina y material fuera de catálogo
+  function abrirOrdenCodigo(c) { ORD.ver = normCod(c); const b = document.querySelector('nav.tabs button[data-tab="ord"]'); if (b) b.click(); else renderOrd(); setTimeout(() => { const s = document.getElementById('v-ord'); if (s) s.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 150); }
+  window.abrirOrdenCodigo = abrirOrdenCodigo; window.esCodigoOrden = s => codigoRx.test(String(s || '').trim());
+  function guardarBorrador() { const B = ORD.borr; if (!B) return; B.origen = (document.getElementById('oOrigen') || {}).value || B.origen; B.nota = (document.getElementById('oNota') || {}).value || B.nota || ''; B.tec = (document.getElementById('oTec') || {}).value || B.tec; }
+  function repintarForm() { const B = ORD.borr; pintarForm(); setTimeout(() => { const n = document.getElementById('oNota'); if (n) n.value = B.nota || ''; const tc = document.getElementById('oTec'); if (tc && B.tec) tc.value = B.tec; }, 0); }
+  document.addEventListener('click', e => {
+    const t = e.target; let b;
+    if (t.id === 'oCodIr') { const v = (document.getElementById('oCodIn') || {}).value; if (v) abrirOrdenCodigo(v); return; }
+    if (t.id === 'oCodX') { ORD.ver = ''; renderOrd(); return; }
+    if ((b = t.closest('[data-opick]'))) { guardarBorrador(); const id = b.dataset.opick, it = S.items[id]; if (!it) return; const [doc, k] = id.split('/'), q = Number(prompt('¿Cuántas piezas de ' + it.c + ' · ' + it.n + '? (hay ' + fmt(ex(it)) + ')', '1')) || 0; if (!(q > 0)) return; const ya = ORD.borr.lineas.find(l => l.doc === doc && l.k === k); if (ya) ya.q += q; else ORD.borr.lineas.push({ doc, k, c: it.c, n: it.n, q, qs: 0 }); repintarForm(); return; }
+    if (t.id === 'oAddO') { guardarBorrador(); const n = String((document.getElementById('oOtro') || {}).value || '').trim().toUpperCase(), q = Number((document.getElementById('oOtroQ') || {}).value) || 0; if (!n) return toast('Escribe el material.'); if (!(q > 0)) return toast('Escribe la cantidad.'); ORD.borr.lineas.push({ otro: true, c: 'OTRO', n, q, qs: 0 }); repintarForm(); return; }
+  }, true);
+  document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'oCodIn') { e.preventDefault(); const v = e.target.value; if (v) abrirOrdenCodigo(v); } });
+  document.addEventListener('change', e => { if (e.target.id === 'oMaq') { guardarBorrador(); ORD.borr.maq = e.target.value; repintarForm(); } });
+  // ---------- 🔐 quién retira material (Personal y accesos, solo administradores)
+  function suscribirRetiro() { db.doc('config/retiro').onSnapshot(s => { RET.n = (s.exists && (s.data() || {}).n) || null; if (S.tab === 'pers') pintarRetiro(); }, () => {}); }
+  function pintarRetiro() {
+    const sec = document.getElementById('v-pers'); if (!sec || !S.isAdmin) return; let box = document.getElementById('retBox');
+    if (!box) { box = document.createElement('div'); box.id = 'retBox'; box.className = 'box'; sec.appendChild(box); }
+    const P = Object.entries(S.pers || {}).filter(([, p]) => p.a !== false).sort((a, b) => String(a[1].n).localeCompare(String(b[1].n)));
+    box.innerHTML = '<h3>🔐 Retira material</h3><p class="foot">Solo las personas marcadas pueden retirar refacciones del almacén (siempre ligadas a un paro, requerimiento, área general o preventivo): técnicos de mantenimiento, jefe, gerente, Humberto y su auxiliar, y dirección. Si alguien no aparece, dalo de alta arriba con su nómina.</p>' +
+      '<div class="retGrid">' + P.map(([k, p]) => '<label class="retI"><input type="checkbox" data-ret="' + esc(k) + '"' + (puedeRetirar(k) ? ' checked' : '') + '><span><b>' + esc(p.n) + '</b><small>' + esc(k) + ' · ' + esc(p.puesto || '') + '</small></span></label>').join('') + '</div>' + (RET.n ? '' : '<p class="foot">Lista inicial: técnicos de mantenimiento, jefe y gerente. Se guarda al primer cambio.</p>');
+  }
+  document.addEventListener('change', async e => {
+    const c = e.target.closest && e.target.closest('[data-ret]'); if (!c || !S.isAdmin) return;
+    const L = Object.assign({}, RET.n || RET_DEF.reduce((a, k) => (a[k] = true, a), {})); if (c.checked) L[c.dataset.ret] = true; else delete L[c.dataset.ret];
+    try { await db.doc('config/retiro').set({ n: L, t: new Date().toISOString(), por: (S.yo || {}).nomina || '' }); toast((c.checked ? '🔐 Puede retirar material: ' : 'Ya no retira material: ') + ((S.pers[c.dataset.ret] || {}).n || c.dataset.ret)); } catch (x) { toast('No se pudo guardar (' + (x.code || x.message) + ').'); c.checked = !c.checked; }
+  });
+  function envolverPers() { if (typeof renderPers !== 'function' || renderPers._ord) return; const base = renderPers; window.renderPers = function () { const r = base.apply(this, arguments); try { pintarRetiro(); } catch (e) {} return r; }; window.renderPers._ord = true; }
   // ---------- arranque
   function iniciar() {
-    montarTab(); envolverDrawer(); envolverGuardar();
-    const espera = () => { if (typeof db !== 'undefined' && db) { envolverDB(); suscribirOrdenes(); } else setTimeout(espera, 600); }; espera();
+    montarTab(); envolverDrawer(); envolverGuardar(); envolverPers();
+    const espera = () => { if (typeof db !== 'undefined' && db) { envolverDB(); suscribirOrdenes(); suscribirRetiro(); } else setTimeout(espera, 600); }; espera();
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', iniciar); else iniciar();
 })();

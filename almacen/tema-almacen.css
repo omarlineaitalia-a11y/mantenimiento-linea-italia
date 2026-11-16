@@ -128,3 +128,13 @@ input,select,textarea{border-radius:10px!important}
 .oAcc{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
 .oForm .oAdd{display:grid;grid-template-columns:1fr 90px auto;gap:8px}
 @media (max-width:560px){.oGrid{grid-template-columns:1fr}.oForm .oAdd{grid-template-columns:1fr 70px}}
+
+/* ---------- código de orden, búsqueda por máquina, retiro autorizado ---------- */
+.oCod{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;background:#fff;border:2px solid #F5A623;border-radius:16px;padding:12px 14px;box-shadow:0 1px 2px rgba(14,42,71,.06),0 10px 26px rgba(14,42,71,.08)}
+.oCod label{display:flex;flex-direction:column;gap:4px;font-weight:700;color:#0E2A47}.oCod input{font-size:24px;letter-spacing:.12em;width:220px;padding:8px 12px;text-transform:uppercase}
+.oCod .foot{flex-basis:100%}
+.oMaqL{display:flex;flex-wrap:wrap;gap:6px;max-height:220px;overflow:auto;padding:4px;background:#F4F7FA;border-radius:12px}
+.oPick{border:1px solid #D6DDE4;background:#fff;border-radius:10px;padding:5px 9px;cursor:pointer;text-align:left;font-size:12.5px}.oPick:disabled{opacity:.45;cursor:not-allowed}.oPick small{color:#1E8E5A}
+.retGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px;margin-top:8px}
+.retI{display:flex;gap:9px;align-items:center;border:1px solid #D6DDE4;border-radius:12px;padding:8px 10px;cursor:pointer;background:#fff}.retI:has(input:checked){border-color:#1E8E5A;background:#EEF8F2}
+.retI span{display:flex;flex-direction:column}.retI small{color:#5A6676}.retI input{width:20px;height:20px}
