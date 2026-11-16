@@ -379,7 +379,7 @@ function calc(p, m) {
  return { prog, cump, pct, n: ps.length, mins, prom: ps.length ? mins / ps.length : 0, pts, fin, pendientes };
 }
 function equipo(m) {
- m = m || M(); const L = plan().map(p => calc(p, m)); const sp = L.reduce((a, x) => a + x.prog, 0), sc = L.reduce((a, x) => a + Math.min(x.cump, x.prog), 0);
+ m = m || M(); const L = plan().map(p => calc(p, m)), Ls = plan().filter(p => p.tipo !== 'supervisor').map(p => calc(p, m)); const sp = Ls.reduce((a, x) => a + x.prog, 0), sc = Ls.reduce((a, x) => a + Math.min(x.cump, x.prog), 0);   // el supervisor lleva las órdenes de todo el equipo: no se suma dos veces
  const conPct = L.filter(x => x.pct != null), conFin = L.filter(x => x.fin != null);
  return { prog: sp, cump: sc, pctTot: sp ? sc / sp * 100 : null, prom: conPct.length ? conPct.reduce((a, x) => a + x.pct, 0) / conPct.length : null, finProm: conFin.length ? conFin.reduce((a, x) => a + x.fin, 0) / conFin.length : null, paros: m.paros.length, mins: m.paros.reduce((a, x) => a + (+x.min || 0), 0), pend: m.paros.filter(x => clasParo(x.min).k === 'no' && !String(x.contra || '').trim()).length };
 }
@@ -428,7 +428,7 @@ function renderEv() {
 
 /* ---------- cumplimiento ---------- */
 function renderCum() {
- const m = M(); let h = '<tr><th>Nómina</th><th>Nombre</th><th>Área</th><th>Órdenes programadas</th><th>Órdenes cumplidas</th><th>Entrega 🔗</th><th>Calidad 🔗</th><th>% cumplimiento</th><th>Clasificación</th></tr>';
+ const m = M(); let h = '<tr><th>Nómina</th><th>Nombre</th><th>Área</th><th>Órdenes del mes 🔗</th><th>Órdenes cumplidas 🔗</th><th>Entrega 🔗</th><th>Calidad 🔗</th><th>% cumplimiento</th><th>Clasificación</th></tr>';
  plan().forEach(p => { const o = m.ord[p.id] || {}; const r = calc(p, m);
   h += `<tr><td>${esc(p.nomina)}</td><td class="l">${esc(p.nombre)}</td><td class="l">${esc(areaDe(p))}</td><td><input type="number" min="0" data-ord="${p.id}" data-c="prog" value="${o.prog ?? ''}"></td><td><input type="number" min="0" data-ord="${p.id}" data-c="cump" value="${o.cump ?? ''}"></td><td>${o.fuente === 'preventivo' && o.cumpl != null ? o.cumpl + ' %' : '—'}</td><td>${o.fuente === 'preventivo' && o.calidad != null ? o.calidad + ' %' : '—'}</td><td><b>${r.pct == null ? '—' : f1(r.pct) + ' %'}</b>${o.fuente === 'preventivo' ? ' <span title="Viene de Mantenimiento Preventivo: promedio de cumplimiento y calidad">🔗</span>' : ''}</td><td>${badge(clasPct(r.pct))}</td></tr>`; });
  const e = equipo(m);
