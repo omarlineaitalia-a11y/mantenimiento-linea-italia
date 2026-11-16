@@ -165,7 +165,7 @@ td select{padding:4px;border:1px solid var(--linea);border-radius:5px;background
  <button data-t="cal">Calificación y paros</button>
  <button data-t="graf">Gráficas</button>
  <button data-t="proy">Nuevos proyectos</button>
- <button data-t="cfg">Personal y criterios</button>
+ <button data-t="cfg">⚙️ Configuración</button>
 </nav>
 <main>
  <div class="banner" id="banner">Este periodo tiene <b>datos de ejemplo</b>. Bórralos antes de capturar los reales (pestaña Personal y criterios → Borrar datos del periodo).</div>
@@ -261,8 +261,8 @@ td select{padding:4px;border:1px solid var(--linea);border-radius:5px;background
  <section id="s-imp"><div id="impCont"></div></section>
 
  <section id="s-cfg">
-  <h2>Personal</h2>
-  <p class="sub">Cambia nombres, áreas o tipo de puesto. "Plan mensual" = se le mide cumplimiento y paros. Los cambios se guardan solos en la nube (Firebase); "Respaldo" descarga una copia.</p>
+  <h2>👥 Personal y organigrama</h2>
+  <p class="sub"><b>Así se arma el organigrama:</b> <b>Tipo</b> = nivel donde aparece (gerente, jefe, supervisor, apoyo/nuevos proyectos o técnico) · <b>Reporta a</b> = de quién depende · <b>▲▼</b> = orden dentro de su nivel · <b>En organigrama</b> = si aparece o no. Cambia nombres, áreas o tipo de puesto. "Plan mensual" = se le mide cumplimiento y paros. Los cambios se guardan solos en la nube (Firebase); "Respaldo" descarga una copia.</p>
   <div class="tw"><table id="tPer"></table></div>
   <p><button class="b-verde" id="bAddPer">+ Agregar persona</button> <button class="b-gris" id="bResetPer">Restaurar personal original</button></p>
   <h2>🔑 Quién puede entrar a esta página</h2>
@@ -394,7 +394,9 @@ function card(p, modo) {
  else if (modo === 'ev' && p.tipo !== 'gerente') {
   const e = M().ev[p.id] || {}; const ef = nivelEf(p);
   if (p.plan) { const r = calc(p); h += `<div class="nm" style="margin-top:5px">Calificación del mes: <b>${r.fin == null ? 'sin datos' : f1(r.fin)}</b> · ${r.fin == null ? 'captura cumplimiento para calificar' : 'nivel automático'}</div>`; }
-  h += '<div class="rate">' + NIVELES.map(n => { const on = ef.n === n.k; return `<label class="opt ${on ? 'on' : ''} ${p.plan ? 'fijo' : ''}" style="--c:${n.c}" data-id="${p.id}" data-n="${n.k}"><span class="box">${on ? '✔' : ''}</span>${n.t}</label>`; }).join('') + '</div>';
+  { const nv = NIVELES.find(n => n.k === ef.n), ic = { exc: '🏆', med: '👍', min: '⚠️', rec: '🔻' }[ef.n] || '⏳';
+    h += `<div class="nivel" style="--c:${nv ? nv.c : '#6B7F94'}"><span class="ic">${ic}</span><span class="tx">${nv ? nv.t : 'Sin calificar'}<small>${p.plan ? (nv ? 'automático por calificación' : 'aún sin datos del mes') : 'evaluación de gerencia'}</small></span></div>`;
+    if (!p.plan) h += `<select class="selniv noprint" data-niv="${p.id}"><option value="">— Elegir nivel —</option>${NIVELES.map(n => `<option value="${n.k}" ${ef.n === n.k ? 'selected' : ''}>${n.t}</option>`).join('')}</select>`; }
   h += `<textarea class="com" data-id="${p.id}" placeholder="Comentario / plan de mejora">${esc(e.com || '')}</textarea>`;
  } else if (modo === 'ev') { h += '<div class="nm" style="margin-top:6px"><b>Evalúa</b></div>'; }
  return h + '</div>';
@@ -404,7 +406,7 @@ function rama(p, modo, todos) {
  return `<div class="rama">${card(p, modo)}${hijos.map(h => `<div class="vd"></div>${rama(h, modo, todos)}`).join('')}</div>`;
 }
 function org(modo) {
- const P = S.personal; const g = P.filter(p => p.tipo === 'gerente'), j = P.filter(p => p.tipo === 'jefe'), sv = P.filter(p => p.tipo === 'supervisor'), t = P.filter(p => p.tipo === 'tecnico');
+ const P = S.personal.filter(p => !p.oculto); const g = P.filter(p => p.tipo === 'gerente'), j = P.filter(p => p.tipo === 'jefe'), sv = P.filter(p => p.tipo === 'supervisor'), t = P.filter(p => p.tipo === 'tecnico');
  const ap = P.filter(p => p.tipo === 'apoyo'), apTop = ap.filter(p => !ap.some(x => x.id === p.reporta));
  const centro = sv.length ? sv : j;
  return `<div class="org"><div>${g.map(p => card(p, modo)).join('')}</div><div class="vl"></div>
@@ -571,8 +573,8 @@ window.addEventListener('afterprint', () => { if (tab === 'imp') verTab(tabPrevi
 
 /* ---------- personal y criterios ---------- */
 function renderCfg() {
- let h = '<tr><th>Nombre</th><th>Nómina</th><th>Puesto</th><th>Área de apoyo (texto libre)</th><th>Tipo</th><th>Reporta a</th><th>Nuevos proyectos (no se evalúa)</th><th>Plan mensual</th><th></th></tr>';
- S.personal.forEach((p, i) => { h += `<tr><td><input class="w" data-per="${i}" data-c="nombre" value="${esc(p.nombre)}"></td><td><input data-per="${i}" data-c="nomina" value="${esc(p.nomina)}"></td><td><input class="w" data-per="${i}" data-c="puesto" value="${esc(p.puesto)}"></td><td><input class="w" data-per="${i}" data-c="area" value="${esc(p.area)}"></td><td><select data-per="${i}" data-c="tipo">${['gerente', 'jefe', 'supervisor', 'apoyo', 'tecnico'].map(t => `<option ${p.tipo === t ? 'selected' : ''}>${t}</option>`).join('')}</select></td><td><select data-per="${i}" data-c="reporta"><option value="">—</option>${S.personal.filter(x => x.id !== p.id).map(x => `<option value="${x.id}" ${p.reporta === x.id ? 'selected' : ''}>${esc(x.nombre)}</option>`).join('')}</select></td><td><input type="checkbox" data-per="${i}" data-c="externo" ${p.externo ? 'checked' : ''}></td><td><input type="checkbox" data-per="${i}" data-c="plan" ${p.plan ? 'checked' : ''}></td><td><button class="b-gris" data-delper="${i}">Quitar</button></td></tr>`; });
+ let h = '<tr><th>Orden</th><th>En organigrama</th><th>Nombre</th><th>Nómina</th><th>Puesto</th><th>Área de apoyo (texto libre)</th><th>Tipo</th><th>Reporta a</th><th>Nuevos proyectos (no se evalúa)</th><th>Plan mensual</th><th></th></tr>';
+ S.personal.forEach((p, i) => { h += `<tr><td style="white-space:nowrap"><button class="b-gris mv" data-mv="${i}|-1" title="Subir">▲</button> <button class="b-gris mv" data-mv="${i}|1" title="Bajar">▼</button></td><td><input type="checkbox" data-vis="${i}" ${p.oculto ? '' : 'checked'}></td><td><input class="w" data-per="${i}" data-c="nombre" value="${esc(p.nombre)}"></td><td><input data-per="${i}" data-c="nomina" value="${esc(p.nomina)}"></td><td><input class="w" data-per="${i}" data-c="puesto" value="${esc(p.puesto)}"></td><td><input class="w" data-per="${i}" data-c="area" value="${esc(p.area)}"></td><td><select data-per="${i}" data-c="tipo">${['gerente', 'jefe', 'supervisor', 'apoyo', 'tecnico'].map(t => `<option ${p.tipo === t ? 'selected' : ''}>${t}</option>`).join('')}</select></td><td><select data-per="${i}" data-c="reporta"><option value="">—</option>${S.personal.filter(x => x.id !== p.id).map(x => `<option value="${x.id}" ${p.reporta === x.id ? 'selected' : ''}>${esc(x.nombre)}</option>`).join('')}</select></td><td><input type="checkbox" data-per="${i}" data-c="externo" ${p.externo ? 'checked' : ''}></td><td><input type="checkbox" data-per="${i}" data-c="plan" ${p.plan ? 'checked' : ''}></td><td><button class="b-gris" data-delper="${i}">Quitar</button></td></tr>`; });
  $('#tPer').innerHTML = h;
  const c = C(); const fila = (k, t) => `<tr><td class="l">${t}</td><td><input type="number" data-crit="${k}" value="${c[k]}"></td></tr>`;
  $('#tCrit').innerHTML = '<tr><th>Criterio</th><th>Valor</th></tr>' + fila('t_exc', 'Cumplimiento Excelente desde (%)') + fila('t_sat', 'Cumplimiento Satisfactorio desde (%)') + fila('t_min', 'Cumplimiento Mínimo aceptable desde (%)') + fila('w_cum', 'Peso del cumplimiento preventivo (%)') + fila('w_par', 'Peso de los paros (%)') + fila('m_exc', 'Paro Excelente hasta (min)') + fila('m_sat', 'Paro No aceptable desde (min)') + fila('p_exc', 'Puntos por paro Excelente (y sin paros)') + fila('p_sat', 'Puntos por paro Satisfactorio') + fila('p_no', 'Puntos por paro No aceptable');
@@ -826,5 +828,22 @@ render = function () {
 };
 setInterval(() => { if (cargado) { PAROS_SYNC.t = 0; syncParos(mesKey()); } }, 5 * 60000);
 </script>
-</body>
+<style>
+.nivel{display:flex;align-items:center;gap:10px;margin-top:8px;padding:9px 12px;border-radius:12px;border:2px solid var(--c);background:color-mix(in srgb,var(--c) 18%,transparent);text-align:left}
+.nivel .ic{font-size:24px;line-height:1}.nivel .tx{font-weight:bold;font-size:15px;color:var(--c);filter:brightness(1.35)}
+.nivel small{display:block;font-weight:normal;font-size:11px;color:var(--gris);filter:none}
+.selniv{width:100%;margin-top:6px;padding:5px;border-radius:8px}
+.mv{padding:3px 8px!important;font-size:12px}#tPer input.w{min-width:180px}
+@media print{.nivel{-webkit-print-color-adjust:exact;print-color-adjust:exact}.nivel .tx{filter:none}}
+</style>
+<script>
+document.addEventListener('change', e => {
+  const s = e.target.closest('[data-niv]'); if (s) { const ev = M().ev; ev[s.dataset.niv] = ev[s.dataset.niv] || {}; ev[s.dataset.niv].nivel = s.value; guardar(); renderEv(); return; }
+  const v = e.target.closest('[data-vis]'); if (v) { const p = S.personal[+v.dataset.vis]; if (p) { if (v.checked) delete p.oculto; else p.oculto = true; guardar(); } }
+});
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-mv]'); if (!b) return; const [i, d] = b.dataset.mv.split('|').map(Number), j = i + d, L = S.personal;
+  if (j < 0 || j >= L.length) return; [L[i], L[j]] = [L[j], L[i]]; guardar(); renderCfg();
+});
+</script></body>
 </html>
