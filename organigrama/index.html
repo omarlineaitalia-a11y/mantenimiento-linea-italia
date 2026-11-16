@@ -951,5 +951,180 @@ document.addEventListener('change', e => { const s = e.target.closest('[data-med
 setInterval(function migrarCrit() { if (!cargado || !S.crit || S.crit._v5) return; Object.assign(S.crit, { t_exc: 90, t_sat: 80, t_min: 70, w_cum: 60, w_par: 40, _v5: true }); guardar(); render(); }, 2000);
 setInterval(() => { if (cargado) cargarCorr(mesKey(), true); }, 5 * 60000);
 </script>
+<style>
+/* ===== v6 · Nuevos proyectos en tarjetas con tareas · Inventario de herramienta ===== */
+.pp{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;margin:8px 0 16px}
+.pp .per{background:rgba(15,22,32,.9);border:1px solid #243244;border-radius:16px;padding:12px 14px}
+.pp .per .top{display:flex;align-items:center;gap:12px;margin-bottom:8px}.pp .per b.n{color:#fff;font-size:15px;display:block}.pp .per span.p{color:#8FA3B8;font-size:12px}
+.pp .tl{list-style:none;margin:0;padding:0;max-height:220px;overflow:auto}.pp .tl li{display:flex;gap:8px;align-items:flex-start;padding:5px 0;border-top:1px solid #1E2A38;font-size:12.5px;color:#DCE7F3}
+.pp .tl li small{color:#8FA3B8}.pp .tl li .f{margin-left:auto;white-space:nowrap;font-size:11.5px;font-weight:bold}
+.pcs{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:12px}
+.pc{background:rgba(19,28,39,.94);border:1px solid #243244;border-left:6px solid var(--ce);border-radius:14px;padding:12px 14px;color:#E6EDF5}
+.pc .h{display:flex;gap:8px;align-items:flex-start}.pc .h b{font-size:15px;color:#fff;flex:1}
+.pc .g{display:grid;grid-template-columns:1fr 1fr;gap:6px 10px;margin:8px 0;font-size:12px;color:#8FA3B8}.pc .g label{display:flex;flex-direction:column;gap:2px}
+.pc select,.pc input,.pc textarea{width:100%;font-size:12.5px;padding:4px 6px;border-radius:6px}
+.pc textarea{min-height:42px}
+.pc .av{display:flex;align-items:center;gap:8px;margin:6px 0}.pc .av .bar{flex:1;height:9px;background:#243244;border-radius:5px;overflow:hidden}.pc .av .bar i{display:block;height:100%;background:#2ECC71}
+.pc .tk{margin-top:8px;border-top:1px solid #243244;padding-top:6px}.pc .tk h4{margin:0 0 4px;font-size:12.5px;color:#9FD0FF}
+.pc .tk .r{display:grid;grid-template-columns:22px 1fr 118px 120px 26px;gap:5px;align-items:center;padding:3px 0;font-size:12.5px}
+.pc .tk .r.ok span{text-decoration:line-through;color:#6B7F94}.pc .tk .r .x{background:none;border:0;color:#FF9AA8;cursor:pointer;font-size:15px}
+.pc .tk .add{display:grid;grid-template-columns:1fr 118px 120px 70px;gap:5px;margin-top:5px}
+.bdg{display:inline-block;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:bold;color:#fff;white-space:nowrap}
+/* inventario */
+.hk{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:8px 0 12px}
+.hk div{background:rgba(15,22,32,.9);border:1px solid #243244;border-left:5px solid var(--c,#3D9BFF);border-radius:12px;padding:9px 12px}.hk b{display:block;font-size:22px;color:#fff}.hk span{font-size:11.5px;color:#8FA3B8}
+.tecs{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 12px}.tecs button{background:#131C27;color:#C9D8E8;border:1px solid #2C3B4F;border-radius:999px;padding:6px 12px;cursor:pointer;font-size:12.5px}
+.tecs button.on{background:#2F78C4;color:#fff;border-color:#2F78C4}.tecs button i{font-style:normal;margin-left:5px}
+.hg{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.hc{background:rgba(19,28,39,.94);border:1px solid #243244;border-radius:14px;overflow:hidden;color:#E6EDF5;display:flex;flex-direction:column}
+.hc .ft{height:140px;background:#0F1620 center/cover no-repeat;display:grid;place-items:center;color:#5A6B7E;font-size:34px}
+.hc .bd{padding:8px 10px;font-size:12px;color:#8FA3B8;flex:1}.hc .bd b{display:block;color:#fff;font-size:14px}.hc .bd .pr{color:#F2CF6B;font-weight:bold;font-size:13px}
+.hc .inv{display:flex;gap:4px;padding:0 10px 8px}.hc .inv button{flex:1;border:1px solid #2C3B4F;background:#131C27;color:#C9D8E8;border-radius:8px;padding:5px 0;cursor:pointer;font-size:12px}
+.hc .inv button.on.ok{background:#1E8E5A;color:#fff;border-color:#1E8E5A}.hc .inv button.on.fa{background:#D32F2F;color:#fff;border-color:#D32F2F}.hc .inv button.on.da{background:#C77C0E;color:#fff;border-color:#C77C0E}
+.hc .ev{display:flex;gap:6px;align-items:center;padding:0 10px 10px;font-size:11.5px}.hc .ev img{width:46px;height:46px;object-fit:cover;border-radius:6px}
+.hform{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;background:rgba(15,22,32,.9);border:1px solid #243244;border-radius:14px;padding:12px;margin:8px 0 12px}
+.hform label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:#8FA3B8}
+.aviso-h{padding:10px 14px;border-radius:12px;margin:8px 0;font-size:13.5px}.aviso-h.wa{background:rgba(242,178,51,.15);border:1px solid #F2B233;color:#F7DC9A}.aviso-h.ok{background:rgba(46,204,113,.13);border:1px solid #2ECC71;color:#A8EBC4}.aviso-h.bad{background:rgba(242,84,106,.15);border:1px solid #F2546A;color:#FFC2CB}
+@media print{.pp .tl{max-height:none}.hc .inv button:not(.on){display:none}.tecs,.hform,.hc .ev label{display:none}}
+</style>
+<script>
+/* ===================== v6 · NUEVOS PROYECTOS: tarjetas + tareas de los dos encargados ===================== */
+const _renderProyBase = renderProy;
+function avanceDe(x) { const T = (x.tareas || []); return T.length ? Math.round(T.filter(t => t.hecha).length / T.length * 100) : (+x.avance || 0); }
+function fCortaO(d) { if (!d) return '—'; const [y, m, dd] = d.split('-'); return dd + '/' + m; }
+renderProy = function () {
+  _renderProyBase.apply(this, arguments);   // chips, formulario y tabla original (la tabla se oculta en pantalla)
+  const sec = document.getElementById('s-proy'), tw = document.getElementById('tProy').closest('.tw'); tw.style.display = 'none'; const fm = sec.querySelector('.form'); if (fm && !fm.closest('details')) { const dd = document.createElement('details'); dd.className = 'noprint'; dd.innerHTML = '<summary style="cursor:pointer;color:#9FD0FF;font-weight:bold;margin:8px 0;font-size:14px">➕ Nuevo proyecto</summary>'; fm.before(dd); dd.appendChild(fm); }
+  let box = document.getElementById('proyNuevo'); if (!box) { box = document.createElement('div'); box.id = 'proyNuevo'; tw.insertAdjacentElement('afterend', box); }
+  const P = S.proyectos, eq = equipoProy(), nomP = id => { const p = persona(id); return p ? corto(p.nombre) : '—'; };
+  // tareas por encargado
+  let h = '<div class="pp">' + eq.map(p => {
+    const T = []; P.forEach((x, i) => (x.tareas || []).forEach((t, j) => { if (t.resp === p.id || (!t.resp && (x.resp === p.id))) T.push({ x, i, t, j }); }));
+    const hechas = T.filter(z => z.t.hecha).length, pend = T.filter(z => !z.t.hecha).sort((a, b) => String(a.t.fecha || '9999').localeCompare(String(b.t.fecha || '9999')));
+    const proys = P.filter(x => x.resp === p.id || x.apo === p.id);
+    return '<div class="per"><div class="top">' + donaO(T.length ? hechas / T.length * 100 : null, 74, 9, '#2ECC71') + '<div><b class="n">' + esc(p.nombre) + '</b><span class="p">' + esc(p.puesto || '') + ' · ' + proys.length + ' proyecto(s) · ' + hechas + ' de ' + T.length + ' tareas hechas</span></div></div>' +
+      (pend.length ? '<ul class="tl">' + pend.map(z => { const d = diasA(z.t.fecha), c = d == null ? '#8FA3B8' : d < 0 ? '#FF9AA8' : d <= 3 ? '#F2CF6B' : '#A8EBC4'; return '<li><input type="checkbox" data-tk="' + z.i + '|' + z.j + '"><div>' + esc(z.t.t) + '<br><small>' + esc(z.x.tit) + '</small></div><span class="f" style="color:' + c + '">' + (d == null ? 'sin fecha' : d < 0 ? 'vencida ' + fCortaO(z.t.fecha) : fCortaO(z.t.fecha)) + '</span></li>'; }).join('') + '</ul>' : '<p class="sub" style="margin:4px 0 0">✅ Sin tareas pendientes.</p>') + '</div>';
+  }).join('') + '</div>';
+  // tarjetas de proyectos
+  const L = P.map((x, i) => ({ x, i })).sort((a, b) => (a.x.estado === 'Terminado') - (b.x.estado === 'Terminado') || String(a.x.fin || '9999').localeCompare(String(b.x.fin || '9999')));
+  h += '<div class="pcs">' + (L.length ? L.map(({ x, i }) => { const sm = semaforo(x), av = avanceDe(x), T = x.tareas || [];
+    return '<div class="pc" style="--ce:' + colEst[x.estado] + '"><div class="h"><b>' + esc(x.tit) + '</b><span class="bdg" style="background:' + sm.c + '">' + sm.t + '</span><button class="b-gris noprint" data-delpy="' + i + '" title="Borrar proyecto" style="padding:2px 8px">🗑</button></div>' +
+      '<div class="g"><label>Responsable<select data-py="' + i + '" data-c="resp">' + optsPer(x.resp) + '</select></label><label>Auxiliar<select data-py="' + i + '" data-c="apo">' + optsPer(x.apo, true) + '</select></label>' +
+      '<label>Inicio<input type="date" data-py="' + i + '" data-c="ini" value="' + esc(x.ini || '') + '"></label><label>Fecha compromiso<input type="date" data-py="' + i + '" data-c="fin" value="' + esc(x.fin || '') + '"></label>' +
+      '<label>Prioridad<select data-py="' + i + '" data-c="pri">' + ['Alta', 'Media', 'Baja'].map(o => '<option' + (x.pri === o ? ' selected' : '') + '>' + o + '</option>').join('') + '</select></label><label>Estado<select data-py="' + i + '" data-c="estado">' + ESTADOS.map(e => '<option' + (x.estado === e ? ' selected' : '') + '>' + e + '</option>').join('') + '</select></label></div>' +
+      '<div class="av"><span style="font-size:12px;color:#8FA3B8">Avance</span><div class="bar"><i style="width:' + av + '%"></i></div><b>' + av + ' %</b>' + (T.length ? '<small style="color:#8FA3B8">por tareas</small>' : '<input type="number" min="0" max="100" step="5" data-py="' + i + '" data-c="avance" value="' + av + '" style="width:62px">') + '</div>' +
+      '<label style="font-size:12px;color:#8FA3B8">Beneficio para la empresa<textarea data-py="' + i + '" data-c="ben">' + esc(x.ben || '') + '</textarea></label>' +
+      '<div class="tk"><h4>✅ Tareas (' + T.filter(t => t.hecha).length + ' de ' + T.length + ')</h4>' +
+      T.map((t, j) => { const d = diasA(t.fecha), venc = !t.hecha && d != null && d < 0; return '<div class="r' + (t.hecha ? ' ok' : '') + '"><input type="checkbox" data-tk="' + i + '|' + j + '"' + (t.hecha ? ' checked' : '') + '><span' + (venc ? ' style="color:#FF9AA8"' : '') + '>' + esc(t.t) + (t.hecha && t.tHecha ? ' <small style="color:#6B7F94">· hecha ' + fCortaO(t.tHecha.slice(0, 10)) + '</small>' : '') + '</span><select data-tkr="' + i + '|' + j + '">' + optsPer(t.resp || x.resp) + '</select><input type="date" data-tkf="' + i + '|' + j + '" value="' + esc(t.fecha || '') + '"><button class="x noprint" data-tkd="' + i + '|' + j + '" title="Quitar">✕</button></div>'; }).join('') +
+      '<div class="add noprint"><input placeholder="Nueva tarea…" data-tkn="' + i + '"><select data-tknr="' + i + '">' + optsPer(x.resp) + '</select><input type="date" data-tknf="' + i + '"><button class="b-verde" data-tka="' + i + '">+ Tarea</button></div></div></div>'; }).join('') : '<p class="sub">Sin proyectos. Agrega el primero con el formulario de arriba.</p>') + '</div>';
+  box.innerHTML = h;
+};
+function guardarTareas(i) { const x = S.proyectos[i]; if (!x) return; const T = x.tareas || []; if (T.length) { x.avance = avanceDe(x); if (x.avance >= 100) x.estado = 'Terminado'; else if (x.estado === 'Terminado') x.estado = 'En proceso'; else if (x.estado === 'Pendiente' && T.some(t => t.hecha)) x.estado = 'En proceso'; } guardar(); renderProy(); }
+document.addEventListener('change', e => {
+  const t = e.target; let m;
+  if (t.dataset.tk) { const [i, j] = t.dataset.tk.split('|').map(Number), z = S.proyectos[i].tareas[j]; z.hecha = t.checked; z.tHecha = t.checked ? new Date().toISOString() : ''; guardarTareas(i); }
+  else if (t.dataset.tkr) { const [i, j] = t.dataset.tkr.split('|').map(Number); S.proyectos[i].tareas[j].resp = t.value; guardarTareas(i); }
+  else if (t.dataset.tkf) { const [i, j] = t.dataset.tkf.split('|').map(Number); S.proyectos[i].tareas[j].fecha = t.value; guardarTareas(i); }
+});
+document.addEventListener('click', e => {
+  const a = e.target.closest('[data-tka]'), d = e.target.closest('[data-tkd]');
+  if (a) { const i = +a.dataset.tka, inp = document.querySelector('[data-tkn="' + i + '"]'), txt = inp.value.trim(); if (!txt) { inp.focus(); return; }
+    const x = S.proyectos[i]; x.tareas = x.tareas || []; x.tareas.push({ id: 't' + Date.now().toString(36), t: txt, resp: document.querySelector('[data-tknr="' + i + '"]').value, fecha: document.querySelector('[data-tknf="' + i + '"]').value, hecha: false }); guardarTareas(i); }
+  if (d) { const [i, j] = d.dataset.tkd.split('|').map(Number); if (confirm('¿Quitar esta tarea?')) { S.proyectos[i].tareas.splice(j, 1); guardarTareas(i); } }
+});
+
+/* ===================== v6 · INVENTARIO DE HERRAMIENTA por técnico (fin de mes · foto · costo · cobro a 15 días) =====================
+   Datos en apps/organigrama/herramienta/: catalogo {items:{id:{tec,nom,marca,modelo,serie,precio,foto,alta,baja}}},
+   inv-AAAA-MM {t:{<tec>:{items:{id:{e:'ok'|'falta'|'danada',foto,nota}},fecha,por,cerrado}}}, cobros {c:{id:{...}}} */
+const HER = { cat: {}, inv: {}, cobros: {}, sel: '', carg: false };
+let assetsO = null;
+(async function () { const ok = () => typeof db !== 'undefined' && db; while (!ok()) await new Promise(r => setTimeout(r, 500));
+  try { assetsO = await window.claude.use('assets'); } catch (e) {}
+  db.collection('herramienta').onSnapshot(q => { HER.inv = {}; q.docs.forEach(d => { const v = d.data() || {}; if (d.id === 'catalogo') HER.cat = v.items || {}; else if (d.id === 'cobros') HER.cobros = v.c || {}; else if (d.id.startsWith('inv-')) HER.inv[d.id.slice(4)] = v.t || {}; }); HER.carg = true; if (tab === 'herr') renderHerr(); }, () => {});
+})();
+async function hup(path, d) { try { await db.doc(path).update(d); } catch (e) { const s = await db.doc(path).get(); if (s.exists) throw e; await db.doc(path).set(d); } }
+const tecsH = () => S.personal.filter(p => p.tipo === 'tecnico' && !p.oculto);
+const dinero = v => '$' + (Math.round((+v || 0) * 100) / 100).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const sumaDias = (iso, n) => { const d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
+function herDe(tec) { return Object.entries(HER.cat).filter(([, h]) => h.tec === tec && !h.baja).sort((a, b) => String(a[1].nom).localeCompare(String(b[1].nom))); }
+function estadoCobro(c) { if (c.estado === 'repuesta' || c.estado === 'cobrada') return c.estado; const d = diasA(c.limite); return d != null && d < 0 ? 'vencido' : 'pendiente'; }
+const ESTC = { pendiente: ['⏳ En plazo para reponer', '#C77C0E'], vencido: ['💲 Pasa a cobro', '#D32F2F'], repuesta: ['✅ Repuesta', '#1E8E5A'], cobrada: ['💵 Cobrada', '#5B6B7B'] };
+function renderHerr() {
+  const sec = document.getElementById('s-herr'); if (!sec) return; const k = mesKey(), T = tecsH(), inv = HER.inv[k] || {};
+  if (!HER.sel || !T.some(p => p.id === HER.sel)) HER.sel = (T[0] || {}).id || '';
+  const todas = Object.values(HER.cat).filter(h => !h.baja), valor = todas.reduce((a, h) => a + (+h.precio || 0), 0);
+  const hechos = T.filter(p => (inv[p.id] || {}).cerrado).length, C = Object.entries(HER.cobros).map(([id, c]) => Object.assign({ id }, c));
+  const porCobrar = C.filter(c => ['pendiente', 'vencido'].includes(estadoCobro(c))), venc = C.filter(c => estadoCobro(c) === 'vencido');
+  const [y, mo] = k.split('-').map(Number), ult = new Date(y, mo, 0), diasFin = diasA(ult.toISOString().slice(0, 10));
+  let h = '<div class="pr-head"><h1>Inventario de herramienta · ' + esc(nomMes(k)) + '</h1><div class="ph"></div></div><h2 class="noprint">🧰 Inventario de herramienta</h2>' +
+    '<p class="sub">Cada técnico tiene su herramienta registrada con <b>foto, nombre, marca, modelo, serie y precio</b>. A <b>fin de mes</b> se hace el inventario de cada técnico (un día por técnico) con foto de evidencia. Si falta una herramienta, el técnico tiene <b>15 días para reponerla</b>; si no, <b>pasa a cobro</b>.</p>' +
+    (hechos < T.length && diasFin != null && diasFin >= 0 && diasFin <= 6 ? '<div class="aviso-h wa">📅 <b>Toca el inventario de fin de mes:</b> faltan ' + (T.length - hechos) + ' técnico(s); el mes cierra en ' + diasFin + ' día(s).</div>' : '') +
+    (venc.length ? '<div class="aviso-h bad">💲 <b>' + venc.length + ' herramienta(s) ya pasaron los 15 días sin reponerse</b> · total ' + dinero(venc.reduce((a, c) => a + (+c.precio || 0), 0)) + '. Pasan a cobro.</div>' : '') +
+    '<div class="hk"><div style="--c:#3D9BFF"><b>' + todas.length + '</b><span>herramientas registradas</span></div><div style="--c:#F2B233"><b>' + dinero(valor) + '</b><span>valor de la herramienta</span></div><div style="--c:#2ECC71"><b>' + hechos + ' / ' + T.length + '</b><span>inventarios cerrados en ' + esc(nomMes(k)) + '</span></div><div style="--c:#C77C0E"><b>' + porCobrar.length + '</b><span>por reponer · ' + dinero(porCobrar.reduce((a, c) => a + (+c.precio || 0), 0)) + '</span></div><div style="--c:#D32F2F"><b>' + venc.length + '</b><span>pasan a cobro</span></div></div>';
+  h += '<div class="tecs">' + T.map(p => { const iv = inv[p.id] || {}, n = herDe(p.id).length, f = Object.values(iv.items || {}).filter(x => x.e === 'falta' || x.e === 'danada').length; return '<button class="' + (HER.sel === p.id ? 'on' : '') + '" data-htec="' + p.id + '">' + esc(corto(p.nombre)) + '<i>' + (iv.cerrado ? (f ? '⚠️' + f : '✅') : '⏳') + '</i> <small>' + n + '</small></button>'; }).join('') + '</div>';
+  const p = persona(HER.sel);
+  if (p) {
+    const L = herDe(p.id), iv = inv[p.id] || {}, it = iv.items || {}, cerr = !!iv.cerrado, marc = L.filter(([id]) => it[id] && it[id].e).length;
+    h += '<h2 style="margin-top:6px">👷 ' + esc(p.nombre) + ' <span class="sub" style="font-weight:normal">· ' + L.length + ' herramientas · ' + dinero(L.reduce((a, [, x]) => a + (+x.precio || 0), 0)) + '</span></h2>' +
+      (cerr ? '<div class="aviso-h ok">✅ Inventario de ' + esc(nomMes(k)) + ' cerrado el ' + esc(iv.fecha) + ' por ' + esc(iv.por || '') + '. ' + (Object.values(it).filter(x => x.e !== 'ok').length ? 'Las faltantes o dañadas se pasaron a reposición (15 días).' : 'Toda la herramienta completa.') + ' <button class="b-gris noprint" data-hreabrir="' + p.id + '">Reabrir</button></div>'
+        : '<div class="aviso-h wa">📋 Inventario de ' + esc(nomMes(k)) + ': marca cada herramienta (<b>✔ Está · ✖ Falta · ⚠ Dañada</b>) y toma la foto de evidencia. Llevas ' + marc + ' de ' + L.length + '. <button class="b-verde noprint" data-hcerrar="' + p.id + '"' + (L.length && marc === L.length ? '' : ' disabled') + '>Cerrar inventario de ' + esc(corto(p.nombre)) + '</button></div>');
+    h += '<details class="noprint"' + (L.length ? '' : ' open') + '><summary style="cursor:pointer;color:#9FD0FF;font-weight:bold;margin:6px 0">➕ Registrar herramienta nueva de ' + esc(corto(p.nombre)) + '</summary><div class="hform">' +
+      '<label>Nombre de la herramienta<input id="hNom" placeholder="Ej. Taladro inalámbrico"></label><label>Marca<input id="hMar" placeholder="Ej. DeWalt"></label><label>Modelo<input id="hMod" placeholder="Ej. DCD771"></label><label>No. de serie<input id="hSer" placeholder="Ej. 123456"></label>' +
+      '<label>Precio (MXN)<input id="hPre" type="number" min="0" step="0.01" placeholder="0.00"></label><label>Foto<input id="hFoto" type="file" accept="image/*" capture="environment"></label><label>&nbsp;<button class="b-verde" id="hAdd">Agregar herramienta</button></label></div></details>';
+    h += '<div class="hg">' + (L.length ? L.map(([id, x]) => { const e = (it[id] || {}).e, ef = (it[id] || {}).foto;
+      return '<div class="hc"><div class="ft"' + (x.foto ? ' style="background-image:url(\'/_blob/' + x.foto + '\')"' : '') + '>' + (x.foto ? '' : '🔧') + '</div><div class="bd"><b>' + esc(x.nom) + '</b>' + esc([x.marca, x.modelo].filter(Boolean).join(' · ') || '—') + '<br>Serie: ' + esc(x.serie || '—') + '<br><span class="pr">' + dinero(x.precio) + '</span>' +
+        '<span class="noprint" style="float:right"><button class="b-gris" data-hedit="' + id + '" title="Editar" style="padding:1px 6px">✏️</button> <button class="b-gris" data-hbaja="' + id + '" title="Dar de baja" style="padding:1px 6px">🗑</button></span></div>' +
+        '<div class="inv">' + [['ok', '✔ Está'], ['fa', '✖ Falta'], ['da', '⚠ Dañada']].map(([c, t]) => { const v = { ok: 'ok', fa: 'falta', da: 'danada' }[c]; return '<button class="' + c + (e === v ? ' on' : '') + '" data-hinv="' + id + '|' + v + '"' + (cerr ? ' disabled' : '') + '>' + t + '</button>'; }).join('') + '</div>' +
+        '<div class="ev">' + (ef ? '<img src="/_blob/' + ef + '" alt="evidencia">' : '<span style="color:#6B7F94">sin foto del inventario</span>') + (cerr ? '' : '<label class="b-gris" style="cursor:pointer;padding:3px 8px;border-radius:6px">📷 Foto<input type="file" accept="image/*" capture="environment" data-hev="' + id + '" hidden></label>') + '</div></div>'; }).join('') : '<p class="sub">Todavía no tiene herramienta registrada. Regístrala arriba con su foto y precio.</p>') + '</div>';
+  }
+  h += '<h2 style="margin-top:18px">💲 Reposición y cobro de herramienta</h2><p class="sub">Fecha límite = fecha del inventario + 15 días. Si no se repone a tiempo, pasa a cobro.</p><div class="tw"><table><tr><th>Técnico</th><th>Herramienta</th><th>Motivo</th><th>Precio</th><th>Detectado</th><th>Límite</th><th>Estado</th><th class="noprint"></th></tr>' +
+    (C.length ? C.sort((a, b) => String(b.det).localeCompare(String(a.det))).map(c => { const st = estadoCobro(c), d = diasA(c.limite), pp = persona(c.tec);
+      return '<tr><td class="l">' + esc(pp ? pp.nombre : c.tec) + '</td><td class="l">' + esc(c.nom) + '<br><small>' + esc([c.marca, c.modelo, c.serie ? 'serie ' + c.serie : ''].filter(Boolean).join(' · ')) + '</small></td><td>' + (c.motivo === 'danada' ? '⚠ Dañada' : '✖ Falta') + '</td><td>' + dinero(c.precio) + '</td><td>' + esc(c.det) + '</td><td>' + esc(c.limite) + (st === 'pendiente' && d != null ? '<br><small>faltan ' + d + ' día(s)</small>' : '') + '</td><td><span class="bdg" style="background:' + ESTC[st][1] + '">' + ESTC[st][0] + '</span></td><td class="noprint">' +
+        (st === 'pendiente' || st === 'vencido' ? '<button class="b-verde" data-hrep="' + c.id + '">✅ Repuesta</button> ' + (st === 'vencido' ? '<button class="b-rojo" data-hcob="' + c.id + '">💵 Cobrada</button>' : '') : '') + '</td></tr>'; }).join('') : '<tr><td colspan="8" class="nota">Sin herramienta por reponer.</td></tr>') + '</table></div>';
+  sec.innerHTML = h;
+}
+async function subirFotoH(file) { if (!assetsO) throw new Error('sin almacenamiento de fotos'); const r = await assetsO.upload(file); return r.id; }
+document.addEventListener('click', async e => {
+  const t = e.target; let b;
+  if ((b = t.closest('[data-htec]'))) { HER.sel = b.dataset.htec; renderHerr(); return; }
+  if (t.id === 'hAdd') {
+    const nom = document.getElementById('hNom').value.trim(), pre = +document.getElementById('hPre').value || 0, f = document.getElementById('hFoto').files[0];
+    if (!nom) return alert('Escribe el nombre de la herramienta.'); if (!pre) return alert('Escribe el precio de la herramienta.'); if (!f) return alert('Toma la foto de la herramienta.');
+    t.disabled = true; t.textContent = 'Guardando…';
+    try { const foto = await subirFotoH(f), id = 'h' + Date.now().toString(36);
+      await hup('herramienta/catalogo', { items: { [id]: { tec: HER.sel, nom, marca: document.getElementById('hMar').value.trim(), modelo: document.getElementById('hMod').value.trim(), serie: document.getElementById('hSer').value.trim(), precio: pre, foto, alta: hoyISO() } } });
+    } catch (x) { alert('No se pudo guardar: ' + (x.message || x.code)); t.disabled = false; t.textContent = 'Agregar herramienta'; }
+    return;
+  }
+  if ((b = t.closest('[data-hedit]'))) { const id = b.dataset.hedit, x = HER.cat[id]; if (!x) return;
+    const nom = prompt('Nombre de la herramienta:', x.nom); if (nom === null) return; const marca = prompt('Marca:', x.marca || ''); if (marca === null) return; const modelo = prompt('Modelo:', x.modelo || ''); if (modelo === null) return; const serie = prompt('No. de serie:', x.serie || ''); if (serie === null) return; const precio = prompt('Precio (MXN):', x.precio || 0); if (precio === null) return;
+    await hup('herramienta/catalogo', { items: { [id]: { nom: nom.trim() || x.nom, marca: marca.trim(), modelo: modelo.trim(), serie: serie.trim(), precio: +precio || 0 } } }); return; }
+  if ((b = t.closest('[data-hbaja]'))) { const id = b.dataset.hbaja, x = HER.cat[id]; if (!x || !confirm('¿Dar de baja "' + x.nom + '"? (no se borra el historial)')) return; await hup('herramienta/catalogo', { items: { [id]: { baja: hoyISO() } } }); return; }
+  if ((b = t.closest('[data-hinv]'))) { const [id, v] = b.dataset.hinv.split('|'); await hup('herramienta/inv-' + mesKey(), { t: { [HER.sel]: { items: { [id]: { e: v } } } } }); return; }
+  if ((b = t.closest('[data-hcerrar]'))) {
+    const tec = b.dataset.hcerrar, k = mesKey(), it = ((HER.inv[k] || {})[tec] || {}).items || {}, L = herDe(tec), hoy = hoyISO(), p = persona(tec);
+    const malas = L.filter(([id]) => it[id] && (it[id].e === 'falta' || it[id].e === 'danada'));
+    if (!confirm('Cerrar el inventario de ' + (p ? p.nombre : tec) + '.\n' + (malas.length ? malas.length + ' herramienta(s) faltante(s) o dañada(s) pasan a reposición: ' + dinero(malas.reduce((a, [, x]) => a + (+x.precio || 0), 0)) + ', con límite al ' + sumaDias(hoy, 15) + '.' : 'Toda la herramienta está completa.'))) return;
+    const yo = (S.personal.find(x => String(x.nomina) === String((window.LI && typeof LI.nomina === 'function' && LI.nomina()) || '')) || {}).nombre || 'Mantenimiento';
+    const cob = {}; malas.forEach(([id, x]) => { cob['c' + k.replace('-', '') + id] = { tec, herr: id, nom: x.nom, marca: x.marca || '', modelo: x.modelo || '', serie: x.serie || '', precio: +x.precio || 0, motivo: it[id].e, det: hoy, limite: sumaDias(hoy, 15), mes: k, estado: 'pendiente', foto: it[id].foto || '' }; });
+    if (Object.keys(cob).length) await hup('herramienta/cobros', { c: cob });
+    await hup('herramienta/inv-' + k, { t: { [tec]: { cerrado: true, fecha: hoy, por: yo } } }); return;
+  }
+  if ((b = t.closest('[data-hreabrir]'))) { if (!confirm('¿Reabrir el inventario? (las reposiciones ya creadas se quedan)')) return; await hup('herramienta/inv-' + mesKey(), { t: { [b.dataset.hreabrir]: { cerrado: false } } }); return; }
+  if ((b = t.closest('[data-hrep]'))) { const id = b.dataset.hrep; if (!confirm('¿El técnico ya repuso la herramienta? Toma después la foto de la herramienta nueva en su tarjeta.')) return; await hup('herramienta/cobros', { c: { [id]: { estado: 'repuesta', fRep: hoyISO() } } }); return; }
+  if ((b = t.closest('[data-hcob]'))) { const id = b.dataset.hcob; if (!confirm('¿Marcar como cobrada (descuento aplicado)?')) return; await hup('herramienta/cobros', { c: { [id]: { estado: 'cobrada', fCob: hoyISO() } } }); return; }
+});
+document.addEventListener('change', async e => {
+  const t = e.target; if (!t.dataset || !t.dataset.hev) return; const f = t.files[0]; if (!f) return;
+  try { const foto = await subirFotoH(f); await hup('herramienta/inv-' + mesKey(), { t: { [HER.sel]: { items: { [t.dataset.hev]: { foto, tf: new Date().toISOString() } } } } }); } catch (x) { alert('No se pudo guardar la foto: ' + (x.message || x.code)); }
+});
+// pestaña nueva junto a Nuevos proyectos
+(function () {
+  const nb = document.querySelector('nav button[data-t="proy"]'); if (nb && !document.querySelector('nav button[data-t="herr"]')) { const b = document.createElement('button'); b.dataset.t = 'herr'; b.textContent = '🧰 Inventario de herramienta'; nb.insertAdjacentElement('afterend', b); b.addEventListener('click', () => verTab('herr')); }
+  const sp = document.getElementById('s-proy'); if (sp && !document.getElementById('s-herr')) { const s = document.createElement('section'); s.id = 's-herr'; sp.insertAdjacentElement('afterend', s); }
+})();
+const _renderV6 = render;
+render = function () { _renderV6.apply(this, arguments); if (tab === 'herr') renderHerr(); };
+</script>
 </body>
 </html>
