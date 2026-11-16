@@ -195,6 +195,12 @@
   // ---------- arranque
   function iniciar() {
     montarTab(); envolverDrawer(); envolverGuardar(); envolverPers();
+    // botón grande en el encabezado: teclear el código que trae el técnico (PA-4821…)
+    const ponerBoton = () => { const acc = document.querySelector('header.hero .hero-actions'); if (!acc) return setTimeout(ponerBoton, 500); if (document.getElementById('btnCodOrd')) return;
+      const b = document.createElement('button'); b.type = 'button'; b.id = 'btnCodOrd'; b.className = 'codBtn'; b.innerHTML = '🔢 Código de orden';
+      b.addEventListener('click', () => { const v = prompt('Código de la orden de material que trae el técnico (ej. PA-4821):', ''); if (v && v.trim()) abrirOrdenCodigo(v); });
+      acc.insertBefore(b, acc.firstChild); };
+    ponerBoton();
     const espera = () => { if (typeof db !== 'undefined' && db) { envolverDB(); suscribirOrdenes(); suscribirRetiro(); } else setTimeout(espera, 600); }; espera();
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', iniciar); else iniciar();
