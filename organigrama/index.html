@@ -161,7 +161,7 @@ td select{padding:4px;border:1px solid var(--linea);border-radius:5px;background
 <nav id="tabs">
  <button data-t="org" class="on">Organigrama</button>
  <button data-t="ev">Evaluación de desempeño</button>
- <button data-t="cum">Cumplimiento plan mensual</button>
+ <button data-t="cum">Cumplimiento de preventivo</button>
  <button data-t="cal">Calificación y paros</button>
  <button data-t="graf">Gráficas</button>
  <button data-t="proy">Nuevos proyectos</button>
@@ -193,9 +193,9 @@ td select{padding:4px;border:1px solid var(--linea);border-radius:5px;background
  </section>
 
  <section id="s-cum">
-  <div class="pr-head"><h1>Cumplimiento del plan mensual de mantenimiento</h1><div class="ph"></div></div>
-  <h2 class="noprint">Cumplimiento del plan mensual</h2>
-  <p class="sub">Órdenes programadas contra órdenes cumplidas de cada técnico. <b>97 % o más: Excelente · 95 %: Satisfactorio · 90 %: Mínimo aceptable · menos de 90 %: No aceptable.</b></p>
+  <div class="pr-head"><h1>Cumplimiento de preventivo de mantenimiento</h1><div class="ph"></div></div>
+  <h2 class="noprint">Cumplimiento de preventivo</h2>
+  <p class="sub">🔗 Viene de <b>Mantenimiento Preventivo</b>: órdenes del mes y cumplidas de cada técnico (el mismo dato de la app), sus categorías del mes y su calificación final (entrega + calidad). El supervisor lleva las órdenes de todo el equipo porque evalúa a todos. <b>97 % o más: Excelente · 95 %: Satisfactorio · 90 %: Mínimo aceptable · menos de 90 %: No aceptable.</b></p>
   <div class="tw"><table id="tCum"></table></div>
   <p class="nota">El % total del equipo = suma de órdenes cumplidas / suma de órdenes programadas. El promedio simple es el promedio de los % individuales.</p>
  </section>
@@ -231,7 +231,7 @@ td select{padding:4px;border:1px solid var(--linea);border-radius:5px;background
   <p class="sub noprint">Se actualizan con lo capturado en el periodo seleccionado; la tendencia usa todos los periodos guardados.</p>
   <div class="kpis" id="kpis"></div>
   <div class="graf">
-   <div class="gc"><h3>Cumplimiento del plan mensual por técnico</h3><div class="cv"><canvas id="g1"></canvas></div></div>
+   <div class="gc"><h3>Cumplimiento de preventivo por técnico</h3><div class="cv"><canvas id="g1"></canvas></div></div>
    <div class="gc"><h3>Calificación integral por técnico (60 % preventivo + 40 % paros)</h3><div class="cv"><canvas id="g2"></canvas></div></div>
    <div class="gc"><h3>Minutos de paro y número de paros por técnico</h3><div class="cv"><canvas id="g3"></canvas></div></div>
    <div class="gc"><h3>Paros por clasificación</h3><div class="cv"><canvas id="g4"></canvas></div></div>
@@ -543,8 +543,8 @@ function hojaTec(p) {
  return `<div class="pag-tec">
  <div class="enc"><h1>Reporte individual de desempeño · Mantenimiento</h1><div>Línea Italia · Creaciones Industriales, S.A. de C.V.<br>Periodo: <b>${nomMes(mesKey())}</b> · Impreso: ${new Date().toLocaleDateString('es-MX')}${m.ejemplo ? '<br><b style="color:#b3261e">DATOS DE EJEMPLO</b>' : ''}</div></div>
  <div class="dat"><div>Nombre<b>${esc(p.nombre)}</b></div><div>Nómina<b>${esc(p.nomina || '—')}</b></div><div>Puesto<b>${esc(p.puesto)}</b></div><div>Reporta a<b>${esc(sup ? sup.nombre : '—')}</b></div><div style="grid-column:1/-1">Área / categorías a cargo<b>${esc(areaDe(p) || '—')}</b></div></div>
- <div class="kp"><div style="border-left-color:${colK(cp.k)}">Cumplimiento del plan mensual<b>${r.pct == null ? '—' : f1(r.pct) + ' %'}</b>${cp.t}</div><div style="border-left-color:#c77c0e">Puntaje de paros<b>${f1(r.pts)}</b>${r.n} paros · ${r.mins} min</div><div style="border-left-color:${colK(cf.k)}">Calificación final (${c.w_cum}/${c.w_par})<b>${r.fin == null ? '—' : f1(r.fin)}</b>${cf.t}</div><div style="border-left-color:${ef.n ? colK(MAPK[ef.n]) : '#8a94a3'}">Desempeño<b style="font-size:15px">${ef.n ? NIVELES.find(x => x.k === ef.n).t : 'Sin evaluar'}</b>${ef.auto ? 'automático por calificación' : ef.n ? 'asignado por el evaluador' : ''}</div></div>
- <h3>Cumplimiento del plan mensual</h3>
+ <div class="kp"><div style="border-left-color:${colK(cp.k)}">Cumplimiento de preventivo<b>${r.pct == null ? '—' : f1(r.pct) + ' %'}</b>${cp.t}</div><div style="border-left-color:#c77c0e">Puntaje de paros<b>${f1(r.pts)}</b>${r.n} paros · ${r.mins} min</div><div style="border-left-color:${colK(cf.k)}">Calificación final (${c.w_cum}/${c.w_par})<b>${r.fin == null ? '—' : f1(r.fin)}</b>${cf.t}</div><div style="border-left-color:${ef.n ? colK(MAPK[ef.n]) : '#8a94a3'}">Desempeño<b style="font-size:15px">${ef.n ? NIVELES.find(x => x.k === ef.n).t : 'Sin evaluar'}</b>${ef.auto ? 'automático por calificación' : ef.n ? 'asignado por el evaluador' : ''}</div></div>
+ <h3>Cumplimiento de preventivo</h3>
  <table><tr><th>Órdenes programadas</th><th>Órdenes cumplidas</th><th>Órdenes no cumplidas</th><th>% cumplimiento</th><th>Clasificación</th><th>Aporta a la calificación (${c.w_cum} %)</th></tr>
  <tr><td>${r.prog}</td><td>${r.cump}</td><td>${Math.max(0, r.prog - r.cump)}</td><td><b>${r.pct == null ? '—' : f1(r.pct) + ' %'}</b></td><td>${badge(cp)}</td><td>${r.pct == null ? '—' : f1(r.pct * c.w_cum / (c.w_cum + c.w_par))}</td></tr></table>
  <h3>Paros de máquina atendidos · calificación de paros</h3>
@@ -667,7 +667,7 @@ $('#bXls').addEventListener('click', async () => {
  filas(ws, S.personal.map(p => { const ev = m.ev[p.id] || {}; const n = NIVELES.find(x => x.k === ev.nivel); return [p.puesto, p.nombre, p.nomina, areaDe(p), (persona(p.reporta) || {}).nombre || (p.tipo === 'gerente' ? 'Dirección' : ''), p.tipo === 'gerente' ? 'Evalúa' : p.externo ? 'Nuevos proyectos' : txtNivel(nivelEf(p, m)), ev.com || '']; }), 5);
  S.personal.forEach((p, i) => { const ef = nivelEf(p, m); if (ef.n && !p.externo) pintar(ws, 5 + i, 6, MAPK[ef.n]); });
  // Cumplimiento
- ws = hoja('Cumplimiento plan mensual', 'CUMPLIMIENTO DEL PLAN MENSUAL', [['Nómina', 10], ['Nombre', 34], ['Área', 40], ['Órdenes programadas', 14], ['Órdenes cumplidas', 14], ['% cumplimiento', 14], ['Clasificación', 20]]);
+ ws = hoja('Cumplimiento de preventivo', 'CUMPLIMIENTO DEL PLAN MENSUAL', [['Nómina', 10], ['Nombre', 34], ['Área', 40], ['Órdenes programadas', 14], ['Órdenes cumplidas', 14], ['% cumplimiento', 14], ['Clasificación', 20]]);
  filas(ws, R.map(([p, r]) => [p.nomina, p.nombre, areaDe(p), r.prog, r.cump, r.pct == null ? null : +r.pct.toFixed(1), clasPct(r.pct).t]).concat([['', 'TOTAL DEL EQUIPO', '', e.prog, e.cump, e.pctTot == null ? null : +e.pctTot.toFixed(1), clasPct(e.pctTot).t], ['', 'PROMEDIO DEL PERSONAL', '', '', '', e.prom == null ? null : +e.prom.toFixed(1), clasPct(e.prom).t]]), 5);
  R.forEach(([p, r], i) => pintar(ws, 5 + i, 7, clasPct(r.pct).k)); ws.getRow(5 + R.length).font = { bold: true }; ws.getRow(6 + R.length).font = { bold: true };
  // Calificación
@@ -845,5 +845,14 @@ document.addEventListener('click', e => {
   const b = e.target.closest('[data-mv]'); if (!b) return; const [i, d] = b.dataset.mv.split('|').map(Number), j = i + d, L = S.personal;
   if (j < 0 || j >= L.length) return; [L[i], L[j]] = [L[j], L[i]]; guardar(); renderCfg();
 });
+</script><script>
+// v4 · categorías del mes desde Mantenimiento Preventivo (cambian mes con mes); el supervisor no lleva categoría
+const _areaBase = areaDe;
+areaDe = function (p) {
+  try { const m = S.meses[mesKey()], o = m && m.ord && m.ord[p.id];
+    if (o && o.fuente === 'preventivo') { if (o.area) return o.area; if (o.cats && o.cats.length) return o.cats.map(k => { const c = (S.cats || []).find(x => x.k === k); return k + (c ? ' · ' + c.t : ''); }).join(' / '); } } catch (e) {}
+  if (p.tipo === 'supervisor') return 'Supervisa a todo el equipo';
+  return _areaBase(p);
+};
 </script></body>
 </html>

@@ -1372,7 +1372,7 @@ function datosOrganigrama(mes) {
   Object.entries(S.pers).forEach(([nom, p]) => {
     if (p.a === false) return;
     if (p.tec) { const T = L.filter(t => t.tec === p.tec); if (!T.length) return; const I = indicadores(T), debidas = T.filter(t => semanaCerrada(t.f) || hecha(t)).length;
-      filas.push({ nom, n: p.n, rol: 'Técnico', prog: debidas, cump: I.hechas, cumpl: I.cumpl, calidad: I.calidad, cal: I.calif }); }
+      filas.push({ nom, n: p.n, rol: 'Técnico', prog: T.length, cump: I.hechas, cumpl: I.cumpl, calidad: I.calidad, cal: I.calif, cats: [...new Set(T.map(t => t.cat))].sort((a, b) => Object.keys(CAT).indexOf(a) - Object.keys(CAT).indexOf(b)), area: '' }); }
     else if (p.califica && !p.otorga) { const CJ = califJassoSemanas(mes), I = indicadores(L), debidas = L.filter(t => semanaCerrada(t.f) || hecha(t)).length;
       filas.push({ nom, n: p.n, rol: 'Supervisor', prog: debidas, cump: I.hechas, cumpl: I.cumpl, calidad: I.calidad, cal: CJ.prom }); }
   });
@@ -1382,7 +1382,7 @@ function vOrganigrama() {
   const F = datosOrganigrama(S.mes), env = (S.aj.organigrama || {})[S.mes];
   return '<div class="caja simple"><h2>🔗 Calificación de preventivo → Organigrama <span class="r">' + (env ? 'enviado ' + fechaHora(env) : 'sin enviar') + '</span></h2>' +
     '<p class="peq mu" style="margin:-4px 0 10px">Esta calificación pasa al Organigrama (Calificación y paros) como el % de preventivo de cada persona: 60 % de su calificación integral, junto con el 40 % de paros. Técnicos: promedio de cumplimiento y calidad. Supervisor: promedio de su calificación semanal.' + '' + '</p>' +
-    '<table class="tbl"><tr><th>Nómina</th><th>Nombre</th><th>Puesto</th><th class="n">Programadas</th><th class="n">Cumplidas</th><th class="n">Cumplimiento</th><th class="n">Calidad</th><th class="n">Calificación → Organigrama</th></tr>' +
+    '<table class="tbl"><tr><th>Nómina</th><th>Nombre</th><th>Puesto</th><th class="n">Órdenes del mes</th><th class="n">Cumplidas</th><th class="n">Cumplimiento</th><th class="n">Calidad</th><th class="n">Calificación → Organigrama</th></tr>' +
     F.map(f => '<tr><td>' + f.nom + '</td><td>' + esc(titulo(f.n)) + '</td><td>' + f.rol + '</td><td class="n">' + f.prog + '</td><td class="n">' + f.cump + '</td><td class="n">' + f.cumpl + '%</td><td class="n">' + (f.calidad == null ? '—' : f.calidad + '%') + '</td><td class="n"><span class="nota ' + notaCls(f.cal) + '">' + (f.cal == null ? '—' : f.cal) + '</span></td></tr>').join('') + '</table>' +
     '<p class="peq" style="margin:8px 0 0;color:#9A6B00">Vista previa: el envío al Organigrama está desactivado para no modificar esa app; se conecta solo cuando el Ing. Omar lo indique.</p></div>';
 }
@@ -1391,7 +1391,7 @@ async function enviarOrganigrama(mes, silencioso) {
   try {
     const fs = firebase.firestore(), g = await fs.doc('apps/organigrama/config/general').get(), gente = (g.exists && g.data().personal) || [];
     const idDe = nom => (gente.find(p => String(p.nomina || '').trim() === String(nom)) || {}).id, ord = {};
-    datosOrganigrama(mes).forEach(f => { const id = idDe(f.nom); if (id && f.cal != null) ord[id] = { prog: f.prog, cump: f.cump, cal: f.cal, cumpl: f.cumpl, calidad: f.calidad, fuente: 'preventivo', t: new Date().toISOString() }; });
+    datosOrganigrama(mes).forEach(f => { const id = idDe(f.nom); if (id && f.cal != null) ord[id] = { prog: f.prog, cump: f.cump, cal: f.cal, cumpl: f.cumpl, calidad: f.calidad, cats: f.cats || [], area: f.area || '', fuente: 'preventivo', t: new Date().toISOString() }; });
     if (!Object.keys(ord).length) { if (!silencioso) toast('No hubo coincidencias de nómina con el Organigrama.'); return; }
     await fs.doc('apps/organigrama/meses/' + mes).set({ ord }, { merge: true });
     await upd('config/ajustes', { organigrama: { [mes]: new Date().toISOString() } });
@@ -2007,9 +2007,9 @@ function datosOrganigrama(mes) {
   Object.entries(S.pers).forEach(([nom, p]) => {
     if (p.a === false) return;
     if (p.tec) { const T = L.filter(t => t.tec === p.tec); if (!T.length) return; const I = indicadores(T), debidas = T.filter(t => semanaCerrada(t.f) || hecha(t)).length;
-      filas.push({ nom, n: p.n, rol: 'Técnico', prog: debidas, cump: I.hechas, cumpl: I.cumpl, calidad: I.calidad, cal: I.calif }); }
+      filas.push({ nom, n: p.n, rol: 'Técnico', prog: T.length, cump: I.hechas, cumpl: I.cumpl, calidad: I.calidad, cal: I.calif, cats: [...new Set(T.map(t => t.cat))].sort((a, b) => Object.keys(CAT).indexOf(a) - Object.keys(CAT).indexOf(b)), area: '' }); }
     else if (p.califica && !p.otorga) { const G = califGeneralJasso(mes).M, I = indicadores(L), debidas = L.filter(t => semanaCerrada(t.f) || hecha(t)).length;
-      filas.push({ nom, n: p.n, rol: 'Supervisor', prog: debidas, cump: I.hechas, cumpl: I.cumpl, calidad: I.calidad, cal: G.gen }); }
+      filas.push({ nom, n: p.n, rol: 'Supervisor', prog: L.length, cump: I.hechas, cumpl: I.cumpl, calidad: I.calidad, cal: G.gen, cats: [], area: 'Supervisa a todo el equipo' }); }
   });
   return filas;
 }
@@ -2017,7 +2017,7 @@ function vOrganigrama() {
   const F = datosOrganigrama(S.mes), env = (S.aj.organigrama || {})[S.mes];
   return '<div class="caja simple"><h2>🔗 Calificación de preventivo → Organigrama <span class="r">' + (env ? '✔ enviada ' + fechaHora(env) : 'sin enviar') + '</span></h2>' +
     '<p class="peq mu" style="margin:-4px 0 10px">Pasa al Organigrama (Calificación y paros) como el % de preventivo de cada persona: 60 % de su calificación integral, junto con el 40 % de paros. Técnicos: promedio de cumplimiento y calidad. Supervisor: su calificación general (cumplimiento, entregas, firmas y líderes).</p>' +
-    '<table class="tbl"><tr><th>Nómina</th><th>Nombre</th><th>Puesto</th><th class="n">Programadas</th><th class="n">Cumplidas</th><th class="n">Cumplimiento</th><th class="n">Calidad</th><th class="n">Calificación → Organigrama</th></tr>' +
+    '<table class="tbl"><tr><th>Nómina</th><th>Nombre</th><th>Puesto</th><th class="n">Órdenes del mes</th><th class="n">Cumplidas</th><th class="n">Cumplimiento</th><th class="n">Calidad</th><th class="n">Calificación → Organigrama</th></tr>' +
     F.map(f => '<tr><td>' + f.nom + '</td><td>' + esc(titulo(f.n)) + '</td><td>' + f.rol + '</td><td class="n">' + f.prog + '</td><td class="n">' + f.cump + '</td><td class="n">' + (f.cumpl == null ? '—' : f.cumpl + '%') + '</td><td class="n">' + (f.calidad == null ? '—' : f.calidad + '%') + '</td><td class="n"><span class="nota ' + notaCls(f.cal) + '">' + (f.cal == null ? '—' : f.cal) + '</span></td></tr>').join('') + '</table>' +
     '<div class="fila" style="margin-top:10px;justify-content:space-between"><span class="peq mu">Se envía sola cada vez que entra el jefe (este mes y el anterior).</span>' + (otorga() ? '<button class="bt p" id="bOrg">🔗 Enviar ahora al Organigrama</button>' : '') + '</div></div>';
 }
