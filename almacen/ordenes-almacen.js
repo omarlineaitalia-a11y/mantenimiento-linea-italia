@@ -50,10 +50,9 @@
   function sinSalidaDirecta() {
     const f = document.getElementById('fMov'); if (!f || S.tipo !== 'S' || f.dataset.bloq) return; f.dataset.bloq = '1';
     const seg = f.querySelector('.seg'), segH = seg ? seg.outerHTML : '';   // el selector Salida / Entrada se conserva (las entradas siguen igual)
-    f.innerHTML = '<h3>' + (segH ? 'Registrar movimiento' : '📤 Salida de material') + '</h3>' + segH + '<div class="soloOrden"><b>El material sale solo con código de orden</b><span>El técnico genera su orden desde <b>Control de Paros</b>, el <b>Preventivo</b> o aquí en <b>Órdenes de material</b>, siempre ligada a un paro, requerimiento, área general o preventivo.</span>' +
-      '<div class="soloOrdenB"><button type="button" class="codBtn" id="soCod">🔢 Código de orden</button><button type="button" class="primary" id="soNueva">➕ Nueva orden de material</button></div></div>';
+    f.innerHTML = '<h3>' + (segH ? 'Registrar movimiento' : '📤 Salida de material') + '</h3>' + segH + '<div class="soloOrden"><b>El material sale solo con código de orden</b><span>El técnico genera su orden en <b>Control de Paros</b> (paro, requerimiento o área general) o en el <b>Preventivo</b>, y aquí se teclea su código.</span>' +
+      '<div class="soloOrdenB"><button type="button" class="codBtn" id="soCod">🔢 Código de orden</button></div></div>';
     f.querySelector('#soCod').addEventListener('click', () => { const v = prompt('Código de la orden de material (ej. PA-4821):', ''); if (v && v.trim()) { if (typeof closeItem === 'function') closeItem(); abrirOrdenCodigo(v); } });
-    f.querySelector('#soNueva').addEventListener('click', () => { if (typeof closeItem === 'function') closeItem(); const b = document.querySelector('nav.tabs button[data-tab="ord"]'); if (b) b.click(); setTimeout(() => { const n = document.getElementById('oNueva'); if (n) n.click(); }, 200); });
   }
   function envolverDrawer() { if (typeof renderDrawer !== 'function' || renderDrawer._ord) return; const base = renderDrawer; window.renderDrawer = function () { const r = base.apply(this, arguments); try { sinSalidaDirecta(); } catch (e) {} return r; }; window.renderDrawer._ord = true; }
   function envolverGuardar() {
@@ -97,8 +96,8 @@
   function renderOrd() {
     const sec = document.getElementById('v-ord'); if (!sec) return; const yo = S.yo || {}, A = S.isAdmin;
     const vis = ORD.L.filter(o => A || String(o.tec) === String(yo.nomina)), ab = vis.filter(o => ['abierta', 'parcial'].includes(o.estado)), resto = vis.filter(o => !['abierta', 'parcial'].includes(o.estado)).slice(0, 30);
-    let h = '<div class="oHero"><div><b>📋 Órdenes de material</b><span>Ninguna refacción sale sin estar ligada a un <b>paro</b>, <b>requerimiento</b>, <b>área general</b> o <b>preventivo</b>. Arma aquí la lista de material y se surte desde la orden.</span></div><button type="button" class="primary" id="oNueva">➕ Nueva orden de material</button></div>';
-    h += '<div class="oCod"><label>🔢 Código de orden<input id="oCodIn" placeholder="Ej. PA-4821" value="' + esc(ORD.ver) + '" autocomplete="off" class="mono"></label><button type="button" class="primary" id="oCodIr">Buscar orden</button>' + (ORD.ver ? '<button type="button" id="oCodX">✕ Ver todas</button>' : '') + '<span class="foot">El técnico genera la orden en Paros, Preventivo o aquí; teclea su código o escanea su QR.</span></div>';
+    let h = '<div class="oHero"><div><b>📋 Órdenes de material</b><span>Ninguna refacción sale sin estar ligada a un <b>paro</b>, <b>requerimiento</b>, <b>área general</b> o <b>preventivo</b>. Las órdenes las genera el técnico en <b>Control de Paros</b> o en el <b>Preventivo</b>; aquí se teclea o escanea su código y se surte.</span></div></div>';
+    h += '<div class="oCod"><label>🔢 Código de orden<input id="oCodIn" placeholder="Ej. PA-4821" value="' + esc(ORD.ver) + '" autocomplete="off" class="mono"></label><button type="button" class="primary" id="oCodIr">Buscar orden</button>' + (ORD.ver ? '<button type="button" id="oCodX">✕ Ver todas</button>' : '') + '<span class="foot">El técnico genera la orden en Control de Paros o en el Preventivo; teclea su código o escanea su QR.</span></div>';
     h += '<div id="oForm"></div>';
     if (ORD.ver) { const o = ORD.L.find(x => x.folio === ORD.ver); h += o ? '<h3 class="oTit">Orden ' + esc(o.folio) + '</h3><div class="oGrid">' + tarjeta(o) + '</div>' : '<div class="banner">No existe la orden ' + esc(ORD.ver) + '. Revisa el código.</div>'; sec.innerHTML = h; if (ORD.borr) pintarForm(); return; }
     h += '<h3 class="oTit">Por surtir <span>' + ab.length + '</span></h3><div class="oGrid">' + (ab.length ? ab.map(tarjeta).join('') : '<div class="empty">No hay órdenes por surtir.</div>') + '</div>';
