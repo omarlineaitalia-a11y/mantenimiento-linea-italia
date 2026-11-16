@@ -41,7 +41,7 @@
     if (!p || p.a === false) return msg('Número de nómina no registrado o inactivo.');
     const pw = (document.getElementById('lPw') || {}).value.trim(); if (!pw) return msg('Escribe tu contraseña.');
     const a = A.acc[k], ok = a && a.h ? a.h === await huella(k, pw) : pw === GEN;
-    if (!ok) { document.getElementById('lPw').value = ''; return msg('Contraseña incorrecta.'); }
+    if (!ok) { document.getElementById('lPw').value = ''; return msg(!a || !a.h ? 'Primera vez con la nueva entrada: tu contraseña es 000000 (luego creas la tuya de 6 dígitos).' : 'Contraseña incorrecta. Si la olvidaste, pide al jefe de mantenimiento que la revise o la regrese a 000000.'); }
     const generica = !a || a.gen || pw === GEN, vencida = !esAdm(p) && (!a || a.mes !== mesHoy());
     if (generica || vencida) return pintarCambio(k, generica ? 'Estás usando la contraseña genérica: crea la tuya.' : 'Nuevo mes: renueva tu contraseña.');
     entrarApp(k);
