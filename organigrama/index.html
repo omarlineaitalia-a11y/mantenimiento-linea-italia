@@ -755,18 +755,6 @@ input,select,textarea{background:#131C27!important;color:#E6EDF5!important;borde
 </style>
 <script>
 /* ===== v2 · Organigrama enlazado: paros automáticos desde Control de Paros + desglose + gráficas circulares + fondo ===== */
-// --- fondo ilustrado: organigrama con personas, medallas y barras
-(function () {
-  const f = document.createElement('div'); f.id = 'fondoOrg';
-  let s = '<svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><defs><linearGradient id="oc" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#132E4C"/><stop offset=".6" stop-color="#0D1B2B"/><stop offset="1" stop-color="#0B1118"/></linearGradient><radialGradient id="ol" cx=".75" cy=".3" r=".6"><stop offset="0" stop-color="#2ECC71" stop-opacity=".18"/><stop offset="1" stop-color="#2ECC71" stop-opacity="0"/></radialGradient></defs><rect width="1600" height="900" fill="url(#oc)"/><rect width="1600" height="900" fill="url(#ol)"/>';
-  const per = (x, y, c, k) => '<g transform="translate(' + x + ' ' + y + ') scale(' + k + ')" opacity=".55"><rect x="-70" y="-55" width="140" height="120" rx="16" fill="#0F2238" stroke="' + c + '" stroke-width="5"/><circle cy="-12" r="22" fill="' + c + '"/><path d="M-36 42 Q0 8 36 42Z" fill="' + c + '"/></g>';
-  s += '<g stroke="#2A4466" stroke-width="5" fill="none" opacity=".6"><path d="M1180 230 V300 M940 300 H1420 M940 300 V350 M1180 300 V350 M1420 300 V350 M1180 470 V520 M1060 520 H1300 M1060 520 V560 M1300 520 V560"/></g>';
-  s += per(1180, 170, '#F5A623', 1.05) + per(940, 410, '#2F78C4', .9) + per(1180, 410, '#2ECC71', .9) + per(1420, 410, '#9B7BFF', .9) + per(1060, 620, '#3D9BFF', .75) + per(1300, 620, '#3D9BFF', .75);
-  s += '<g opacity=".45">' + [210, 290, 250, 340, 310].map((v, i) => '<rect x="' + (170 + i * 74) + '" y="' + (760 - v) + '" width="48" height="' + v + '" rx="7" fill="' + ['#2F78C4', '#2ECC71', '#F2B233', '#2ECC71', '#3D9BFF'][i] + '"/>').join('') + '</g>';
-  s += '<g opacity=".5" transform="translate(300 250)"><circle r="70" fill="#F2B233"/><circle r="48" fill="none" stroke="#C99A2E" stroke-width="8"/><path d="M-40 -66 L-70 -150 L-20 -150 L0 -90 L20 -150 L70 -150 L40 -66" fill="#2F78C4"/></g>';
-  s += '<g stroke="#1E3350" stroke-width="2" opacity=".55"><line x1="0" y1="790" x2="1600" y2="790"/>' + Array.from({ length: 21 }, (_, i) => '<line x1="800" y1="790" x2="' + (-800 + i * 160) + '" y2="900"/>').join('') + '</g></svg><div class="velo"></div>';
-  f.innerHTML = s; document.body.prepend(f);
-})();
 // --- gráficas circulares
 function donaO(v, tam, grueso, col) {
   const r = (tam - grueso) / 2, c = 2 * Math.PI * r, p = v == null ? 0 : Math.max(0, Math.min(100, v)), cc = col || (v == null ? '#6B7F94' : v >= 97 ? '#2ECC71' : v >= 95 ? '#3D9BFF' : v >= 90 ? '#F2B233' : '#F2546A');
