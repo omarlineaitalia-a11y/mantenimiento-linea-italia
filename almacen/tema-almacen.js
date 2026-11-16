@@ -88,7 +88,7 @@
   function envolver(nombre, fn) { try { const base = window[nombre]; if (typeof base !== 'function' || base._tema) return; const nuevo = function () { const r = base.apply(this, arguments); try { fn(); } catch (e) {} return r; }; nuevo._tema = true; window[nombre] = nuevo; } catch (e) {} }
 
   // ---------- dibujos de máquinas (los mismos de la Base de Datos: iconos.js + iconos-maquinas.js)
-  const CCOLM = { MTA: '#1F6FD1', MTB: '#EB6834', EA: '#1BAF7A', HM: '#7A3FC2', GEN: '#5A6676' }, CICO = { MTA: 'mta', MTB: 'mtb', EA: 'ea', HM: 'mtc', GEN: 'ag' };
+  const CCOLM = { MTA: '#1F6FD1', MTB: '#EB6834', MTC: '#8E5A1F', EA: '#1BAF7A', AA: '#2BA9B3', AG: '#5A6676', EBT: '#E0A100', EMT: '#C62828', EM: '#1E8E5A', IL: '#F5A623', HM: '#7A3FC2', GEN: '#5A6676' }, CICO = { MTA: 'mta', MTB: 'mtb', MTC: 'mtc', EA: 'ea', AA: 'aa', AG: 'ag', EBT: 'ebt', EMT: 'emt', EM: 'em', IL: 'il', HM: 'mtc', GEN: 'ag' };
   const normT = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
   function icMaq(nombre, cat) {
     const n = normT(nombre);

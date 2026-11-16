@@ -506,7 +506,7 @@ label.f{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--mu
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
-const CATS = { MTA:'Maquinaria tipo A', MTB:'Maquinaria tipo B', EA:'Equipo auxiliar (compresores)', HM:'Herramienta de mantenimiento', GEN:'Refacciones y consumibles generales' };
+const CATS = { MTA:'Maquinaria tipo A', MTB:'Maquinaria tipo B', MTC:'Maquinaria tipo C (herramienta de planta)', EA:'Equipo auxiliar (compresores)', AA:'Aires acondicionados', AG:'Áreas generales', EBT:'Eléctrico baja tensión', EMT:'Eléctrico media tensión', EM:'Equipo móvil', IL:'Iluminación', HM:'Herramienta de mantenimiento', GEN:'Refacciones y consumibles generales' };   // categorías de la Base de Datos de planta (2026-11-16)
 const AREAS = ['Corte láser','Estructura de muebles','Estructura de sillas','Estructura de mamparas','Terminado de mamparas','Pintura','Tapizado','Corte de tela','Ensamble','Prototipos','Troqueles','Máquinas y herramientas','Taller de mantenimiento','Producto terminado','Área de embarques','Almacén de materia prima','Almacén de melamina','Custom CEDIS','Cuarto de bombas','Área de gas y vaporizadores','Área de reciclaje','Compresores','Subestación eléctrica','Oficinas','Áreas generales'];
 const S = { items:{}, docs:{}, movs:[], hist:null, tab:'exist', sel:null, limit:120, tipo:'S', estName:{}, isAdmin:false, canEdit:false, uid:null, names:{}, pers:null, yo:null };
 const LOGO_LI = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 300"><rect width="340" height="300" fill="#0F2B3D"/><rect x="113" y="52" width="114" height="114" fill="none" stroke="#fff" stroke-width="7"/><text x="170" y="138" text-anchor="middle" font-family="Century Gothic, Futura, Montserrat, Arial, sans-serif" font-size="74" font-weight="300" fill="#fff">LI</text><text x="164" y="232" text-anchor="middle" font-family="Century Gothic, Futura, Montserrat, Arial, sans-serif" font-size="42" font-weight="300" fill="#fff">línea italia</text><text x="270" y="210" font-family="Arial, sans-serif" font-size="13" fill="#fff">®</text><text x="170" y="268" text-anchor="middle" font-family="Century Gothic, Futura, Montserrat, Arial, sans-serif" font-size="14.5" letter-spacing="4.6" fill="#fff">ECCELLENZA IN MOBILE</text></svg>');
@@ -797,7 +797,7 @@ function renderMaq(){
   const g = {}; list.forEach(o => { (g[o.cat||'GEN'] = g[o.cat||'GEN'] || []).push(o); });
   $('maqGrid').innerHTML = list.length ? Object.keys(CATS).filter(c => g[c]).map(c =>
     '<div class="catsec"><h2><span class="mono">'+c+'</span>'+esc(CATS[c])+' <span class="foot">'+g[c].length+' máquinas</span></h2><div class="shelves">' +
-    g[c].sort((a,b)=>a.n.localeCompare(b.n,'es')).map(o => '<button type="button" class="shelf" data-maq="'+esc(o.k)+'"><span class="sh-name" style="font-size:16px">'+esc(o.n)+'</span><span class="mono" style="color:var(--accent);font-weight:600">Estante '+esc(o.cod||'—')+'</span>'+(o.area?'<span class="desc">'+esc(o.area)+'</span>':'')+'<span class="sh-nums"><span>'+o.items.length+' refacciones</span><span>'+o.con+' con existencia</span>'+(o.al?'<span class="a">'+o.al+' alertas</span>':'')+'</span></button>').join('') + '</div></div>').join('')
+    g[c].sort((a,b)=>a.n.localeCompare(b.n,'es',{numeric:true})).map(o => '<button type="button" class="shelf" data-maq="'+esc(o.k)+'"><span class="sh-name" style="font-size:16px">'+esc(o.n)+'</span><span class="mono" style="color:var(--accent);font-weight:600">Estante '+esc(o.cod||'—')+'</span>'+(o.area?'<span class="desc">'+esc(o.area)+'</span>':'')+'<span class="sh-nums"><span>'+o.items.length+' refacciones</span><span>'+o.con+' con existencia</span>'+(o.al?'<span class="a">'+o.al+' alertas</span>':'')+'</span></button>').join('') + '</div></div>').join('')
     : '<div class="empty">No se encontró ninguna máquina.</div>';
 }
 function renderMaqDet(){
@@ -890,7 +890,7 @@ function renderGasto(){
 }
 
 // ---------- valor del almacén
-const CCOL = { MTA:'var(--c1)', MTB:'var(--c2)', EA:'var(--c3)', HM:'var(--c4)', GEN:'var(--c5)' };
+const CCOL = { MTA:'var(--c1)', MTB:'var(--c2)', MTC:'#8E5A1F', EA:'var(--c3)', AA:'#3FC1C9', AG:'#5A6676', EBT:'#E0A100', EMT:'#C62828', EM:'#1E8E5A', IL:'#F5A623', HM:'var(--c4)', GEN:'var(--c5)' };
 const valorDe = it => (Number(it.cu)||0) * Math.max(0, ex(it));
 S.vlim = 200; S.cargaCostos = null;
 function renderValor(){
@@ -1366,4 +1366,4 @@ document.addEventListener('click', e => {
 if (location.hash === '#gasto') setTab('gasto');
 if (location.hash === '#valor') setTab('valor');
 </script>
-<script src="iconos.js?v=1"></script><script src="iconos-maquinas.js?v=1"></script><script src="tema-almacen.js?v=7"></script></body></html>
+<script src="iconos.js?v=1"></script><script src="iconos-maquinas.js?v=1"></script><script src="tema-almacen.js?v=8"></script></body></html>
