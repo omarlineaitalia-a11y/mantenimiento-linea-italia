@@ -2306,3 +2306,15 @@ document.addEventListener('click', e => { if (e.target.closest('[data-cartelcal]
 
 // v24 · 📋 Pedir material al almacén desde la hoja (orden PV-0000 ligada a este preventivo; se surte en la computadora del almacén)
 document.addEventListener('click', e => { if (!e.target.closest('[data-pedmat]') || !S.hojaT || !window.PedidoMaterial) return; const t = S.hojaT; PedidoMaterial.abrir({ origen: { tipo: 'prev', id: t.k, txt: 'Preventivo · ' + t.eq + ' · ' + nomMes(t.mes), maq: t.eq }, nomina: S.nom, nombre: (yoP().n || ''), app: 'preventivo' }); });
+
+// v25 · BASE DE DATOS EN VIVO: los datos de placa salen de la app Base de Datos (apps/equipos/cat/*) cada vez que se abre;
+// si la cuenta de este equipo no tiene acceso a Base de Datos, se usa la copia (equipos-pm.js). Así, al actualizar la base, el preventivo se actualiza solo.
+(async function baseEnVivo() {
+  if (window.DEMO || typeof firebase === 'undefined') return;
+  for (let i = 0; i < 40 && !DB; i++) await new Promise(r => setTimeout(r, 500));
+  try {
+    const q = await firebase.firestore().collection('apps/equipos/cat').get(), L = [];
+    q.docs.forEach(d => Object.values((d.data() || {}).items || {}).forEach(e => { if (e && e.nombre && !e.baja) L.push(e); }));
+    if (L.length > 50) { window.EQ_BASE = L; _cruce = null; window.EQ_BASE_VIVO = new Date().toISOString(); if (S.nom) render(); }
+  } catch (e) { /* sin acceso a Base de Datos: se queda la copia */ }
+})();
