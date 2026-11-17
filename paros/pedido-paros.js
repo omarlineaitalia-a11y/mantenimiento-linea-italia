@@ -3,7 +3,7 @@
  * No cambia la lógica de Paros: solo agrega el botón (usa ../lib/pedido-material.js). */
 (function () {
   'use strict';
-  const esMtto = () => { try { return typeof devArea === 'function' && devArea() === 'mtto'; } catch (e) { return false; } };
+  const esMtto = () => { try { if (typeof devArea === 'function' && devArea() === 'mtto') return true; const s = (typeof S !== 'undefined' && S.sesion) || null; return !!(s && ((typeof esAdm === 'function' && esAdm(s)) || (typeof depDe === 'function' && depDe(s) === 'mtto'))); } catch (e) { return false; } };
   const fC = iso => { try { return new Date(iso).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' }); } catch (e) { return ''; } };
   function boton(datos) {
     const card = document.getElementById('mcard'); if (!card || card.querySelector('.pmBtnParos')) return;
