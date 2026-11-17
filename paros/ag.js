@@ -1,7 +1,7 @@
 /* Áreas generales · Control de Paros · Mantenimiento Línea Italia
  * Solicitudes que NO son paro de máquina: mejoras, modificaciones, acondicionamientos y reparaciones
  * de equipos de áreas generales, oficinas y edificio. Datos en apps/paros/ag (solicitudes) y apps/paros/config/ag (equipos).
- * Flujo: espera (alarma rosa a mantenimiento) → proceso (técnico pone tiempo estimado) → [pendiente con fecha compromiso
+ * Flujo: espera (alarma verde esmeralda a mantenimiento) → proceso (técnico pone tiempo estimado) → [pendiente con fecha compromiso
  * y materiales] → terminada (solución) → cerrada (encuesta de quien solicitó: duración, área limpia, calidad).
  */
 const AG_CATS_DEF = { MTC:'Maquinaria tipo C', AG:'Áreas generales', AA:'Aires acondicionados', IL:'Iluminación', EBT:'Eléctrico baja tensión', EMT:'Eléctrico media tensión', EM:'Equipo móvil', EA:'Equipo auxiliar' };
@@ -46,7 +46,7 @@ const agUbicaciones = () => {
 const agPrioTag = p => p === 'urgente' ? ' · <span class="tag bad">URGENTE</span>' : p === 'alta' ? ' · <span class="tag bad">prioridad alta</span>' : '';
 const esGral = p => !!p && p.r === 'general';   // administrador general: puede liberar y cerrar cualquier solicitud
 const esMttoAdm = p =>!!p && (esAdm(p) || p.r === 'mtto' || depDe(p) === 'mtto');
-// los requerimientos (proyectos con compra de material) no son urgentes: no lanzan la alarma rosa
+// los requerimientos (proyectos con compra de material) no son urgentes: no lanzan la alarma verde esmeralda
 const agEsp = () => S.agReq.filter(r => r.estado === 'espera' && !r.req).sort((a, b) => (a.t0 || '').localeCompare(b.t0 || ''));
 const agMin = r => r.tAcept && r.tFin ? ms(r.tAcept, r.tFin) : null;   // tiempo real de reparación
 const agFmtEst = m => m == null ? '—' : m >= 60 ? (Math.round(m / 6) / 10) + ' h' : m + ' min';
@@ -60,12 +60,12 @@ function agConectar(db){
   db.doc('config/ag').onSnapshot(s => { S.agCfg = s.exists ? s.data() : null; if (S.view === 'ag') renderAG(); }, () => {});
 }
 
-// ---------- alarma ROSA (solo a mantenimiento): sin tiempo de llegada; el técnico pone tiempo estimado
-// la alarma rosa sale a mantenimiento; nunca en equipos de áreas generales ni en la pantalla de máquina
+// ---------- alarma VERDE ESMERALDA (solo a mantenimiento): sin tiempo de llegada; el técnico pone tiempo estimado
+// la alarma verde esmeralda sale a mantenimiento; nunca en equipos de áreas generales ni en la pantalla de máquina
 const alertaAG = () => S.view !== 'op' && devArea() !== 'ag' && (S.sesion ? ((esMttoAdm(S.sesion) || vistasDe(S.sesion).includes('agmt')) && (S.view === 'tab' || S.view === 'ag' || devArea() === 'mtto')) : devArea() === 'mtto');
 const agNotif = new Set();
-// Alarma de mantenimiento: si solo hay solicitudes de áreas generales → alarma rosa; si coinciden con fallas de máquina
-// (o hay varias), la pantalla se DIVIDE en un panel por falla (rojo = falla de máquina, morado = prueba, rosa = áreas generales).
+// Alarma de mantenimiento: si solo hay solicitudes de áreas generales → alarma verde esmeralda; si coinciden con fallas de máquina
+// (o hay varias), la pantalla se DIVIDE en un panel por falla (rojo = falla de máquina, morado = prueba, verde esmeralda = áreas generales).
 // Si solo hay fallas de máquina, la dibuja la página como siempre (devuelve false).
 function renderAlertaAG(espMaq, showMaq){
   const el = $('alerta');
@@ -78,7 +78,7 @@ function renderAlertaAG(espMaq, showMaq){
   const pie = '<div class="apie">' + (sil ? '<span style="font-size:18px;font-weight:700;align-self:center">🔕 Silenciada</span>' : '<button type="button" id="btnSilenciarAG" style="background:#fff;color:#7A1212;border-color:#fff">🔕 Silenciar</button>') +
     '<button type="button" id="btnOcultar" style="background:transparent;color:#fff;border-color:#fff">Ver tablero 1 min</button></div>';
   if (todos.length === 1) {
-    // una sola solicitud de áreas generales: alarma rosa completa
+    // una sola solicitud de áreas generales: alarma verde esmeralda completa
     const r = ag[0];
     el.classList.remove('multi'); el.classList.add('ag');
     el.innerHTML = '<div class="a1">🏢 ' + (r.reab ? '🔁 LA FALLA CONTINÚA' : 'ÁREAS GENERALES') + '</div><div class="a2">' + esc(r.eqN) + '</div>' +
@@ -86,7 +86,7 @@ function renderAlertaAG(espMaq, showMaq){
       '<div class="a2" style="font-size:clamp(20px,3.4vw,40px)">📍 ' + esc(r.ubic || 'sin ubicación') + '</div>' +
       '<div class="a3">👤 Solicita: <b>' + esc(r.sol?.n || '') + '</b> · ' + fdt(r.t0) + '<br>' + esc(r.tipo || '') + ' · ' + esc(agCats()[r.cat] || r.cat || '') + (r.prio === 'urgente' ? ' · <b>⚠ URGENTE</b>' : r.prio === 'alta' ? ' · <b>PRIORIDAD ALTA</b>' : '') + '</div>' +
       '<div class="a3">📝 Notas: <b>' + esc(r.desc || '') + '</b></div>' +
-      '<div><button type="button" data-agacc="atender" data-id="' + r.id + '" style="background:#fff;color:#AD1457;border-color:#fff;font-size:20px;padding:14px 26px">🧰 Atender · poner tiempo estimado</button></div>' + pie;
+      '<div><button type="button" data-agacc="atender" data-id="' + r.id + '" style="background:#fff;color:#035E43;border-color:#fff;font-size:20px;padding:14px 26px">🧰 Atender · poner tiempo estimado</button></div>' + pie;
   } else {
     // varias fallas a la vez: pantalla dividida
     el.classList.remove('ag'); el.classList.add('multi');
@@ -96,7 +96,7 @@ function renderAlertaAG(espMaq, showMaq){
       '<div class="pf">🧰 El técnico registra "Técnico en sitio" en la pantalla de la máquina</div></div>';
     const panelAG = r => '<div class="apanel agp"><div class="pt">🏢 ' + (r.reab ? '🔁 CONTINÚA · ' : '') + 'ÁREAS GENERALES' + (r.prio === 'urgente' ? ' · ⚠ URGENTE' : '') + '</div>' +
       '<div class="pn">' + esc(r.eqN) + '</div><div>📍 <b>' + esc(r.ubic || '') + '</b></div><div>👤 Solicita: <b>' + esc(r.sol?.n || '') + '</b></div><div>📝 ' + esc(r.reab ? r.reabNota || r.desc || '' : r.desc || '') + '</div>' +
-      '<div><button type="button" data-agacc="atender" data-id="' + r.id + '" style="background:#fff;color:#AD1457;border-color:#fff">🧰 Atender · tiempo estimado</button></div></div>';
+      '<div><button type="button" data-agacc="atender" data-id="' + r.id + '" style="background:#fff;color:#035E43;border-color:#fff">🧰 Atender · tiempo estimado</button></div></div>';
     const lim = 6, L = todos.slice(0, lim);
     el.innerHTML = '<div class="agrid">' + L.map(x => x.eqN !== undefined && x.maqN === undefined ? panelAG(x) : panelMaq(x)).join('') + '</div>' +
       (todos.length > lim ? '<div class="a3">+ ' + (todos.length - lim) + ' falla(s) más</div>' : '') + pie;
@@ -512,7 +512,7 @@ async function agTerminar(r){
   });
 }
 // 🔁 Continúa la falla: quien solicitó (con su nómina) regresa el trabajo a mantenimiento antes de liberarlo;
-// vuelve a "esperando técnico" con alarma rosa nueva; lo anterior queda guardado en "ciclos"
+// vuelve a "esperando técnico" con alarma verde esmeralda nueva; lo anterior queda guardado en "ciclos"
 // 🔒 cierre directo por el administrador general (cualquier estatus): queda registrado quién, cuándo y por qué
 async function agCerrarAdm(r){
   const p = await pedirNomina('Cerrar solicitud · ' + r.eqN, 'config', 'Nómina del administrador general'); if (!p) return;
@@ -831,8 +831,8 @@ async function agExcel(mes){
   catch (er) { if (er && er.code !== 'declined') toast('No se pudo descargar (' + (er.code || er.message) + ').'); return false; }
 }
 
-// estilo de la alarma rosa
-(() => { const st = document.createElement('style'); st.textContent = '@keyframes parpadeoAG{0%,100%{background:#D81B60}50%{background:#880E4F}} .alerta.ag{animation:parpadeoAG 1.2s infinite}' +
+// estilo de la alarma verde esmeralda
+(() => { const st = document.createElement('style'); st.textContent = '@keyframes parpadeoAG{0%,100%{background:#047857}50%{background:#023D2C}} .alerta.ag{animation:parpadeoAG 1.2s infinite}' +
   ' .alerta.multi{background:#1C1F1E;animation:none;justify-content:flex-start;overflow-y:auto;padding:16px}' +
   ' .alerta .agrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;width:100%;max-width:1500px}' +
   ' .apanel{border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:8px;text-align:center;align-items:center;color:#fff;font-size:clamp(15px,1.6vw,20px)}' +
