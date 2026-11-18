@@ -271,7 +271,7 @@ function render() {
 }
 document.addEventListener('click', e => {
   const t = e.target.closest('[data-pant]'); if (t) { S.pant = Number(t.dataset.pant); S.hoja = null; scrollTo(0, 0); return render(); }
-  if (e.target.closest('#bYo')) { if (confirm('¿Salir de ' + titulo(yoP().n) + '?')) salir(); }
+  if (e.target.closest('#bYo')) { confirmarApp({ titulo: 'Salir', texto: '¿Salir de ' + titulo(yoP().n) + '?', si: 'Salir', icono: '🚪' }).then(si => { if (si) salir(); }); }
 });
 function selMes() {
   return '<select class="in" id="selMes" style="width:auto;min-width:170px">' + mesesPlan().map(m => '<option value="' + m + '"' + (m === S.mes ? ' selected' : '') + '>' + nomMes(m) + (m === MES_HOY ? ' (en curso)' : '') + '</option>').join('') + '</select>';
@@ -332,7 +332,7 @@ const contarMal = o => Object.values(o.resp || {}).filter(r => r && (r.e === 'M'
 document.addEventListener('click', async e => {
   const c = e.target.closest('[data-cal]'); if (!c) return;
   const s = c.dataset.cal, i = s.lastIndexOf('|'), k = s.slice(0, i), v = s.slice(i + 1); const t = tareasMes(S.mes).find(x => x.k === k) || {};
-  let nota = ''; if (v !== '100') { nota = prompt('Calificación ' + v + ': ¿qué faltó o qué estuvo mal? (opcional)') || ''; }
+  let nota = ''; if (v !== '100') { nota = (await preguntarApp({ titulo: 'Calificación ' + v, texto: '¿Qué faltó o qué estuvo mal? (opcional)', tipo: 'texto', icono: '⭐', si: 'Guardar' })) || ''; }
   const firmaS = await firmaGuardada('Firma del supervisor'); if (!firmaS) return toast('Sin firma no se registra la calificación.');
   await upd('ordenes/' + k, { cal: Number(v), calPor: S.nom, calN: yoP().n, calT: new Date().toISOString(), calNota: nota, estado: 'calificada', firmaS });
   toast('Calificado con ' + v + ' · ' + (t.eq || ''));
@@ -354,7 +354,7 @@ document.addEventListener('click', async e => {
   const r = e.target.closest('[data-recordar]'); if (!r) return;
   const tec = r.dataset.recordar, nom = nomDeTec(tec); if (!nom) return toast('Ese técnico no tiene nómina dada de alta.');
   const faltan = tareasMes(S.mes).filter(t => t.tec === tec && !hecha(t)).length;
-  const txt = prompt('Mensaje para ' + nombreTec(tec) + ':', 'Te faltan ' + faltan + ' preventivos del mes. Apóyame a terminarlos esta semana (el sábado es para faltantes).'); if (!txt) return;
+  const fm = await formApp({ titulo: 'Mensaje para ' + nombreTec(tec), icono: '💬', si: 'Enviar', campos: [{ k: 'txt', l: 'Mensaje', tipo: 'area', valor: 'Te faltan ' + faltan + ' preventivos del mes. Apóyame a terminarlos esta semana (el sábado es para faltantes).' }] }), txt = fm && fm.txt; if (!txt) return;
   const prev = (S.avisos[nom] || {}).m || [];
   await DB.doc('avisos/' + nom).set({ m: prev.concat([{ t: new Date().toISOString(), de: yoP().n, txt }]).slice(-10) });
   toast('Recordatorio enviado a ' + nombreTec(tec));
@@ -566,7 +566,7 @@ document.addEventListener('click', async e => {
     const L = contarFaltan();
     if (L.length) { $('#hoja').innerHTML = '<div class="fila" style="justify-content:space-between"><h2 style="margin:0;color:var(--bad)">⚠️ Todavía no se puede terminar</h2><button class="bt s" data-cerrar>✕</button></div><ul style="line-height:1.6">' + L.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul><button class="bt p" data-cerrar style="width:100%">Entendido</button>'; $('#modal').classList.add('on'); return; }
     const o = S.ords[S.hojaT.k] || {}, fin = new Date(), min = Math.max(1, Math.round((fin - new Date(o.ini)) / 60000));
-    const ajuste = prompt('Tiempo real del mantenimiento en minutos (puedes corregirlo):', String(min)); if (ajuste === null) return;
+    const ajuste = await preguntarApp({ titulo: 'Tiempo real del mantenimiento', texto: 'Minutos que tardó (puedes corregirlo).', valor: String(min), tipo: 'numero', icono: '⏱', si: 'Guardar' }); if (ajuste === null) return;
     const firmaT = await pedirFirma('Firma del técnico', yoP().n); if (!firmaT) return toast('Sin firma no se puede terminar la orden.');
     await guardarOrden({ estado: 'terminada', fin: fin.toISOString(), min: Math.max(1, Number(ajuste) || min), firmaN: yoP().n, firmaT, firmaTT: new Date().toISOString() });
     toast('¡Preventivo terminado! El supervisor lo va a calificar.'); S.hoja = null; S.pant = 2; return render();
@@ -706,26 +706,27 @@ function vHist(k) {
 document.addEventListener('click', async e => {
   const c = e.target.closest('[data-cambio]');
   if (c) {
-    const [tipo, id] = c.dataset.cambio.split('|'), f = prompt('Fecha del cambio (AAAA-MM-DD):', HOY); if (!f) return;
-    const nota = prompt('¿Qué se cambió? (marca, referencia, motivo)', '') || '', costo = Number(prompt('Costo de la refacción (opcional):', '') || 0);
+    const [tipo, id] = c.dataset.cambio.split('|'), fc = await formApp({ titulo: 'Registrar cambio', icono: '🔧', campos: [{ k: 'f', l: 'Fecha del cambio', tipo: 'fecha', valor: HOY }, { k: 'nota', l: '¿Qué se cambió? (marca, referencia, motivo)', tipo: 'texto' }, { k: 'costo', l: 'Costo de la refacción (opcional)', tipo: 'numero' }] }); if (!fc || !fc.f) return; const f = fc.f;
+    const nota = fc.nota || '', costo = Number(fc.costo || 0);
     const doc = tipo === 'refac' ? 'refac' : 'baleros', x = (S.param[doc] || {})[id] || {};
     const h = { f, nota, costo, por: yoP().n };
     const up = { [id]: { hist: (x.hist || []).concat([h]) } }; if (tipo === 'bal') up[id].inst = f; else up[id].real = f;
     await upd('param/' + doc, up); return toast('Cambio registrado.');
   }
   if (e.target.closest('[data-nbal]')) {
-    const eq = prompt('Equipo (ej. Selexx · 1):'); if (!eq) return; const pos = prompt('Posición del balero (ej. husillo delantero, motor del ventilador):') || '';
-    const ref = prompt('Referencia del balero (ej. SKF 6205-2RS):') || ''; const tipos = (window.PM_VIDA_BALEROS || []).map((v, i) => (i + 1) + ') ' + v[0] + ' ' + v[1] + ' h').join('\n');
-    const sel = prompt('Vida en horas según el proveedor. Escribe las horas o el número de la lista:\n' + tipos, '1'); let vida = Number(sel); if (vida > 0 && vida <= (window.PM_VIDA_BALEROS || []).length) vida = window.PM_VIDA_BALEROS[vida - 1][1];
-    const hDia = Number(prompt('Horas de trabajo al día:', '8') || 8), inst = prompt('Fecha de instalación (AAAA-MM-DD):', HOY) || HOY;
+    const VB = window.PM_VIDA_BALEROS || [], fb = await formApp({ titulo: 'Agregar balero', icono: '⚙️', campos: [{ k: 'eq', l: 'Equipo', placeholder: 'ej. Selexx · 1' }, { k: 'pos', l: 'Posición del balero', placeholder: 'ej. husillo delantero, motor del ventilador' }, { k: 'ref', l: 'Referencia del balero', placeholder: 'ej. SKF 6205-2RS' }, { k: 'sel', l: 'Vida en horas según el proveedor', opciones: VB.map(v => [String(v[1]), v[0] + ' · ' + v[1] + ' h']).concat([['otro', 'Otra (escribir abajo)']]) }, { k: 'otra', l: 'Otra vida en horas (si elegiste "Otra")', tipo: 'numero' }, { k: 'hDia', l: 'Horas de trabajo al día', tipo: 'numero', valor: '8' }, { k: 'inst', l: 'Fecha de instalación', tipo: 'fecha', valor: HOY }] });
+    if (!fb || !fb.eq) return; const eq = fb.eq, pos = fb.pos || '';
+    const ref = fb.ref || '';
+    const vida = Number(fb.sel === 'otro' ? fb.otra : fb.sel) || 0;
+    const hDia = Number(fb.hDia || 8), inst = fb.inst || HOY;
     const id = 'b' + Date.now().toString(36); await upd('param/baleros', { [id]: { eq, pos, ref, vidaH: vida, hDia, inst, hist: [] } }); return toast('Balero agregado.');
   }
   const hr = e.target.closest('[data-horo]');
   if (hr) {
     const [tipo, eq] = hr.dataset.horo.split('|'), id = eq.replace(/[\/.#$\[\]]/g, '_'), x = (S.param.horometros || {})[id] || {};
-    const h = Number(prompt((tipo === 'lect' ? 'Lectura del horómetro de ' : 'Horómetro al hacer el cambio de aceite y filtro de ') + eq + ':', '')); if (!h) return;
+    const fh = await formApp({ titulo: (tipo === 'lect' ? 'Lectura del horómetro' : 'Cambio de aceite y filtro'), texto: eq, icono: '⏲️', campos: [{ k: 'h', l: tipo === 'lect' ? 'Lectura del horómetro (h)' : 'Horómetro al hacer el cambio (h)', tipo: 'numero' }].concat(tipo === 'serv' ? [{ k: 'costo', l: 'Costo del servicio (opcional)', tipo: 'numero' }] : []) }); const h = Number(fh && fh.h); if (!h) return;
     const up = { eq, lect: (x.lect || []).concat([{ h, f: HOY, por: yoP().n }]).slice(-30) };
-    if (tipo === 'serv') { up.serv = h; up.hist = (x.hist || []).concat([{ f: HOY, nota: 'Cambio de aceite y filtro a las ' + h + ' h', por: yoP().n, costo: Number(prompt('Costo del servicio (opcional):', '') || 0) }]); }
+    if (tipo === 'serv') { up.serv = h; up.hist = (x.hist || []).concat([{ f: HOY, nota: 'Cambio de aceite y filtro a las ' + h + ' h', por: yoP().n, costo: Number((fh && fh.costo) || 0) }]); }
     await upd('param/horometros', { [id]: up }); return toast('Guardado.');
   }
 });
@@ -757,13 +758,14 @@ function vConfig() {
 }
 document.addEventListener('click', async e => {
   const s = e.target.closest('[data-subc]'); if (s) { S.subC = s.dataset.subc; return render(); }
-  if (e.target.closest('[data-nper]')) { const k = (prompt('Número de nómina:') || '').trim(); if (!/^\d+$/.test(k)) return; const n = (prompt('Nombre completo:') || '').trim().toUpperCase(); if (!n) return; const tec = (prompt('Si es técnico, nombre como aparece en el Excel (columna EM). Si no, deja vacío:') || '').trim().toUpperCase(); const area = tec ? '' : (prompt('Si es LÍDER DE ÁREA de producción, escribe su área (ej. Enchapado). Solo verá la pantalla ⭐ Líderes. Si no, deja vacío:') || '').trim(); await upd('config/personal', { p: { [k]: { n, r: 'usuario', a: true, puesto: tec ? 'Técnico' : area ? 'Líder de área · ' + area : '', pant: tec ? [2, 3] : area ? [5] : [1, 3], tec } } }); return toast('Persona agregada.'); }
-  const q = e.target.closest('[data-quitar]'); if (q) { if (!confirm('¿Quitar este mantenimiento del mes?')) return; await upd('config/ajustes', { excl: { [q.dataset.quitar]: true } }); return toast('Quitado.'); }
+  if (e.target.closest('[data-nper]')) { const fp = await formApp({ titulo: 'Agregar persona', icono: '👤', si: 'Agregar', campos: [{ k: 'k', l: 'Número de nómina *', tipo: 'numero', placeholder: 'ej. 2000' }, { k: 'n', l: 'Nombre completo *', placeholder: 'ej. Marisela …' }, { k: 'tec', l: 'Si es técnico: nombre como aparece en el Excel (columna EM). Si no, déjalo vacío' }, { k: 'area', l: 'Si es LÍDER DE ÁREA de producción: su área (ej. Enchapado). Solo verá ⭐ Líderes. Si no, vacío' }] }); if (!fp) return;
+    const k = String(fp.k || '').trim(); if (!/^\d+$/.test(k)) return toast('Escribe el número de nómina.'); const n = String(fp.n || '').trim().toUpperCase(); if (!n) return toast('Escribe el nombre.'); const tec = String(fp.tec || '').trim().toUpperCase(); const area = tec ? '' : String(fp.area || '').trim(); await upd('config/personal', { p: { [k]: { n, r: 'usuario', a: true, puesto: tec ? 'Técnico' : area ? 'Líder de área · ' + area : '', pant: tec ? [2, 3] : area ? [5] : [1, 3], tec } } }); return toast('Persona agregada.'); }
+  const q = e.target.closest('[data-quitar]'); if (q) { if (!(await confirmarApp({ titulo: 'Quitar mantenimiento', texto: '¿Quitar este mantenimiento del mes?', si: 'Quitar', icono: '🗓️' }))) return; await upd('config/ajustes', { excl: { [q.dataset.quitar]: true } }); return toast('Quitado.'); }
   if (e.target.closest('[data-restaurar]')) { const ex = {}; Object.keys(S.aj.excl || {}).forEach(k => ex[k] = { __delete__: true }); await upd('config/ajustes', { excl: ex }); return; }
   if (e.target.closest('[data-conexcel]')) return revisarExcel(false);
   if (e.target.closest('[data-aplexcel]')) return aplicarCambiosExcel(false);
   if (e.target.closest('[data-cierre]')) return cierreMes(S.mes);
-  if (e.target.closest('[data-borrardemo]')) { if (confirm('¿Borrar todo lo capturado en la prueba?')) window.PM_BORRAR_DEMO(); }
+  if (e.target.closest('[data-borrardemo]')) { if (await confirmarApp({ titulo: 'Borrar prueba', texto: '¿Borrar todo lo capturado en la prueba?', si: 'Borrar', icono: '🧹' })) window.PM_BORRAR_DEMO(); }
 });
 document.addEventListener('change', async e => {
   const pe = e.target.closest('[data-per]'); if (pe) { const [k, c] = pe.dataset.per.split('|'); await upd('config/personal', { p: { [k]: { [c]: c === 'tec' ? pe.value.trim().toUpperCase() : pe.value.trim() } } }); return toast('Guardado.'); }
@@ -1048,7 +1050,7 @@ function celdaClave(k) {
 }
 document.addEventListener('click', async e => {
   const v = e.target.closest('[data-verclave]'); if (v) { S.verClaves[v.dataset.verclave] = !S.verClaves[v.dataset.verclave]; return render(); }
-  const r = e.target.closest('[data-resetclave]'); if (r) { const k = r.dataset.resetclave; if (!confirm('¿Regresar la contraseña de ' + titulo(S.pers[k].n) + ' a 000000? Al entrar se le pedirá crear una nueva.')) return; await DB.doc('acceso/' + k).set({ h: await huellaClave(k, GEN), gen: true, mes: '', t: new Date().toISOString() }); await DB.doc('claves/' + k).set({ c: GEN, t: new Date().toISOString(), por: yoP().n }); toast('Contraseña regresada a 000000'); }
+  const r = e.target.closest('[data-resetclave]'); if (r) { const k = r.dataset.resetclave; if (!(await confirmarApp({ titulo: 'Regresar contraseña a 000000', texto: titulo(S.pers[k].n) + ' tendrá que crear una nueva al entrar.', si: 'Regresar', icono: '🔑' }))) return; await DB.doc('acceso/' + k).set({ h: await huellaClave(k, GEN), gen: true, mes: '', t: new Date().toISOString() }); await DB.doc('claves/' + k).set({ c: GEN, t: new Date().toISOString(), por: yoP().n }); toast('Contraseña regresada a 000000'); }
 });
 // ============================================================ LO DEL DÍA (vista general): qué toca hoy y quién lo hace
 function vDia() {
@@ -1266,7 +1268,7 @@ function vLiberar() {
 document.addEventListener('click', async e => {
   if (!e.target.closest('[data-liberar]')) return;
   const E = estadoLiberacion(S.mes); if (E.sinFirma.length) return toast('Todavía hay preventivos sin las tres firmas.');
-  if (!confirm('¿Liberar ' + nomMes(S.mes) + '? Se genera la carpeta del mes y se actualizan los parámetros de las máquinas.')) return;
+  if (!(await confirmarApp({ titulo: 'Liberar ' + nomMes(S.mes), texto: 'Se genera la carpeta del mes y se actualizan los parámetros de las máquinas.', si: 'Liberar', icono: '📗' }))) return;
   const res = await cierreMes(S.mes); if (!res) return toast('No se generó la carpeta del mes; no se liberó.');
   await archivarFotos(S.mes, res);
   await upd('config/ajustes', { liberados: { [S.mes]: new Date().toISOString() } });
@@ -1776,7 +1778,7 @@ function pVida() {
 }
 document.addEventListener('click', async e => {
   const m = e.target.closest('[data-maqp]'); if (m) { S.maqP = m.dataset.maqp; return render(); }
-  const v = e.target.closest('[data-vidaman]'); if (v) { const [eq, key, nom] = v.dataset.vidaman.split('|'); const r = prompt('Vida de "' + nom + '" según el proveedor.\nEscribe días (ej. 180) u horas con "h" (ej. 20000h):', ''); if (!r) return; let dias = Number(r.replace(/[^\d.]/g, '')); if (/h/i.test(r)) dias = Math.round(dias / (8 * 6 / 7)); if (!dias) return; await upd('param/vidas', { [kEq(eq)]: { [key]: { dias, t: new Date().toISOString(), por: yoP().n } } }); toast('Vida guardada: ' + dias + ' días'); }
+  const v = e.target.closest('[data-vidaman]'); if (v) { const [eq, key, nom] = v.dataset.vidaman.split('|'); const r = await preguntarApp({ titulo: 'Vida de "' + nom + '"', texto: 'Según el proveedor. Escribe días (ej. 180) u horas con "h" (ej. 20000h).', tipo: 'texto', icono: '⏳', si: 'Guardar' }); if (!r) return; let dias = Number(r.replace(/[^\d.]/g, '')); if (/h/i.test(r)) dias = Math.round(dias / (8 * 6 / 7)); if (!dias) return; await upd('param/vidas', { [kEq(eq)]: { [key]: { dias, t: new Date().toISOString(), por: yoP().n } } }); toast('Vida guardada: ' + dias + ' días'); }
 });
 document.addEventListener('input', e => { if (e.target.id === 'vBusca') { S.vBusca = e.target.value; clearTimeout(window._vbT); window._vbT = setTimeout(() => { render(); const i = document.getElementById('vBusca'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }, 300); } });
 // Parámetros: primero "Vida por máquina" (gráficas); las tablas de antes quedan como pestañas de consulta
@@ -2095,7 +2097,7 @@ function consumidoAlm(it, nomina) {
 }
 async function almSacar(id) { toast("Para sacar refacciones usa 📋 Pedir material: genera un código PV y se surte en el Almacén."); return;
   const t = S.hojaT, o = S.ords[t.k] || {}, it = ALM.items[id]; if (!t || !it || !almPuede(t, o)) return;
-  const hay = exAlm(it), r = prompt('¿Cuántas piezas de ' + it.c + ' · ' + it.n + ' usaste en ' + t.eq + '?\nHay ' + hay + ' en el Almacén (' + ubAlm(it) + ').', '1'); if (r === null) return;
+  const hay = exAlm(it), r = await preguntarApp({ titulo: 'Piezas usadas', texto: it.c + ' · ' + it.n + ' en ' + t.eq + '. Hay ' + hay + ' en el Almacén.', valor: '1', tipo: 'numero', icono: '📦' }); if (r === null) return;
   const q = Number(String(r).replace(',', '.')); if (!(q > 0)) return toast('Escribe una cantidad mayor a 0.');
   if (q > hay) return toast('Solo hay ' + hay + ' en el Almacén. Avisa al almacenista para registrar la entrada.');
   const lim = Number(it.lim) || 0; if (lim) { const usado = consumidoAlm(it, S.nom); if (usado + q > lim) return toast('⛔ Límite excedido de material: ya retiraste ' + usado + ' de ' + lim + ' permitidas ' + (it.limPer === 'sem' ? 'por semana' : 'por mes') + '.'); }
@@ -2159,8 +2161,8 @@ function cajaReinicio() {
 }
 async function reiniciarCero() {
   const L = Object.entries(S.ords); if (!L.length) return toast('No hay órdenes que borrar.');
-  if (!confirm('Se van a borrar ' + L.length + ' órdenes con sus fotos, firmas y calificaciones. NO se puede deshacer (se baja un respaldo antes). ¿Continuar?')) return;
-  if ((prompt('Para confirmar escribe: CERO') || '').trim().toUpperCase() !== 'CERO') return toast('Cancelado.');
+  if (!(await confirmarApp({ titulo: 'Arrancar en cero', texto: 'Se van a borrar ' + L.length + ' órdenes con sus fotos, firmas y calificaciones. NO se puede deshacer (se baja un respaldo antes).', si: 'Continuar', icono: '⚠️' }))) return;
+  if (String((await preguntarApp({ titulo: 'Confirmación', texto: 'Para confirmar escribe: CERO', tipo: 'codigo', icono: '⚠️', si: 'Borrar' })) || '').trim().toUpperCase() !== 'CERO') return toast('Cancelado.');
   try { const b = new Blob([JSON.stringify({ app: 'preventivo', t: new Date().toISOString(), ordenes: S.ords }, null, 1)], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'respaldo-preventivos-prueba-' + HOY + '.json'; document.body.appendChild(a); a.click(); a.remove(); } catch (e) {}
   toast('Borrando ' + L.length + ' órdenes…'); let ok = 0, mal = 0, fot = 0;
   for (const [k, o] of L) {
