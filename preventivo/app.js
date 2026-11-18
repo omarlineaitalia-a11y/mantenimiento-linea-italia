@@ -418,10 +418,11 @@ document.addEventListener('click', async e => {
 // ---- REGISTRO DE CAMBIOS DE REFACCIÓN (alimenta "Vida por máquina" en Parámetros) ----
 async function guardarCambio(eq, d) {
   const pieza = (d.pieza || '').trim(); if (!eq || !pieza) { toast('Falta la máquina o la refacción.'); return; }
-  const f = d.f || HOY, key = 'reg:' + kEq(pieza), eqk = kEq(eq);
-  const evento = { f, ref: (d.ref || '').trim(), horas: Number(d.horas) || 0, por: (d.por || yoP().n || '') };
+  const pos = (d.pos || '').trim(), nom = pieza + (pos ? ' · ' + pos : '');
+  const f = d.f || HOY, key = 'reg:' + kEq(nom), eqk = kEq(eq);
+  const evento = { f, ref: (d.ref || '').trim(), pos, horas: Number(d.horas) || 0, por: (d.por || yoP().n || '') };
   const cur = (S.param.cambios || {})[eqk] || {}, prev = cur[key] || {};
-  const nuevoEq = Object.assign({}, cur, { [key]: { nom: pieza, cambios: (prev.cambios || []).concat([evento]).sort((a, b) => (a.f || '').localeCompare(b.f || '')) } });
+  const nuevoEq = Object.assign({}, cur, { [key]: { nom, cambios: (prev.cambios || []).concat([evento]).sort((a, b) => (a.f || '').localeCompare(b.f || '')) } });
   await upd('param/cambios', { [eqk]: nuevoEq });
   let dias = 0; if ((d.vida || '').toString().trim()) { dias = Number(String(d.vida).replace(/[^\d.]/g, '')); if (/h/i.test(d.vida)) dias = Math.round(dias / (8 * 6 / 7)); }
   if (dias) { const cv = (S.param.vidas || {})[eqk] || {}; await upd('param/vidas', { [eqk]: Object.assign({}, cv, { [key]: { dias, t: new Date().toISOString(), por: yoP().n } }) }); }
@@ -430,7 +431,8 @@ async function guardarCambio(eq, d) {
 const CAMPOS_CAMBIO = [
   { k: 'pieza', l: '¿Qué refacción se cambió?', placeholder: 'ej. balero husillo, filtro de aire, banda, aceite' },
   { k: 'f', l: '¿Qué día se cambió?', tipo: 'fecha', valor: HOY },
-  { k: 'ref', l: 'Número o marca (si aplica)', placeholder: 'ej. SKF 6205-2RS' },
+  { k: 'ref', l: 'Número de balero o marca (si aplica)', placeholder: 'ej. 6904, SKF 6205-2RS' },
+  { k: 'pos', l: 'Posición · dónde va (si aplica)', placeholder: 'ej. derecho frontal, izquierdo lado motor, husillo delantero' },
   { k: 'horas', l: 'Horómetro / horas de la máquina (si aplica)', tipo: 'numero' },
   { k: 'vida', l: '¿Cada cuánto se cambia? (opcional: días u horas)', placeholder: 'ej. 180 días o 4000h' }
 ];
@@ -447,7 +449,7 @@ document.addEventListener('click', async e => {
 document.addEventListener('click', async e => {
   const b = e.target.closest('[data-regmaq]'); if (!b) return;
   const eq = b.dataset.regmaq, tecs = [...new Set(Object.values(S.pers).filter(p => p.tec).map(p => p.tec))].sort();
-  const r = await formApp({ titulo: '➕ Registrar cambio de refacción', texto: eq, icono: '🛠️', si: 'Guardar', campos: [CAMPOS_CAMBIO[0], CAMPOS_CAMBIO[1], { k: 'por', l: '¿Quién lo hizo? (opcional)', opciones: [['', '—']].concat(tecs.map(t => [t, t])) }, CAMPOS_CAMBIO[2], CAMPOS_CAMBIO[3], CAMPOS_CAMBIO[4]] });
+  const r = await formApp({ titulo: '➕ Registrar cambio de refacción', texto: eq, icono: '🛠️', si: 'Guardar', campos: [CAMPOS_CAMBIO[0], CAMPOS_CAMBIO[1], { k: 'por', l: '¿Quién lo hizo? (opcional)', opciones: [['', '—']].concat(tecs.map(t => [t, t])) }, CAMPOS_CAMBIO[2], CAMPOS_CAMBIO[3], CAMPOS_CAMBIO[4], CAMPOS_CAMBIO[5]] });
   if (r) await guardarCambio(eq, r);
 });
 
