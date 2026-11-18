@@ -234,6 +234,23 @@ function entrar(nom) {
   if (otorga() && !window.DEMO) { revisarExcel(true); enviarOrganigrama(S.mes, true); const _d = new Date(); enviarOrganigrama(iso(new Date(_d.getFullYear(), _d.getMonth() - 1, 1)).slice(0, 7), true); }   // v19: calificación al Organigrama (autorizado por el Ing. Omar 2026-11-15)
 }
 function salir() { S.nom = null; try { sessionStorage.removeItem('pm_nom'); } catch (e) {} mostrarLogin(); }
+// cambio voluntario de contraseña: el técnico (o cualquiera) la puede cambiar cuando quiera desde su perfil
+async function cambiarMiClave() {
+  const nom = S.nom; if (!nom) return;
+  const r = await formApp({ titulo: '🔑 Cambiar mi contraseña', texto: 'Tu contraseña de 6 dígitos para entrar al preventivo. La puedes cambiar cuando quieras.', icono: '🔑', si: 'Guardar', campos: [
+    { k: 'p1', l: 'Nueva contraseña (6 dígitos, solo números)', tipo: 'texto', placeholder: '6 dígitos' },
+    { k: 'p2', l: 'Repite la nueva contraseña', tipo: 'texto', placeholder: '6 dígitos' }] });
+  if (!r) return;
+  const p1 = String(r.p1 == null ? '' : r.p1).trim(), p2 = String(r.p2 == null ? '' : r.p2).trim();
+  if (!/^\d{6}$/.test(p1)) return toast('La contraseña debe tener exactamente 6 dígitos (solo números).');
+  if (p1 === GEN) return toast('No puedes usar la contraseña genérica 000000.');
+  if (p1 !== p2) return toast('Las dos contraseñas no coinciden.');
+  if ((S.acc[nom] || {}).h === await huellaClave(nom, p1)) return toast('Usa una contraseña diferente a la actual.');
+  await DB.doc('acceso/' + nom).set({ h: await huellaClave(nom, p1), mes: MES_HOY, t: new Date().toISOString(), gen: false });
+  await DB.doc('claves/' + nom).set({ c: p1, t: new Date().toISOString() });
+  toast('✅ Contraseña actualizada.');
+}
+document.addEventListener('click', e => { if (e.target.closest('[data-cambiarclave]')) cambiarMiClave(); });
 const campoAct = () => LG.campo === 'nom' ? 'nom' : LG.campo;
 function teclear(v) {
   const c = campoAct(), max = c === 'nom' ? 6 : 6;
@@ -1991,7 +2008,7 @@ function perfilTec(T, I, p) {
   h += '<div class="dash-sec" style="margin-top:12px"><h3>📅 Mi avance semana por semana</h3><div class="jg-sem">' + Object.keys(sems).sort().filter(l => l <= HOY).map(l => { const A = sems[l], II = indicadores(A);
     return '<div class="jg-s' + (l === lun ? ' cur' : '') + '"><div class="jg-s-h"><b>' + fCorta(l) + ' – ' + fCorta(iso(sumar(deIso(l), 5))) + '</b>' + (l === lun ? '<span class="chip acc">esta semana</span>' : '') + '<small>' + II.hechas + ' de ' + II.n + ' terminados</small></div>' + dona(II.calif, null, 100, 'Calificación', '') +
       '<div class="jg-mini"><div title="Entrega"><span>📦</span><i><em style="width:' + II.cumpl + '%;background:#3D9BFF"></em></i><b>' + II.cumpl + '</b></div><div title="Calidad"><span>🛠️</span><i><em style="width:' + (II.calidad || 0) + '%;background:#2ECC71"></em></i><b>' + (II.calidad == null ? '—' : II.calidad) + '</b></div></div></div>'; }).join('') + '</div>' +
-    '<div class="fila" style="margin-top:12px;justify-content:flex-end"><button class="bt s" data-plangen="1">🗓️ Ver plan general del mes</button></div></div></div>';
+    '<div class="fila" style="margin-top:12px;justify-content:flex-end"><button class="bt s" data-cambiarclave>🔑 Cambiar mi contraseña</button><button class="bt s" data-plangen="1">🗓️ Ver plan general del mes</button></div></div></div>';
   return h;
 }
 
