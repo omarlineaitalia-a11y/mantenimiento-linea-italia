@@ -79,3 +79,15 @@ window.PM_MONTACARGAS = [
   { cada: 1000, piezas: [['Aceite hidráulico (litros)', 20, 0], ['Filtro hidráulico', 1, 0], ['Aceite de transmisión (litros)', 6, 0]] },
   { cada: 2000, piezas: [['Refrigerante (litros)', 8, 0], ['Juego de bujías', 1, 0], ['Banda del motor', 1, 0]] }
 ];
+
+/* Equivalencia de nombres: máquina de Control de Paros (en MAYÚSCULAS, como la guarda Paros) → máquina exacta del plan del Preventivo.
+ * Sirve para que un cambio de refacción anotado en Paros caiga en la máquina correcta de la "Vida por máquina".
+ * Paros usa nombres genéricos (SELEXX, COMPRESORES) y el Preventivo usa unidades (Selexx · 1). Si no está mapeada, no se liga (para no meter datos equivocados). */
+window.PM_PAROS_MAQ = {
+  'SELEXX': 'Selexx · 1',
+  'HOMAG': 'Homag · 104'
+  // Pendiente de confirmar con el Ing. Omar:
+  // 'LÁSER WEIKE 1': 'Gweike 1 · 106',
+  // 'COMPRESORES': 'Compresor 100 HP · 88',
+  // 'FLEJADORA LIBREROS': 'Flejadora 1 · 154'
+};

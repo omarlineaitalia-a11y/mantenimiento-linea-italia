@@ -1751,7 +1751,7 @@ function compsDeMaquina(eq) {
   const reg = (S.param.cambios || {})[kEq(eq)] || {};
   Object.entries(reg).forEach(([key, r]) => { if (!r || !(r.cambios || []).length) return; const c = add(key, r.nom || key, 'Registro'); r.cambios.forEach(h => c.cambios.push({ f: h.f, nota: [h.ref, h.horas ? h.horas + ' h' : ''].filter(Boolean).join(' · '), costo: 0, tec: h.por })); });
   // cambios de refacción registrados en Control de Paros (al resolver la falla); se liga por nombre de máquina
-  (window.PAROS_REFAC || []).forEach(p => { if (!p.maqN || !p.refac || !p.f) return; if (!(norm(eq).includes(norm(p.maqN)) || norm(p.maqN).includes(norm(eq)))) return; const c = add('p:' + kEq(p.refac), p.refac, 'Control de Paros'); c.cambios.push({ f: p.f, nota: p.refac, costo: 0, tec: p.tec }); });
+  (window.PAROS_REFAC || []).forEach(p => { if (!p.maqN || !p.refac || !p.f) return; const map = window.PM_PAROS_MAQ || {}; const target = map[p.maqN] || map[String(p.maqN).toUpperCase()] || map[String(p.maqN).trim()]; if (!target || norm(target) !== norm(eq)) return; const c = add('p:' + kEq(p.refac), p.refac, 'Control de Paros'); c.cambios.push({ f: p.f, nota: p.refac, costo: 0, tec: p.tec }); });
   // v15 (18-nov-2026): la vida sale SOLO de dato real (hojas, baleros, registro directo y Control de Paros). Sin COMPRAS (PM_REFAC) ni salidas de Almacén. Petición del Ing. Omar.
   const vidas = (S.param.vidas || {})[kEq(eq)] || {};
   return Object.values(C).map(c => {
@@ -2079,7 +2079,7 @@ function cargarAlmacen() {
     fs.collection('apps/almacen/catalogo').onSnapshot(q => { const items = {}; q.docs.forEach(d => { const its = (d.data() || {}).items || {}; for (const k in its) items[d.id + '/' + k] = Object.assign({}, its[k], { k, doc: d.id }); }); ALM.items = items; ALM.ok = true; ALM.err = ''; pasarS(); almRefrescar(); }, e => { ALM.err = e.code || e.message; S.alm = null; almRefrescar(); });
     fs.collection('apps/almacen/movimientos').orderBy('t', 'desc').limit(1500).onSnapshot(q => { ALM.movs = q.docs.map(d => Object.assign({ id: d.id }, d.data())); almRefrescar(); }, () => {});
     // Control de Paros: cambios de refacción anotados al resolver una falla → entran a la vida de piezas en Parámetros
-    fs.collection('apps/paros/eventos').orderBy('t0', 'desc').limit(800).onSnapshot(q => { window.PAROS_REFAC = q.docs.map(d => d.data()).filter(e => e && e.refac && (e.maqN || e.maq)).map(e => ({ maqN: e.maqN || e.maq, refac: String(e.refac).trim(), f: String(e.tLib || e.t0 || '').slice(0, 10), tec: (e.tecRep && e.tecRep.n) || (e.tec && e.tec.n) || '' })).filter(e => e.f && e.refac); if (S.nom && S.pant === 4) render(); }, () => {});
+    fs.collection('apps/paros/eventos').orderBy('t0', 'desc').limit(800).onSnapshot(q => { const GEN = ['no', 'si', 'ok', 'ya', 'na', 'n/a', 'nada', 'listo', 'prueba', 'pruba']; window.PAROS_REFAC = q.docs.map(d => d.data()).filter(e => e && !e.prueba && e.refac && (e.maqN || e.maq)).map(e => ({ maqN: e.maqN || e.maq, refac: String(e.refac).trim(), f: String(e.tLib || e.t0 || '').slice(0, 10), tec: (e.tecRep && e.tecRep.n) || (e.tec && e.tec.n) || '' })).filter(e => { const r = e.refac.toLowerCase(); return e.f && e.refac.length >= 4 && /[aeiouáéíóú]/.test(r) && GEN.indexOf(r) < 0; }); if (S.nom && S.pant === 4) render(); }, () => {});
   } catch (e) { ALM.err = e.message; S.alm = null; }
 }
 function almDemo() {
