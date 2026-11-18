@@ -2064,18 +2064,18 @@ function coincideMaq(txt, t) {
 function almPuede(t, o) { return t.tec === tecDe(S.nom) && !!o.ini && !o.fin && !['terminada', 'calificada'].includes(o.estado) && o.cal == null; }
 function filaAlm(id, it, puede) {
   const [cl, tx] = estAlm(it);
-  return '<tr><td><b>' + esc(it.c || '') + '</b></td><td>' + esc(it.n || '') + (it.m ? '<br><small class="mu">' + esc(it.m) + '</small>' : '') + '</td><td class="peq">' + esc(ubAlm(it)) + '</td><td><span class="chip ' + cl + '">' + tx + '</span></td><td>' + (puede && exAlm(it) > 0 ? '<button class="bt s" data-almsacar="' + esc(id) + '">📤 Usar</button>' : '') + '</td></tr>';
+  return '<tr><td><b>' + esc(it.c || '') + '</b></td><td>' + esc(it.n || '') + (it.m ? '<br><small class="mu">' + esc(it.m) + '</small>' : '') + '</td><td class="peq">' + esc(ubAlm(it)) + '</td><td><span class="chip ' + cl + '">' + tx + '</span></td><td></td></tr>';   // sin salida directa: el material se pide con 📋 Pedir material (código PV) y se surte en el Almacén
 }
 function almCaja(t, o, puede) {
   let h = '<div class="caja"><h2>📦 Refacciones del Almacén <span class="r">' + (ALM.ok ? '<span class="chip ok">en línea</span>' : '') + '</span></h2>';
-  if (ALM.err) return h + '<div class="aviso inf"><span class="i">📦</span><div>No se pudo leer el Almacén LI (' + esc(ALM.err) + '). Tu nómina debe estar dada de alta en el Almacén para ver existencias y sacar refacciones.</div></div></div>';
+  if (ALM.err) return h + '<div class="aviso inf"><span class="i">📦</span><div>No se pudo leer el Almacén LI (' + esc(ALM.err) + '). Tu nómina debe estar dada de alta en el Almacén para ver existencias (el material se pide con 📋 Pedir material).</div></div></div>';
   if (!ALM.ok) return h + '<p class="peq mu">Conectando con el Almacén…</p></div>';
   if (o.ini && t.tec === tecDe(S.nom)) h += '<div class="fila" style="margin:-4px 0 12px"><button class="bt p" data-pedmat>📋 Pedir material al almacén (genera código)</button><span class="peq mu">Arma la lista de lo que necesitas (refacciones, silicón, cinta…) y te da un código PV-0000 para recogerlo en el almacén.</span></div>';
   const usadas = o.alm || [];
   if (usadas.length) h += '<p class="peq" style="margin:0 0 6px"><b>Usadas en este preventivo</b> (salida ya registrada en el Almacén):</p><table class="tbl"><tr><th>Código</th><th>Descripción</th><th class="n">Cant.</th><th class="n">Costo</th><th>Hora</th></tr>' +
     usadas.map(u => '<tr><td>' + esc(u.c) + '</td><td>' + esc(u.n) + '</td><td class="n">' + u.q + '</td><td class="n">' + dineroA(u.q * (u.cu || 0)) + '</td><td>' + fechaHora(u.t) + '</td></tr>').join('') + '</table>';
   const mias = Object.entries(ALM.items).filter(([, it]) => coincideMaq(it.m, t)).slice(0, 15);
-  h += '<p class="peq" style="margin:10px 0 6px"><b>Refacciones de este equipo en el Almacén</b>' + (puede ? ' · toca <b>📤 Usar</b> para sacarla: se descuenta del Almacén a tu nombre' : (o.ini ? '' : ' · toca "Iniciar" para poder sacar refacciones')) + '</p>' +
+  h += '<p class="peq" style="margin:10px 0 6px"><b>Refacciones de este equipo en el Almacén</b>' + (o.ini ? ' · existencia y ubicación para consulta; para sacarla usa <b>📋 Pedir material</b> (código PV) y recógela en el almacén' : ' · toca "Iniciar" para poder pedir material') + '</p>' +
     (mias.length ? '<table class="tbl"><tr><th>Código</th><th>Descripción</th><th>Ubicación</th><th>Existencia</th><th></th></tr>' + mias.map(([id, it]) => filaAlm(id, it, puede)).join('') + '</table>' : '<p class="peq mu">El Almacén no tiene refacciones ligadas a este equipo. Búscala abajo por código o nombre.</p>');
   h += '<label class="l" style="margin-top:10px">🔎 Buscar en todo el Almacén</label><input class="in" data-almq placeholder="Código o descripción (ej. 6205, banda, filtro)" value="' + esc(ALM.q) + '"><div id="almRes">' + almResultados(puede) + '</div>';
   return h + '</div>';
@@ -2090,7 +2090,7 @@ function consumidoAlm(it, nomina) {
   if (per === 'sem') { const l = lunesDe(h); a = iso(l); b = iso(sumar(l, 7)); } else { a = iso(new Date(h.getFullYear(), h.getMonth(), 1)); b = iso(new Date(h.getFullYear(), h.getMonth() + 1, 1)); }
   return ALM.movs.filter(m => m.tipo === 'S' && m.c === it.c && String(m.nomina) === String(nomina) && (m.f || '') >= a && (m.f || '') < b).reduce((s, m) => s + (Number(m.q) || 0), 0);
 }
-async function almSacar(id) {
+async function almSacar(id) { toast("Para sacar refacciones usa 📋 Pedir material: genera un código PV y se surte en el Almacén."); return;
   const t = S.hojaT, o = S.ords[t.k] || {}, it = ALM.items[id]; if (!t || !it || !almPuede(t, o)) return;
   const hay = exAlm(it), r = prompt('¿Cuántas piezas de ' + it.c + ' · ' + it.n + ' usaste en ' + t.eq + '?\nHay ' + hay + ' en el Almacén (' + ubAlm(it) + ').', '1'); if (r === null) return;
   const q = Number(String(r).replace(',', '.')); if (!(q > 0)) return toast('Escribe una cantidad mayor a 0.');
