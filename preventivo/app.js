@@ -402,6 +402,9 @@ function vMiMes() {
   if (venc) h += '<div class="aviso bad"><span class="i">⚠️</span><div><b>' + venc + ' preventivo' + (venc > 1 ? 's' : '') + ' vencido' + (venc > 1 ? 's' : '') + '.</b> La fecha programada no cambia; hazlos lo antes posible.</div></div>';
   h += perfilTec(T, I, p);
   h += '<div class="caja" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;border-left:4px solid #1F6FD1"><button class="bt p" id="regRefac" style="font-size:16px">🔧 Registré un cambio de refacción</button><span class="peq mu" style="flex:1;min-width:180px">Anota la pieza que cambiaste (balero, filtro, banda, aceite…) y la máquina sabrá su próximo cambio.</span></div>';
+  // ARRASTRE: preventivos no hechos de meses anteriores. Se pueden (y se deben) terminar; se arrastran hasta que no quede ninguno. Cuentan en la calificación.
+  const atras = mesesPlan().filter(m => m < S.mes).flatMap(m => tareasMes(m).filter(t => t.tec === tec && !hecha(t)));
+  if (atras.length) h += '<div class="caja" style="border-left:4px solid var(--bad)"><h2>⚠️ Atrasados de meses anteriores <span class="r">' + atras.length + '</span></h2><p class="peq mu" style="margin:-6px 0 12px">Estos preventivos no se realizaron en su mes. <b>Tienes que terminarlos</b> — se quedan aquí (se arrastran) hasta que no quede ninguno, y pesan en tu calificación.</p>' + atras.sort((a, b) => a.f.localeCompare(b.f)).map(t => filaOrden(t, false)).join('') + '</div>';
   const sems = {}; T.forEach(t => { const l = iso(lunesDe(deIso(t.f))); (sems[l] = sems[l] || []).push(t); });
   h += '<div class="caja"><h2>🧰 Mis órdenes asignadas <span class="r">' + T.length + '</span></h2>';
   if (!T.length) h += '<div class="vacio"><span class="i">📭</span>No tienes preventivos asignados este mes.</div>';
@@ -628,8 +631,8 @@ document.addEventListener('change', async e => {
 });
 // alertas por máquina: refacciones con cambio próximo (según compras/cambios) y cambio de aceite de montacargas
 function alertasEq(t) {
-  const A = [], n = norm(t.eq).split(/[\s·]+/).filter(w => w.length > 3 && !/^\d+$/.test(w));
-  (window.PM_REFAC || []).forEach(x => { const en = norm(x.eq); if (!n.some(w => en.includes(w))) return; const ed = (S.param.refac || {})[x.k] || {}, hist = ed.hist || [], ult = (hist.length ? hist[hist.length - 1].f : '') || ed.real || x.real || x.ult; if (!ult || !x.dias) return; const rest = diasEntre(HOY, iso(sumar(deIso(ult), x.dias))); if (rest <= 30) A.push({ txt: '🧩 ' + x.n.split('(')[0].trim() + (rest < 0 ? ': cambio vencido' : ': cambio en ' + rest + ' días'), cls: rest < 0 ? 'bad' : 'wa' }); });
+  const A = [];
+  // v15 (18-nov-2026): se retiraron las alertas de refacciones por COMPRAS (PM_REFAC) de los preventivos. Solo quedan las de dato real (horómetro de montacargas). Petición del Ing. Omar.
   if (/montacargas/i.test(t.eq)) { const x = (S.param.horometros || {})[t.eq.replace(/[\/.#$\[\]]/g, '_')] || {}, ls = x.lect || [], u = ls[ls.length - 1]; if (u) { const falt = (Number(x.serv) || 0) + 250 - u.h; if (falt <= 25) A.push({ txt: '🛢️ Aceite y filtro ' + (falt <= 0 ? 'vencido (' + (-falt) + ' h pasado)' : 'en ' + falt + ' h'), cls: falt <= 0 ? 'bad' : 'wa' }); } else A.push({ txt: '⏲️ Captura la lectura del horómetro', cls: 'acc' }); }
   return A;
 }
@@ -719,6 +722,20 @@ function pRefac() {
       A.map(x => '<tr><td><span class="sem ' + semaforo(x.rest) + '"></span></td><td><b>' + esc(x.n) + '</b>' + (x.hist.length ? '<br><span class="peq mu">' + x.hist.length + ' cambio(s) registrados</span>' : '') + '</td><td>' + esc(x.eq) + '</td><td class="n">' + (x.dias ? x.dias + ' días' : '—') + '</td><td>' + (x.ult ? fCorta(x.ult) : '—') + '</td><td>' + (x.prox ? fCorta(x.prox) : '—') + '</td><td class="n">' + (x.rest == null ? '—' : x.rest < 0 ? '<span class="chip bad">' + x.rest + '</span>' : x.rest) + '</td><td class="n">' + dinero(x.anual) + '</td><td>' + (califica() ? '<button class="bt s" data-cambio="refac|' + x.k + '">Registrar cambio</button>' : '') + '</td></tr>').join(''); }).join('') + '</table></div>' +
     '<p class="peq mu" style="margin:10px 0 0">Con 2 o más cambios registrados, "cada cuánto" se recalcula con los cambios reales. Si sale muy distinto a la frecuencia del preventivo, ajusta la frecuencia en el plan para no cambiar piezas antes de tiempo ni dejarlas fallar.</p></div>';
 }
+// ---- vida de balero por VELOCIDAD/GRASA (modo práctico: número + RPM, sin carga). Es un ESTIMADO, no el dato exacto del proveedor ----
+function dmBalero(num) {
+  let k = String(num || '').toUpperCase().replace(/[\s\-\/_.]/g, '');
+  k = k.replace(/(2RSH|2RSL|2RS1|2RS|2ZNR|2ZR|2Z|RSH|RSL|RS1|RS|ZNR|ZZ|Z|NR|N|C2|C3|C4|C5|ETN9|TN9|TNG|TN|MA|M|P4|P5|P6|GA|GJN|E|K)+$/g, '');
+  const d = (window.PM_BALEROS_CAT || {})[k];
+  return d ? { dm: (d[0] + d[1]) / 2, d: d[0], D: d[1], k } : null;
+}
+function vidaGrasa(num, rpm, temp) {
+  const info = dmBalero(num); if (!info || !rpm) return null;
+  const A = rpm * info.dm; let tf = 1.43e10 / Math.pow(A, 1.18);
+  const T = Number(temp) || 70; if (T > 70) tf *= Math.pow(0.5, (T - 70) / 15);
+  tf = Math.max(1000, Math.min(50000, Math.round(tf / 500) * 500));
+  return { dm: info.dm, A: Math.round(A), tf, k: info.k };
+}
 function pBaleros() {
   const B = Object.entries(S.param.baleros || {}).map(([id, b]) => { const dias = b.inst ? diasEntre(b.inst, HOY) : 0, usadas = dias * (Number(b.hDia) || 8) * (6 / 7), vida = Number(b.vidaH) || 0, pct = vida ? Math.min(100, Math.round(usadas / vida * 100)) : 0, rest = vida ? Math.round((vida - usadas) / ((Number(b.hDia) || 8) * 6 / 7)) : null; return Object.assign({ id, pct, rest, prox: rest != null ? iso(sumar(new Date(), rest)) : '', cat: b.cat || catDeEq(b.eq) }, b); });
   const cats = [...new Set(B.map(b => b.cat))].filter(CATF).sort((a, b) => Object.keys(CAT).indexOf(a) - Object.keys(CAT).indexOf(b));
@@ -752,12 +769,23 @@ document.addEventListener('click', async e => {
     await upd('param/' + doc, up); return toast('Cambio registrado.');
   }
   if (e.target.closest('[data-nbal]')) {
-    const VB = window.PM_VIDA_BALEROS || [], fb = await formApp({ titulo: 'Agregar balero', icono: '⚙️', campos: [{ k: 'eq', l: 'Equipo', placeholder: 'ej. Selexx · 1' }, { k: 'pos', l: 'Posición del balero', placeholder: 'ej. husillo delantero, motor del ventilador' }, { k: 'ref', l: 'Referencia del balero', placeholder: 'ej. SKF 6205-2RS' }, { k: 'sel', l: 'Vida en horas según el proveedor', opciones: VB.map(v => [String(v[1]), v[0] + ' · ' + v[1] + ' h']).concat([['otro', 'Otra (escribir abajo)']]) }, { k: 'otra', l: 'Otra vida en horas (si elegiste "Otra")', tipo: 'numero' }, { k: 'hDia', l: 'Horas de trabajo al día', tipo: 'numero', valor: '8' }, { k: 'inst', l: 'Fecha de instalación', tipo: 'fecha', valor: HOY }] });
-    if (!fb || !fb.eq) return; const eq = fb.eq, pos = fb.pos || '';
-    const ref = fb.ref || '';
-    const vida = Number(fb.sel === 'otro' ? fb.otra : fb.sel) || 0;
+    const VB = window.PM_VIDA_BALEROS || [], fb = await formApp({ titulo: 'Agregar balero', icono: '⚙️', campos: [
+      { k: 'eq', l: 'Equipo', placeholder: 'ej. Selexx · 1' },
+      { k: 'pos', l: 'Posición del balero', placeholder: 'ej. husillo delantero, lado motor, derecho frontal' },
+      { k: 'ref', l: 'Número de balero', placeholder: 'ej. 6205-2RS, 6904, B7005' },
+      { k: 'rpm', l: 'RPM del eje (para calcular por velocidad)', tipo: 'numero' },
+      { k: 'sel', l: '¿Cómo saco la vida?', opciones: [['calc', '⚙️ Calcular por velocidad/grasa (usa el número + RPM)']].concat(VB.map(v => [String(v[1]), v[0] + ' · ' + v[1] + ' h'])).concat([['otro', 'Otra (escribir abajo)']]) },
+      { k: 'otra', l: 'Otra vida en horas (si elegiste "Otra")', tipo: 'numero' },
+      { k: 'temp', l: 'Temperatura de trabajo °C (opcional, para el cálculo)', tipo: 'numero', placeholder: '70' },
+      { k: 'hDia', l: 'Horas de trabajo al día', tipo: 'numero', valor: '8' },
+      { k: 'inst', l: 'Fecha de instalación', tipo: 'fecha', valor: HOY }] });
+    if (!fb || !fb.eq) return; const eq = fb.eq, pos = fb.pos || '', ref = fb.ref || '';
+    let vida = 0, calc = null;
+    if (fb.sel === 'calc') { const g = vidaGrasa(ref, Number(fb.rpm), Number(fb.temp)); if (!g) return toast('Para calcular necesito el número del balero (en catálogo) y las RPM. Si no está, elige una vida típica o escríbela.'); vida = g.tf; calc = { A: g.A, dm: g.dm, rpm: Number(fb.rpm), temp: Number(fb.temp) || 70 }; }
+    else vida = Number(fb.sel === 'otro' ? fb.otra : fb.sel) || 0;
     const hDia = Number(fb.hDia || 8), inst = fb.inst || HOY;
-    const id = 'b' + Date.now().toString(36); await upd('param/baleros', { [id]: { eq, pos, ref, vidaH: vida, hDia, inst, hist: [] } }); return toast('Balero agregado.');
+    const id = 'b' + Date.now().toString(36); await upd('param/baleros', { [id]: { eq, pos, ref, vidaH: vida, hDia, inst, rpm: Number(fb.rpm) || 0, calc, hist: [] } });
+    return toast(calc ? ('Balero agregado · vida estimada ' + vida.toLocaleString('es-MX') + ' h (factor n·dm ' + calc.A.toLocaleString('es-MX') + ')') : 'Balero agregado.');
   }
   const hr = e.target.closest('[data-horo]');
   if (hr) {
