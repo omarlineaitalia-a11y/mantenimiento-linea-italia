@@ -878,6 +878,10 @@ function modoCorr(p) { if (p.medCorr) return p.medCorr; if (p.tipo === 'supervis
 const ptsHoras = h => h <= 5 ? 100 : h <= 7 ? 75 : h <= 9 ? 50 : 0;
 const lunes = d => { const x = new Date(d); x.setHours(0, 0, 0, 0); const w = (x.getDay() + 6) % 7; x.setDate(x.getDate() - w); return x; };
 const isoD = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+// regla del nocturno (igual que Control de Paros): de 1:40 a 7:30 no hay personal, ese lapso no suma horas de paro
+let TURNOS = [];   // apps/paros/config/turnos · cambios con fecha (tercer turno activo = esa noche sí suma)
+const tercerEnO = ts => { let v = false; for (const c of TURNOS) { if (+new Date(c.t) <= ts) v = !!c.tercer; else break; } return v; };
+function minNocheO(A, B) { A = +A; B = +B; if (!(B > A)) return 0; let s = 0; const d = new Date(A); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - 1); for (let i = 0; +d < B && i < 4000; i++, d.setDate(d.getDate() + 1)) { const x = +new Date(d.getFullYear(), d.getMonth(), d.getDate(), 1, 40), z = +new Date(d.getFullYear(), d.getMonth(), d.getDate(), 7, 30); if (tercerEnO(x)) continue; s += Math.max(0, Math.min(B, z) - Math.max(A, x)); } return s; }
 async function cargarCorr(k, forzar) {
   if (typeof firebase === 'undefined' || !cargado) return; const c = CORR[k];
   if (c && (c.busy || (!forzar && Date.now() - c.t < 5 * 60000))) return;
@@ -886,13 +890,14 @@ async function cargarCorr(k, forzar) {
     const fs = firebase.firestore(), [y, mo] = k.split('-').map(Number), ini = new Date(y, mo - 1, 1), fin = new Date(y, mo, 1), ahora = new Date(), corte = fin < ahora ? fin : ahora;
     const [cfg, evs, ags] = await Promise.all([fs.doc('apps/paros/config/maquinas').get(), fs.collection('apps/paros/eventos').where('t0', '>=', isoD(lunes(ini))).where('t0', '<', isoD(new Date(y, mo, 8))).get(), fs.collection('apps/paros/ag').get()]);
     const maq = (cfg.exists && (cfg.data() || {}).m) || {};
+    try { const tu = await fs.doc('apps/paros/config/turnos').get(); TURNOS = ((tu.exists && (tu.data() || {}).cambios) || []).slice().sort((a, b) => String(a.t).localeCompare(String(b.t))); } catch (x) { TURNOS = []; }
     // semanas (lunes a domingo) que empiezan dentro del mes y ya comenzaron
     const sem = []; let w = lunes(ini); if (w < ini) w = new Date(w.getFullYear(), w.getMonth(), w.getDate() + 7);   // semanas cuyo lunes cae en el mes
     for (; w < fin && w <= ahora; w = new Date(w.getFullYear(), w.getMonth(), w.getDate() + 7)) sem.push({ lun: w, fin: new Date(w.getFullYear(), w.getMonth(), w.getDate() + 7), min: 0, n: 0 });
     evs.docs.forEach(d => { const ev = d.data(); if (ev.prueba || (maq[ev.maq] || {}).cat !== 'MTA') return;
       const cs = (ev.ciclos || []).slice(); cs.push({ tAlerta: ev.tAlerta || ev.t0, tRep: ev.tRep });
       cs.forEach(cy => { if (!cy.tAlerta) return; const a = new Date(cy.tAlerta), b = cy.tRep ? new Date(cy.tRep) : corte;
-        sem.forEach(s => { const x = Math.max(a, s.lun), z = Math.min(b, s.fin, corte); if (z > x) { s.min += (z - x) / 60000; if (a >= s.lun && a < s.fin) s.n++; } }); }); });
+        sem.forEach(s => { const x = Math.max(a, s.lun), z = Math.min(b, s.fin, corte); if (z > x) { s.min += (z - x - minNocheO(x, z)) / 60000; if (a >= s.lun && a < s.fin) s.n++; } }); }); });
     sem.forEach(s => { s.h = Math.round(s.min / 6) / 10; s.pts = ptsHoras(s.h); s.encurso = s.fin > ahora; });
     const mta = sem.length ? Math.round(sem.reduce((a, s) => a + s.pts, 0) / sem.length) : null;
     // áreas generales
