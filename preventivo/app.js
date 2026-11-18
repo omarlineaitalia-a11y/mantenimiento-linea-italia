@@ -1460,7 +1460,7 @@ function datosRefacMes(mes) {
   L.forEach(t => { const o = S.ords[t.k] || {};
     (o.hall || []).filter(x => (x.ref || x.d) && /cambi|material|modific/i.test(x.t)).forEach(x => items.push({ tipo: 'real', desc: x.ref || x.d, det: x.d, q: Number(x.q) || 1, cu: Number(x.costo) || 0, eq: t.eq, cat: t.cat, tec: t.tec, origen: x.t + ' · ' + fCorta(t.f), fotos: (x.fotos || []).length }));
     (o.otros || []).filter(x => x.pieza).forEach(x => items.push({ tipo: 'otro', desc: x.pieza, det: [x.ubic, x.volt ? x.volt + ' V' : '', x.modelo].filter(Boolean).join(' · '), q: Number(x.q) || 1, cu: Number(x.costo) || 0, eq: t.eq, cat: t.cat, tec: t.tec, origen: (x.acc || 'Encargar') + ' · ' + fCorta(t.f), fotos: (x.fotos || []).length, acc: x.acc })); });
-  (window.PM_REFAC || []).forEach(x => { const ed = (S.param.refac || {})[x.k] || {}, hist = ed.hist || [], ult = (hist.length ? hist[hist.length - 1].f : '') || ed.real || x.real || x.ult; if (!ult || !x.dias) return; const prox = iso(sumar(deIso(ult), x.dias)); if (prox.slice(0, 7) === mes || (mes === MES_HOY && prox < HOY)) items.push({ tipo: 'pron', desc: x.n, det: '', q: 1, cu: x.veces ? Math.round(x.gasto / x.veces) : 0, eq: x.eq, cat: x.cat, tec: '', origen: 'Cambio estimado ' + fCorta(prox) }); });
+  // v15 (18-nov-2026): se retiró el pronóstico de cambios por COMPRAS (PM_REFAC). El costo del mes = material real anotado en las hojas + servicios de montacargas por horas.
   refacMontacargas(mes).filter(z => !z.sinLectura).forEach(z => items.push({ tipo: 'mont', desc: z.n, det: 'Servicio de ' + z.h + ' h (cada ' + z.cada + ' h)', q: z.q, cu: z.cu, eq: z.eq, cat: 'EM', tec: '', origen: 'Horómetro → ' + z.h + ' h' }));
   const alm = S.alm, buscar = d => { if (!alm) return null; const n = norm(d).split(/\s+/).filter(w => w.length > 3); let best = null, sc = 0; alm.forEach(a => { const h = norm(a.c + ' ' + a.n + ' ' + a.d); const s = n.filter(w => h.includes(w)).length; if (s > sc) { sc = s; best = a; } }); return sc >= Math.min(2, n.length) ? best : null; };
   return items.map(x => { const a = buscar(x.desc), cu = x.cu || (a && a.cu) || 0; return Object.assign({}, x, { a, cu, tot: cu * x.q, hay: !!(a && a.ex >= x.q) }); });
@@ -1711,8 +1711,8 @@ function compsDeMaquina(eq) {
   const words = norm(eq).split(/[\s·]+/).filter(w => w.length > 3 && !/^\d+$/.test(w));
   Object.values(S.ords).forEach(o => { if (!o.fin) return; const tt = buscarTarea(o.k); if (!tt || tt.eq !== eq) return; (o.hall || []).filter(x => /cambi/i.test(x.t) && (x.ref || x.d)).forEach(x => { const nom = (x.ref || x.d).trim(); const c = add('h:' + kEq(nom), nom, 'Hojas de preventivo'); c.cambios.push({ f: o.fin.slice(0, 10), nota: x.d, q: x.q, costo: Number(x.costo) || 0, tec: tt.tec, fotos: (x.fotos || []).length }); }); });
   Object.entries(S.param.baleros || {}).forEach(([id, b]) => { if (!b.eq || !(norm(eq).includes(norm(b.eq)) || norm(b.eq).includes(norm(eq)))) return; const c = add('b:' + id, 'Balero ' + (b.pos || '') + (b.ref ? ' · ' + b.ref : ''), 'Baleros'); (b.hist || []).forEach(h => c.cambios.push({ f: h.f, nota: h.nota, costo: h.costo })); if (b.inst && !c.cambios.some(x => x.f === b.inst)) c.cambios.push({ f: b.inst, nota: 'Instalado' }); const hd = (Number(b.hDia) || 8) * 6 / 7; if (b.vidaH) { c.vidaBase = Math.round(b.vidaH / hd); c.unidad = Number(b.vidaH).toLocaleString('es-MX') + ' h del proveedor'; } });
-  (window.PM_REFAC || []).forEach(x => { const en = norm(x.eq); if (!words.some(w => en.includes(w))) return; const c = add('r:' + x.k, x.n, 'Cálculo de compras'); const ed = (S.param.refac || {})[x.k] || {}; (ed.hist || []).forEach(h => c.cambios.push({ f: h.f, nota: h.nota, costo: h.costo })); const ult = ed.real || x.real || x.ult; if (ult && !c.cambios.some(z => z.f === ult)) c.cambios.push({ f: ult, nota: 'Última compra / cambio' }); if (x.dias) { c.vidaBase = x.dias; c.unidad = 'promedio de compras'; } });
-  almCambios(eq, add);
+  // v15 (18-nov-2026): la vida sale SOLO de lo que registra el técnico (cambios anotados en las hojas y baleros instalados).
+  // Se retiraron las fuentes de COMPRAS (PM_REFAC) y las salidas de Almacén por petición del Ing. Omar (confía en el dato del técnico).
   const vidas = (S.param.vidas || {})[kEq(eq)] || {};
   return Object.values(C).map(c => {
     c.cambios = c.cambios.filter(z => z.f).sort((a, b) => a.f.localeCompare(b.f));
@@ -1784,7 +1784,7 @@ document.addEventListener('input', e => { if (e.target.id === 'vBusca') { S.vBus
 // Parámetros: primero "Vida por máquina" (gráficas); las tablas de antes quedan como pestañas de consulta
 if (S.sub4 === 'refac') S.sub4 = 'vida';
 function vParam() {
-  const subs = [['vida', '📈 Vida por máquina'], ['refac', '🧩 Refacciones por compras'], ['baleros', '🔩 Baleros'], ['horo', '⏲️ Horómetros montacargas'], ['mat', '💲 Refacciones y costos del mes'], ['hist', '🧾 Historial (tabla)']];
+  const subs = [['vida', '📈 Vida por máquina'], ['baleros', '🔩 Baleros'], ['horo', '⏲️ Horómetros montacargas'], ['mat', '💲 Refacciones y costos del mes'], ['hist', '🧾 Historial (tabla)']];
   if (!subs.some(s => s[0] === S.sub4)) S.sub4 = 'vida';
   let h = '<div class="seg" style="margin-bottom:10px">' + subs.map(([k, l]) => '<button data-sub4="' + k + '" aria-pressed="' + (S.sub4 === k) + '">' + l + '</button>').join('') + '</div>' +
     '<div class="fila" style="margin-bottom:14px"><span class="peq mu">Categoría:</span><div class="seg">' + [''].concat(Object.keys(CAT)).map(c => '<button data-catp="' + c + '" aria-pressed="' + ((S.catP || '') === c) + '" title="' + esc(c ? CAT[c][0] : 'Todas') + '">' + (c || 'Todas') + '</button>').join('') + '</div>' + (S.catP ? '<span class="chip acc">' + esc(CAT[S.catP][0]) + '</span>' : '') + '</div>';
@@ -2140,7 +2140,7 @@ function pAlm() {
   return h;
 }
 function vParam() {
-  const subs = [['vida', '📈 Vida por máquina'], ['alm', '📦 Almacén'], ['refac', '🧩 Refacciones por compras'], ['baleros', '🔩 Baleros'], ['horo', '⏲️ Horómetros montacargas'], ['mat', '💲 Refacciones y costos del mes'], ['hist', '🧾 Historial (tabla)']];
+  const subs = [['vida', '📈 Vida por máquina'], ['baleros', '🔩 Baleros'], ['horo', '⏲️ Horómetros montacargas'], ['mat', '💲 Refacciones y costos del mes'], ['hist', '🧾 Historial (tabla)']];
   if (!subs.some(s => s[0] === S.sub4)) S.sub4 = 'vida';
   let h = '<div class="seg" style="margin-bottom:10px">' + subs.map(([k, l]) => '<button data-sub4="' + k + '" aria-pressed="' + (S.sub4 === k) + '">' + l + '</button>').join('') + '</div>' +
     '<div class="fila" style="margin-bottom:14px"><span class="peq mu">Categoría:</span><div class="seg">' + [''].concat(Object.keys(CAT)).map(c => '<button data-catp="' + c + '" aria-pressed="' + ((S.catP || '') === c) + '" title="' + esc(c ? CAT[c][0] : 'Todas') + '">' + (c || 'Todas') + '</button>').join('') + '</div>' + (S.catP ? '<span class="chip acc">' + esc(CAT[S.catP][0]) + '</span>' : '') + '</div>';
