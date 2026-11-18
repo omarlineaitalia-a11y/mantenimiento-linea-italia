@@ -766,7 +766,7 @@ function pDeben() {
   if (!adm) return;
   $('#nD').onclick = () => dlgDeuda();
   $$('[data-ed]').forEach(b => b.onclick = () => dlgDeuda(b.dataset.ed));
-  $$('[data-bd]').forEach(b => b.onclick = () => { const d = D.deudas.find(x => x.id === b.dataset.bd); if (confirm('¿Borrar el registro de ' + d.persona + '?')) { D.deudas = D.deudas.filter(x => x !== d); guardar(); } });
+  $$('[data-bd]').forEach(b => b.onclick = async () => { const d = D.deudas.find(x => x.id === b.dataset.bd); if ((await confirmarApp({ titulo: 'Confirmar', texto: '¿Borrar el registro de ' + d.persona + '?' }))) { D.deudas = D.deudas.filter(x => x !== d); guardar(); } });
   $$('[data-ab]').forEach(b => b.onclick = () => { const d = D.deudas.find(x => x.id === b.dataset.ab), s = saldoDeuda(d);
     const m = modal('💵 Abono de ' + esc(d.persona), '<p>Saldo: <b>' + din(s) + '</b></p><form class="form"><label class="f">Monto<input name="m" type="number" step="0.01" min="0.01" value="' + s.toFixed(2) + '" required></label><label class="f">Fecha<input name="f" type="date" value="' + hoyISO() + '" required></label><div class="full row"><button class="btn pri" type="submit">Registrar</button><button class="btn" type="button" data-x>Cancelar</button></div></form>');
     $('form', m).onsubmit = e => { e.preventDefault(); (d.abonos = d.abonos || []).push({ fecha: e.target.f.value, monto: r2(e.target.m.value) }); m.remove(); guardar(); }; });
@@ -797,7 +797,7 @@ function pSolicitudes() {
     '<div class="full"><button class="btn pri" type="submit">Anotar vale (se resta de la caja negra)</button></div></form></div></div>';
   $('#fS').onsubmit = e => { e.preventDefault(); const F = e.target; D.solicitudes.push({ id: nuevoId('s'), fecha: F.f.value, persona: F.p.value.trim().toUpperCase(), motivo: F.m.value.trim(), monto: r2(F.d.value), estado: 'pendiente' }); guardar(); };
   $$('[data-fac]').forEach(b => b.onclick = () => dlgFactura(null, D.solicitudes.find(s => s.id === b.dataset.fac)));
-  $$('[data-dev]').forEach(b => b.onclick = () => { const s = D.solicitudes.find(x => x.id === b.dataset.dev); if (confirm(s.persona + ' regresó los ' + din(s.monto) + ' completos (no se compró nada)?')) { s.estado = 'devuelta'; s.fechaFactura = hoyISO(); guardar(); } });
+  $$('[data-dev]').forEach(b => b.onclick = async () => { const s = D.solicitudes.find(x => x.id === b.dataset.dev); if ((await confirmarApp({ titulo: 'Confirmar', texto: s.persona + ' regresó los ' + din(s.monto) + ' completos (no se compró nada)?' }))) { s.estado = 'devuelta'; s.fechaFactura = hoyISO(); guardar(); } });
 }
 
 // ---------- Configuración (solo administrador)
@@ -847,7 +847,7 @@ async function pConfig() {
     guardar(); toast('✔ Permisos guardados');
   };
   $$('#t-config [data-reset]').forEach(b => b.onclick = () => window.LI.dialogoRestablecer(b.dataset.reset, (D.usuarios[b.dataset.reset] || {}).n));
-  $$('#t-config [data-qu]').forEach(b => b.onclick = () => { const k = b.dataset.qu; if (confirm('¿Quitar el acceso de ' + D.usuarios[k].n + '? Ya no podrá entrar a la caja chica.')) { delete D.usuarios[k]; guardar(); } });
+  $$('#t-config [data-qu]').forEach(b => b.onclick = async () => { const k = b.dataset.qu; if ((await confirmarApp({ titulo: 'Confirmar', texto: '¿Quitar el acceso de ' + D.usuarios[k].n + '? Ya no podrá entrar a la caja chica.' }))) { delete D.usuarios[k]; guardar(); } });
   $('#fU').onsubmit = async e => {
     e.preventDefault(); const F = e.target, k = F.n.value.trim(), m = $('#fUMsg');
     if (!/^\d{1,8}$/.test(k)) { m.className = 'msg e'; m.textContent = 'Nómina no válida.'; return; }
@@ -861,10 +861,10 @@ async function pConfig() {
   // datos de la caja
   $('#fJ').onsubmit = e => { e.preventDefault(); const F = e.target; D.fondo = r2(F.fo.value) || D.fondo; D.responsable = F.re.value.trim(); D.diasEntrega = Number(F.de.value) || 7; D.diasCheque = Number(F.dc.value) || 7; D.alertaPct = Number(F.ap.value) || 30; D.pin = F.pin.value; guardar(); toast('✔ Datos de la caja guardados'); };
   $('#jCar').onclick = elegirCarpeta;
-  $('#jOut').onclick = () => { if (confirm('Este equipo ya no podrá entrar con solo la nómina hasta que alguien vuelva a entrar con nómina y contraseña. ¿Cerrar la sesión?')) { try { sessionStorage.removeItem('cc_nom'); } catch (e) {} window.LI.salir(); } };
+  $('#jOut').onclick = async () => { if ((await confirmarApp({ titulo: 'Confirmar', texto: 'Este equipo ya no podrá entrar con solo la nómina hasta que alguien vuelva a entrar con nómina y contraseña. ¿Cerrar la sesión?' }))) { try { sessionStorage.removeItem('cc_nom'); } catch (e) {} window.LI.salir(); } };
   $('#jXls').onclick = async () => { if (soporta) await pedirPermiso(); actualizarExcel(true); };
   $('#jRes').onclick = () => { const x = {}; ['fondo', 'responsable', 'diasEntrega', 'diasCheque', 'alertaPct'].concat(COLS).forEach(k => x[k] = D[k]); const b = new Blob([JSON.stringify(x, null, 1)], { type: 'application/json' }); if (carpeta) escribirArchivo('caja-chica-respaldo-' + hoyISO() + '.json', b).then(() => toast('Respaldo guardado en CAJA CHICA')).catch(() => descargar(b, 'caja-chica-respaldo-' + hoyISO() + '.json')); else descargar(b, 'caja-chica-respaldo-' + hoyISO() + '.json'); };
-  $('#jImp').onchange = async e => { const f = e.target.files[0]; if (!f) return; if (!confirm('Importar reemplaza las facturas, entregas, vales y adeudos actuales por los del archivo. ¿Continuar?')) return; try { importar(JSON.parse(await f.text())); toast('✔ Respaldo importado'); } catch (x) { toast('No se pudo leer: ' + x.message); } };
+  $('#jImp').onchange = async e => { const f = e.target.files[0]; if (!f) return; if (!(await confirmarApp({ titulo: 'Confirmar', texto: 'Importar reemplaza las facturas, entregas, vales y adeudos actuales por los del archivo. ¿Continuar?' }))) return; try { importar(JSON.parse(await f.text())); toast('✔ Respaldo importado'); } catch (x) { toast('No se pudo leer: ' + x.message); } };
   // eliminados
   $$('#t-config [data-rest]').forEach(b => b.onclick = () => { const e = D.eliminados.find(x => x.id === b.dataset.rest); if (!e) return;
     D.facturas.push(Object.assign({}, e.datos, { id: e.ref || nuevoId('g') })); e.restaurado = true; e.restT = new Date().toISOString(); e.restPor = YO.nom; guardar(); toast('✔ Factura restaurada'); });
@@ -881,4 +881,5 @@ if (window.claude && window.LI) conectar();
 else document.querySelector('main').innerHTML = '<div class="card vacio" style="margin-top:20px"><span class="e">🌐</span>Abre la caja chica desde su liga en internet (no como archivo).</div>';
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
 </script>
+<script src="../lib/dialogo-app.js?v=3"></script><script>window.alert = function (m) { if (window.avisoApp) avisoApp({ texto: String(m) }); };</script>
 </body></html>

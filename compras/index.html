@@ -1060,8 +1060,8 @@ function pintarEquipo(){
   $("lgDev").hidden=false;$("lgDev").innerHTML=`<span>${txt}</span><button type="button" id="lgDevOut">Cambiar cuenta del equipo</button>`;
   $("pDevTxt").innerHTML=txt;
 }
-function cerrarEquipo(){
-  if(!confirm("Este equipo ya no podrá entrar con solo la nómina hasta que alguien vuelva a entrar con nómina y contraseña. ¿Cerrar la sesión de este equipo?"))return;
+async function cerrarEquipo(){
+  if(!(await confirmarApp({ titulo: 'Confirmar', texto: "Este equipo ya no podrá entrar con solo la nómina hasta que alguien vuelva a entrar con nómina y contraseña. ¿Cerrar la sesión de este equipo?" })))return;
   try{sessionStorage.removeItem("mtto-ses");sessionStorage.removeItem("mtto-auto")}catch(e){}
   window.LI?.salir?.();
 }
@@ -1343,4 +1343,5 @@ async function fotosParaPdf(list){
 if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
 </script>
 
+<script src="../lib/dialogo-app.js?v=3"></script><script>window.alert = function (m) { if (window.avisoApp) avisoApp({ texto: String(m) }); };</script>
 </body></html>

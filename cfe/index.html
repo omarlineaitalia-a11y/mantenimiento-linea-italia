@@ -772,7 +772,7 @@ function vRecibos() {
   $('#rNuevo').onclick = () => dlgRecibo();
   $('#rArch').onchange = e => { const fs = [...e.target.files]; e.target.value = ''; if (fs.length) leerRecibo(fs); };
   $$('[data-ver]').forEach(b => b.onclick = () => dlgConciliar(D.recibos.find(r => r.id === b.dataset.ver)));
-  $$('[data-bor]').forEach(b => b.onclick = () => { const r = D.recibos.find(x => x.id === b.dataset.bor); if (confirm('¿Borrar el recibo de ' + r.medidor + ' (' + fF(r.periodo_fin) + ')?')) { D.recibos = D.recibos.filter(x => x !== r); guardar(); } });
+  $$('[data-bor]').forEach(b => b.onclick = async () => { const r = D.recibos.find(x => x.id === b.dataset.bor); if ((await confirmarApp({ titulo: 'Confirmar', texto: '¿Borrar el recibo de ' + r.medidor + ' (' + fF(r.periodo_fin) + ')?' }))) { D.recibos = D.recibos.filter(x => x !== r); guardar(); } });
   if (window.Chart && filas.length) {
     const per = [...new Set(D.recibos.map(r => r.periodo_fin.slice(0, 7)))].sort();
     const ser = (fn, tipo) => ['V366EB', 'GGH742', 'PT477E'].map(id => { const m = medDe(id); return { label: id, data: per.map(p => { const r = D.recibos.find(x => (x.medidor === id || (id === 'GGH742' && x.medidor === 'D660RH')) && x.periodo_fin.slice(0, 7) === p); return r ? fn(r) : null; }), backgroundColor: m.color, borderColor: m.color, tension: .3, spanGaps: true }; });
@@ -1544,4 +1544,5 @@ async function tareasAdmin() {
 if (window.claude && window.LI) conectar(); else document.querySelector('main').innerHTML = '<div class="card vacio"><span class="e">🌐</span>Abre la app desde su liga en internet.</div>';
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').then(r => { swReg = r; }).catch(() => {});
 </script>
+<script src="../lib/dialogo-app.js?v=3"></script><script>window.alert = function (m) { if (window.avisoApp) avisoApp({ texto: String(m) }); };</script>
 </body></html>

@@ -517,10 +517,10 @@ function renderProy() {
  });
  $('#tProy').innerHTML = h;
 }
-$('#bAddProy').addEventListener('click', () => {
+$('#bAddProy').addEventListener('click', async () => {
  const tit = $('#yTit').value.trim(); if (!tit) { alert('Escribe el nombre del proyecto o tarea.'); return; }
  if (!$('#yFin').value) { alert('La fecha compromiso es obligatoria.'); return; }
- if (!$('#yBen').value.trim() && !confirm('No escribiste el beneficio para la empresa. ¿Agregar de todos modos?')) return;
+ if (!$('#yBen').value.trim() && !(await confirmarApp({ titulo: 'Confirmar', texto: 'No escribiste el beneficio para la empresa. ¿Agregar de todos modos?' }))) return;
  S.proyectos.push({ id: 'y' + Date.now(), tit, resp: $('#yResp').value, apo: $('#yApo').value, ini: $('#yIni').value, fin: $('#yFin').value, pri: $('#yPri').value, estado: 'Pendiente', avance: 0, ben: $('#yBen').value.trim() });
  guardar(); ['#yTit', '#yBen', '#yFin'].forEach(s => $(s).value = ''); renderProy();
 });
@@ -595,11 +595,11 @@ $('#mes').addEventListener('change', render);
 $('#lMaq').innerHTML = MAQUINAS.map(x => `<option value="${esc(x)}">`).join('');
 $('#pFecha').value = hoy.toISOString().slice(0, 10);
 
-document.addEventListener('click', e => {
+document.addEventListener('click', async e => {
  const o = e.target.closest('.opt'); if (o && o.classList.contains('fijo')) return; if (o) { const ev = M().ev; ev[o.dataset.id] = ev[o.dataset.id] || {}; ev[o.dataset.id].nivel = ev[o.dataset.id].nivel === o.dataset.n ? '' : o.dataset.n; guardar(); renderEv(); return; }
- const d = e.target.closest('[data-del]'); if (d) { if (confirm('¿Borrar este paro?')) { M().paros.splice(+d.dataset.del, 1); guardar(); renderCal(); } return; }
- const dy = e.target.closest('[data-delpy]'); if (dy) { const x = S.proyectos[+dy.dataset.delpy]; if (confirm('¿Borrar el proyecto "' + x.tit + '"?')) { S.proyectos.splice(+dy.dataset.delpy, 1); guardar(); renderProy(); } return; }
- const dp = e.target.closest('[data-delper]'); if (dp) { const p = S.personal[+dp.dataset.delper]; if (confirm('¿Quitar a ' + p.nombre + ' del organigrama?')) { S.personal.splice(+dp.dataset.delper, 1); guardar(); renderCfg(); } }
+ const d = e.target.closest('[data-del]'); if (d) { if ((await confirmarApp({ titulo: 'Confirmar', texto: '¿Borrar este paro?' }))) { M().paros.splice(+d.dataset.del, 1); guardar(); renderCal(); } return; }
+ const dy = e.target.closest('[data-delpy]'); if (dy) { const x = S.proyectos[+dy.dataset.delpy]; if ((await confirmarApp({ titulo: 'Confirmar', texto: '¿Borrar el proyecto "' + x.tit + '"?' }))) { S.proyectos.splice(+dy.dataset.delpy, 1); guardar(); renderProy(); } return; }
+ const dp = e.target.closest('[data-delper]'); if (dp) { const p = S.personal[+dp.dataset.delper]; if ((await confirmarApp({ titulo: 'Confirmar', texto: '¿Quitar a ' + p.nombre + ' del organigrama?' }))) { S.personal.splice(+dp.dataset.delper, 1); guardar(); renderCfg(); } }
 });
 document.addEventListener('input', e => {
  const t = e.target;
@@ -616,18 +616,18 @@ document.addEventListener('change', e => {
  if (t.dataset.crit) { S.crit[t.dataset.crit] = +t.value; guardar(); }
  if (t.dataset.py != null && t.tagName !== 'TEXTAREA') { const x = S.proyectos[+t.dataset.py]; x[t.dataset.c] = t.dataset.c === 'avance' ? Math.max(0, Math.min(100, +t.value || 0)) : t.value; if (t.dataset.c === 'avance' && x.avance >= 100) x.estado = 'Terminado'; guardar(); renderProy(); }
 });
-$('#bAddParo').addEventListener('click', () => {
+$('#bAddParo').addEventListener('click', async () => {
  const min = $('#pMin').value, maq = $('#pMaq').value.trim(), contra = $('#pContra').value.trim();
  if (min === '' || !maq) { alert('Captura la máquina y los minutos de paro.'); return; }
- if (+min >= C().m_sat && !contra && !confirm(`El paro es de ${C().m_sat} min o más (No aceptable) y requiere contramedida. ¿Guardarlo como PENDIENTE de contramedida?`)) return;
+ if (+min >= C().m_sat && !contra && !(await confirmarApp({ titulo: 'Confirmar', texto: `El paro es de ${C().m_sat} min o más (No aceptable) y requiere contramedida. ¿Guardarlo como PENDIENTE de contramedida?` }))) return;
  M().paros.push({ fecha: $('#pFecha').value, maq, tec: $('#pTec').value, min: +min, falla: $('#pFalla').value.trim(), contra });
  guardar(); ['#pMin', '#pFalla', '#pContra'].forEach(s => $(s).value = ''); renderCal();
 });
 $('#bAddPer').addEventListener('click', () => { S.personal.push({ id: 'p' + Date.now(), nombre: 'Nuevo', nomina: '', puesto: 'Técnico de mantenimiento', area: '', tipo: 'tecnico', plan: true, externo: false, reporta: 'car' }); guardar(); renderCfg(); });
-$('#bResetPer').addEventListener('click', () => { if (confirm('¿Restaurar el personal original? Las evaluaciones capturadas se conservan.')) { S.personal = JSON.parse(JSON.stringify(PERSONAL_DEF)); S.cats = JSON.parse(JSON.stringify(CATS_DEF)); guardar(); renderCfg(); } });
-$('#bBorrar').addEventListener('click', () => { if (confirm('¿Borrar órdenes, evaluaciones y paros de ' + nomMes(mesKey()) + '?')) { delete S.meses[mesKey()]; guardar(); render(); } });
-$('#bEjemplo').addEventListener('click', () => {
- if (!confirm('Se cargarán datos de EJEMPLO en ' + nomMes(mesKey()) + ' (reemplaza lo capturado en este periodo). ¿Continuar?')) return;
+$('#bResetPer').addEventListener('click', async () => { if ((await confirmarApp({ titulo: 'Confirmar', texto: '¿Restaurar el personal original? Las evaluaciones capturadas se conservan.' }))) { S.personal = JSON.parse(JSON.stringify(PERSONAL_DEF)); S.cats = JSON.parse(JSON.stringify(CATS_DEF)); guardar(); renderCfg(); } });
+$('#bBorrar').addEventListener('click', async () => { if ((await confirmarApp({ titulo: 'Confirmar', texto: '¿Borrar órdenes, evaluaciones y paros de ' + nomMes(mesKey()) + '?' }))) { delete S.meses[mesKey()]; guardar(); render(); } });
+$('#bEjemplo').addEventListener('click', async () => {
+ if (!(await confirmarApp({ titulo: 'Confirmar', texto: 'Se cargarán datos de EJEMPLO en ' + nomMes(mesKey()) + ' (reemplaza lo capturado en este periodo). ¿Continuar?' }))) return;
  const k = mesKey(), m = { ord: {}, ev: {}, paros: [], ejemplo: true }; const pr = [40, 38, 22, 44, 36, 30, 26, 35, 18];
  plan().forEach((p, i) => { const prog = pr[i % pr.length]; const falt = [0, 1, 0, 2, 1, 4, 0, 1, 1][i % 9]; m.ord[p.id] = { prog, cump: prog - falt }; m.ev[p.id] = { nivel: ['exc', 'med', 'exc', 'min', 'med', 'rec', 'exc', 'med', 'exc'][i % 9], com: '' }; });
  const mq = ['Selexx', 'Láser Gweike 1', 'Homag', 'Prensa 90 ton', 'Túnel de lavado', 'Gabbiani', 'Compresor 50 HP', 'Montacargas'], mn = [8, 25, 60, 5, 15, 50, 9, 30, 12, 7];
@@ -1032,11 +1032,11 @@ document.addEventListener('change', e => {
   else if (t.dataset.tkr) { const [i, j] = t.dataset.tkr.split('|').map(Number); S.proyectos[i].tareas[j].resp = t.value; guardarTareas(i); }
   else if (t.dataset.tkf) { const [i, j] = t.dataset.tkf.split('|').map(Number); S.proyectos[i].tareas[j].fecha = t.value; guardarTareas(i); }
 });
-document.addEventListener('click', e => {
+document.addEventListener('click', async e => {
   const a = e.target.closest('[data-tka]'), d = e.target.closest('[data-tkd]');
   if (a) { const i = +a.dataset.tka, inp = document.querySelector('[data-tkn="' + i + '"]'), txt = inp.value.trim(); if (!txt) { inp.focus(); return; }
     const x = S.proyectos[i]; x.tareas = x.tareas || []; x.tareas.push({ id: 't' + Date.now().toString(36), t: txt, resp: document.querySelector('[data-tknr="' + i + '"]').value, fecha: document.querySelector('[data-tknf="' + i + '"]').value, hecha: false }); guardarTareas(i); }
-  if (d) { const [i, j] = d.dataset.tkd.split('|').map(Number); if (confirm('¿Quitar esta tarea?')) { S.proyectos[i].tareas.splice(j, 1); guardarTareas(i); } }
+  if (d) { const [i, j] = d.dataset.tkd.split('|').map(Number); if ((await confirmarApp({ titulo: 'Confirmar', texto: '¿Quitar esta tarea?' }))) { S.proyectos[i].tareas.splice(j, 1); guardarTareas(i); } }
 });
 
 /* ===================== v6 · INVENTARIO DE HERRAMIENTA por técnico (fin de mes · foto · costo · cobro a 15 días) =====================
@@ -1103,22 +1103,22 @@ document.addEventListener('click', async e => {
     return;
   }
   if ((b = t.closest('[data-hedit]'))) { const id = b.dataset.hedit, x = HER.cat[id]; if (!x) return;
-    const nom = prompt('Nombre de la herramienta:', x.nom); if (nom === null) return; const marca = prompt('Marca:', x.marca || ''); if (marca === null) return; const modelo = prompt('Modelo:', x.modelo || ''); if (modelo === null) return; const serie = prompt('No. de serie:', x.serie || ''); if (serie === null) return; const precio = prompt('Precio (MXN):', x.precio || 0); if (precio === null) return;
+    const fh = await formApp({ titulo: 'Editar herramienta', icono: '🧰', campos: [{ k: 'nom', l: 'Nombre de la herramienta', valor: x.nom }, { k: 'marca', l: 'Marca', valor: x.marca || '' }, { k: 'modelo', l: 'Modelo', valor: x.modelo || '' }, { k: 'serie', l: 'No. de serie', valor: x.serie || '' }, { k: 'precio', l: 'Precio (MXN)', tipo: 'numero', valor: x.precio || 0 }] }); if (!fh) return; const { nom, marca, modelo, serie, precio } = fh;
     await hup('herramienta/catalogo', { items: { [id]: { nom: nom.trim() || x.nom, marca: marca.trim(), modelo: modelo.trim(), serie: serie.trim(), precio: +precio || 0 } } }); return; }
-  if ((b = t.closest('[data-hbaja]'))) { const id = b.dataset.hbaja, x = HER.cat[id]; if (!x || !confirm('¿Dar de baja "' + x.nom + '"? (no se borra el historial)')) return; await hup('herramienta/catalogo', { items: { [id]: { baja: hoyISO() } } }); return; }
+  if ((b = t.closest('[data-hbaja]'))) { const id = b.dataset.hbaja, x = HER.cat[id]; if (!x || !(await confirmarApp({ titulo: 'Confirmar', texto: '¿Dar de baja "' + x.nom + '"? (no se borra el historial)' }))) return; await hup('herramienta/catalogo', { items: { [id]: { baja: hoyISO() } } }); return; }
   if ((b = t.closest('[data-hinv]'))) { const [id, v] = b.dataset.hinv.split('|'); await hup('herramienta/inv-' + mesKey(), { t: { [HER.sel]: { items: { [id]: { e: v } } } } }); return; }
   if ((b = t.closest('[data-hcerrar]'))) {
     const tec = b.dataset.hcerrar, k = mesKey(), it = ((HER.inv[k] || {})[tec] || {}).items || {}, L = herDe(tec), hoy = hoyISO(), p = persona(tec);
     const malas = L.filter(([id]) => it[id] && (it[id].e === 'falta' || it[id].e === 'danada'));
-    if (!confirm('Cerrar el inventario de ' + (p ? p.nombre : tec) + '.\n' + (malas.length ? malas.length + ' herramienta(s) faltante(s) o dañada(s) pasan a reposición: ' + dinero(malas.reduce((a, [, x]) => a + (+x.precio || 0), 0)) + ', con límite al ' + sumaDias(hoy, 15) + '.' : 'Toda la herramienta está completa.'))) return;
+    if (!(await confirmarApp({ titulo: 'Confirmar', texto: 'Cerrar el inventario de ' + (p ? p.nombre : tec) + '.\n' + (malas.length ? malas.length + ' herramienta(s) faltante(s) o dañada(s) pasan a reposición: ' + dinero(malas.reduce((a, [, x]) => a + (+x.precio || 0), 0)) + ', con límite al ' + sumaDias(hoy, 15) + '.' : 'Toda la herramienta está completa.') }))) return;
     const yo = (S.personal.find(x => String(x.nomina) === String((window.LI && typeof LI.nomina === 'function' && LI.nomina()) || '')) || {}).nombre || 'Mantenimiento';
     const cob = {}; malas.forEach(([id, x]) => { cob['c' + k.replace('-', '') + id] = { tec, herr: id, nom: x.nom, marca: x.marca || '', modelo: x.modelo || '', serie: x.serie || '', precio: +x.precio || 0, motivo: it[id].e, det: hoy, limite: sumaDias(hoy, 15), mes: k, estado: 'pendiente', foto: it[id].foto || '' }; });
     if (Object.keys(cob).length) await hup('herramienta/cobros', { c: cob });
     await hup('herramienta/inv-' + k, { t: { [tec]: { cerrado: true, fecha: hoy, por: yo } } }); return;
   }
-  if ((b = t.closest('[data-hreabrir]'))) { if (!confirm('¿Reabrir el inventario? (las reposiciones ya creadas se quedan)')) return; await hup('herramienta/inv-' + mesKey(), { t: { [b.dataset.hreabrir]: { cerrado: false } } }); return; }
-  if ((b = t.closest('[data-hrep]'))) { const id = b.dataset.hrep; if (!confirm('¿El técnico ya repuso la herramienta? Toma después la foto de la herramienta nueva en su tarjeta.')) return; await hup('herramienta/cobros', { c: { [id]: { estado: 'repuesta', fRep: hoyISO() } } }); return; }
-  if ((b = t.closest('[data-hcob]'))) { const id = b.dataset.hcob; if (!confirm('¿Marcar como cobrada (descuento aplicado)?')) return; await hup('herramienta/cobros', { c: { [id]: { estado: 'cobrada', fCob: hoyISO() } } }); return; }
+  if ((b = t.closest('[data-hreabrir]'))) { if (!(await confirmarApp({ titulo: 'Confirmar', texto: '¿Reabrir el inventario? (las reposiciones ya creadas se quedan)' }))) return; await hup('herramienta/inv-' + mesKey(), { t: { [b.dataset.hreabrir]: { cerrado: false } } }); return; }
+  if ((b = t.closest('[data-hrep]'))) { const id = b.dataset.hrep; if (!(await confirmarApp({ titulo: 'Confirmar', texto: '¿El técnico ya repuso la herramienta? Toma después la foto de la herramienta nueva en su tarjeta.' }))) return; await hup('herramienta/cobros', { c: { [id]: { estado: 'repuesta', fRep: hoyISO() } } }); return; }
+  if ((b = t.closest('[data-hcob]'))) { const id = b.dataset.hcob; if (!(await confirmarApp({ titulo: 'Confirmar', texto: '¿Marcar como cobrada (descuento aplicado)?' }))) return; await hup('herramienta/cobros', { c: { [id]: { estado: 'cobrada', fCob: hoyISO() } } }); return; }
 });
 document.addEventListener('change', async e => {
   const t = e.target; if (!t.dataset || !t.dataset.hev) return; const f = t.files[0]; if (!f) return;
@@ -1148,5 +1148,6 @@ render = function () { _renderV6.apply(this, arguments); if (tab === 'herr') ren
   };
   if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(function () {});
 })();
-</script></body>
+</script><script src="../lib/dialogo-app.js?v=3"></script><script>window.alert = function (m) { if (window.avisoApp) avisoApp({ texto: String(m) }); };</script>
+</body>
 </html>

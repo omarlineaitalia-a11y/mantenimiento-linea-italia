@@ -1087,7 +1087,7 @@ async function descargarManual(m) {
   catch (x) { toast('⚠ ' + (x.message || x)); }
 }
 async function borrarManual(e, m) {
-  if (!confirm('¿Quitar el manual "' + m.nom + '" de ' + e.clave + '?\n(El respaldo de la carpeta de la PC no se borra.)')) return;
+  if (!(await confirmarApp({ titulo: 'Confirmar', texto: '¿Quitar el manual "' + m.nom + '" de ' + e.clave + '?\n(El respaldo de la carpeta de la PC no se borra.)' }))) return;
   await guardarCampos(e, { man: (e.man || []).filter(x => x.id !== m.id) }, 'Quitar manual');
   for (let i = 0; i < (m.pz || 0); i++) DB.doc('man/' + m.id + '_' + i).delete().catch(() => {});
   pintarFicha(D.eq[e.id] || e, true);
@@ -1096,9 +1096,9 @@ function formManual(e) {
   const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'application/pdf,.pdf';
   inp.onchange = async () => { const f = inp.files[0]; if (!f) return;
     const sug = tipoManual(f.name), op = Object.entries(MAN_TIPOS).map(([k, v], i) => (i + 1) + ' = ' + v.replace(/^\S+\s/, '')).join('\n');
-    const r = prompt('¿Qué tipo de manual es "' + f.name + '"?\n' + op + '\n\nEscribe el número:', String(Object.keys(MAN_TIPOS).indexOf(sug) + 1)); if (r === null) return;
+    const fmn = await formApp({ titulo: 'Subir manual', texto: f.name, icono: '📘', si: 'Subir', campos: [{ k: 'r', l: 'Tipo de manual', opciones: Object.keys(MAN_TIPOS).map((k, i) => [String(i + 1), MAN_TIPOS[k] && (MAN_TIPOS[k].n || MAN_TIPOS[k]) || k]), valor: String(Object.keys(MAN_TIPOS).indexOf(sug) + 1) }, { k: 'nom', l: 'Nombre para mostrar', valor: f.name.replace(/\.pdf$/i, '').replace(/[_]+/g, ' ') }] }); if (!fmn) return; const r = fmn.r;
     const tipo = Object.keys(MAN_TIPOS)[(+r || 4) - 1] || 'otro';
-    const nom = prompt('Nombre para mostrar:', f.name.replace(/\.pdf$/i, '').replace(/[_]+/g, ' ')); if (nom === null) return;
+    const nom = fmn.nom;
     try { await subirManual(e, f, tipo, nom.trim() || f.name); toast('✅ Manual guardado en ' + e.clave); pintarFicha(D.eq[e.id] || e, true); } catch (x) { toast('⚠ ' + (x.message || x), 6000); } };
   inp.click();
 }
@@ -1186,7 +1186,7 @@ async function guardarCampos(e, campos, acc) {
   toast('✅ Guardado');
 }
 async function darBaja(e) {
-  const m = prompt('Motivo de la baja de ' + e.clave + ' (' + nombreDe(e) + '):'); if (!m) return;
+  const m = await preguntarApp({ titulo: 'Dar de baja ' + e.clave, texto: 'Motivo de la baja de ' + nombreDe(e), tipo: 'texto', icono: '📉', si: 'Dar de baja' }); if (!m) return;
   await guardarCampos(e, { baja: Object.assign(sello(), { motivo: m }) }, 'Baja');
   cerrarModal(); pintar();
 }
@@ -1290,7 +1290,7 @@ function formRef(e, idx) {
   const tomar = async cam => { const x = await pedirFoto(cam); if (!x) return; fl = x; $('#pvr').innerHTML = '<img src="' + URL.createObjectURL(x) + '" alt="">'; };
   $('#rCam').onclick = () => tomar(true); $('#rGal').onclick = () => tomar(false);
   $('.cab .x', md).onclick = $('#rCan').onclick = () => abrirFicha(e.id);
-  const del = $('#rDel'); if (del) del.onclick = async () => { if (!confirm('¿Quitar ' + r.n + ' de este equipo?')) return; R.splice(idx, 1); await guardarCampos(D.eq[e.id], { refs: R }, 'Refacción quitada: ' + r.n); abrirFicha(e.id); };
+  const del = $('#rDel'); if (del) del.onclick = async () => { if (!(await confirmarApp({ titulo: 'Confirmar', texto: '¿Quitar ' + r.n + ' de este equipo?' }))) return; R.splice(idx, 1); await guardarCampos(D.eq[e.id], { refs: R }, 'Refacción quitada: ' + r.n); abrirFicha(e.id); };
   f.onsubmit = async ev => { ev.preventDefault(); const b = $('button[type=submit]', f); b.disabled = true; b.textContent = 'Guardando…';
     const o = { n: f.n.value.trim(), mod: f.mod.value.trim(), marca: f.marca.value.trim(), np: f.np.value.trim(), cant: f.cant.value.trim(), alm: f.alm.value.trim(), nota: f.nota.value.trim(), f: r.f || '' };
     try { if (fl) o.f = await subirFoto(fl); o.t = new Date().toISOString(); o.por = YO.nom;
@@ -1493,4 +1493,5 @@ window.addEventListener('appinstalled', () => { pedirInstalar = null; $('#btnIns
 $('#btnInstalar').onclick = async () => { if (!pedirInstalar) return; pedirInstalar.prompt(); try { await pedirInstalar.userChoice; } catch (e) {} pedirInstalar = null; $('#btnInstalar').hidden = true; };
 </script>
 <script>if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});</script>
+<script src="../lib/dialogo-app.js?v=3"></script><script>window.alert = function (m) { if (window.avisoApp) avisoApp({ texto: String(m) }); };</script>
 </body></html>
