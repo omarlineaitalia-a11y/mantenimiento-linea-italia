@@ -160,7 +160,7 @@ function dibujo(t, w) {
   DB.collection('plan').onSnapshot(q => { S.planes = {}; q.docs.forEach(d => S.planes[d.id] = d.data()); if (S.nom) render(); });
   DB.collection('ordenes').onSnapshot(q => { S.ords = {}; q.docs.forEach(d => S.ords[d.id] = d.data()); if (window.DEMO) precargarFotos(); if (S.nom && !(S.pant === 3 && S.hoja)) render(); });   // mientras se llena una hoja no se repinta (no se pierde lo que se toca)
   DB.collection('formatos').onSnapshot(q => { S.fmtEd = {}; q.docs.forEach(d => S.fmtEd[d.id] = d.data()); if (S.nom) render(); });
-  ['refac', 'baleros', 'horometros', 'vidas', 'placas'].forEach(k => DB.doc('param/' + k).onSnapshot(s => { S.param[k] = (s.exists && s.data()) || {}; if (S.nom && S.pant === 4) render(); }));
+  ['refac', 'baleros', 'horometros', 'vidas', 'placas', 'cambios'].forEach(k => DB.doc('param/' + k).onSnapshot(s => { S.param[k] = (s.exists && s.data()) || {}; if (S.nom && S.pant === 4) render(); }));
   DB.collection('avisos').onSnapshot(q => { S.avisos = {}; q.docs.forEach(d => S.avisos[d.id] = d.data()); if (S.nom) render(); });
   DB.collection('acceso').onSnapshot(q => { S.acc = {}; q.docs.forEach(d => S.acc[d.id] = d.data()); });
   DB.collection('claves').onSnapshot(q => { S.claves = {}; q.docs.forEach(d => S.claves[d.id] = d.data()); if (S.nom && S.pant === 1 && S.sub1 === 'config') render(); }, () => {});
@@ -401,6 +401,7 @@ function vMiMes() {
   if (S.mes === MES_HOY && faltanSem && dow >= 4) h += '<div class="aviso wa"><span class="i">⏰</span><div><b>Te faltan ' + faltanSem + ' preventivo' + (faltanSem > 1 ? 's' : '') + ' de esta semana.</b> Termínalos antes del sábado; el sábado es para faltantes.</div></div>';
   if (venc) h += '<div class="aviso bad"><span class="i">⚠️</span><div><b>' + venc + ' preventivo' + (venc > 1 ? 's' : '') + ' vencido' + (venc > 1 ? 's' : '') + '.</b> La fecha programada no cambia; hazlos lo antes posible.</div></div>';
   h += perfilTec(T, I, p);
+  h += '<div class="caja" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;border-left:4px solid #1F6FD1"><button class="bt p" id="regRefac" style="font-size:16px">🔧 Registré un cambio de refacción</button><span class="peq mu" style="flex:1;min-width:180px">Anota la pieza que cambiaste (balero, filtro, banda, aceite…) y la máquina sabrá su próximo cambio.</span></div>';
   const sems = {}; T.forEach(t => { const l = iso(lunesDe(deIso(t.f))); (sems[l] = sems[l] || []).push(t); });
   h += '<div class="caja"><h2>🧰 Mis órdenes asignadas <span class="r">' + T.length + '</span></h2>';
   if (!T.length) h += '<div class="vacio"><span class="i">📭</span>No tienes preventivos asignados este mes.</div>';
@@ -413,6 +414,41 @@ function vMiMes() {
 document.addEventListener('click', async e => {
   const g = e.target.closest('[data-plangen]'); if (g) { S.verPlanGeneral = g.dataset.plangen === '1'; return render(); }
   const en = e.target.closest('[data-enterado]'); if (en) { const m = ((S.avisos[S.nom] || {}).m || []).slice(); m.splice(Number(en.dataset.enterado), 1); await DB.doc('avisos/' + S.nom).set({ m }); }
+});
+// ---- REGISTRO DE CAMBIOS DE REFACCIÓN (alimenta "Vida por máquina" en Parámetros) ----
+async function guardarCambio(eq, d) {
+  const pieza = (d.pieza || '').trim(); if (!eq || !pieza) { toast('Falta la máquina o la refacción.'); return; }
+  const f = d.f || HOY, key = 'reg:' + kEq(pieza), eqk = kEq(eq);
+  const evento = { f, ref: (d.ref || '').trim(), horas: Number(d.horas) || 0, por: (d.por || yoP().n || '') };
+  const cur = (S.param.cambios || {})[eqk] || {}, prev = cur[key] || {};
+  const nuevoEq = Object.assign({}, cur, { [key]: { nom: pieza, cambios: (prev.cambios || []).concat([evento]).sort((a, b) => (a.f || '').localeCompare(b.f || '')) } });
+  await upd('param/cambios', { [eqk]: nuevoEq });
+  let dias = 0; if ((d.vida || '').toString().trim()) { dias = Number(String(d.vida).replace(/[^\d.]/g, '')); if (/h/i.test(d.vida)) dias = Math.round(dias / (8 * 6 / 7)); }
+  if (dias) { const cv = (S.param.vidas || {})[eqk] || {}; await upd('param/vidas', { [eqk]: Object.assign({}, cv, { [key]: { dias, t: new Date().toISOString(), por: yoP().n } }) }); }
+  toast('✅ Cambio registrado: ' + pieza + ' · ' + eq + '. Lo ve el jefe en Parámetros → Vida por máquina.');
+}
+const CAMPOS_CAMBIO = [
+  { k: 'pieza', l: '¿Qué refacción se cambió?', placeholder: 'ej. balero husillo, filtro de aire, banda, aceite' },
+  { k: 'f', l: '¿Qué día se cambió?', tipo: 'fecha', valor: HOY },
+  { k: 'ref', l: 'Número o marca (si aplica)', placeholder: 'ej. SKF 6205-2RS' },
+  { k: 'horas', l: 'Horómetro / horas de la máquina (si aplica)', tipo: 'numero' },
+  { k: 'vida', l: '¿Cada cuánto se cambia? (opcional: días u horas)', placeholder: 'ej. 180 días o 4000h' }
+];
+// técnico: desde "Mi mes", elige entre sus máquinas asignadas
+document.addEventListener('click', async e => {
+  if (!e.target.closest('#regRefac')) return;
+  const p = yoP(), tec = p.tec, T = tareasMes(S.mes).filter(t => t.tec === tec);
+  const eqs = [...new Set(T.map(t => t.eq))].sort();
+  if (!eqs.length) return toast('No tienes máquinas asignadas este mes.');
+  const r = await formApp({ titulo: '🔧 Registré un cambio de refacción', icono: '🔧', si: 'Guardar', campos: [{ k: 'eq', l: '¿En qué máquina?', opciones: eqs.map(x => [x, x]) }].concat(CAMPOS_CAMBIO) });
+  if (r) await guardarCambio(r.eq, r);
+});
+// jefe / supervisor / gerencia (Omar, Jasso, Adrián): registro manual por máquina en Parámetros, cuando el técnico no lo anotó
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-regmaq]'); if (!b) return;
+  const eq = b.dataset.regmaq, tecs = [...new Set(Object.values(S.pers).filter(p => p.tec).map(p => p.tec))].sort();
+  const r = await formApp({ titulo: '➕ Registrar cambio de refacción', texto: eq, icono: '🛠️', si: 'Guardar', campos: [CAMPOS_CAMBIO[0], CAMPOS_CAMBIO[1], { k: 'por', l: '¿Quién lo hizo? (opcional)', opciones: [['', '—']].concat(tecs.map(t => [t, t])) }, CAMPOS_CAMBIO[2], CAMPOS_CAMBIO[3], CAMPOS_CAMBIO[4]] });
+  if (r) await guardarCambio(eq, r);
 });
 
 // ============================================================ PANTALLA 3 · HOJAS (biblioteca y llenado)
@@ -1711,8 +1747,12 @@ function compsDeMaquina(eq) {
   const words = norm(eq).split(/[\s·]+/).filter(w => w.length > 3 && !/^\d+$/.test(w));
   Object.values(S.ords).forEach(o => { if (!o.fin) return; const tt = buscarTarea(o.k); if (!tt || tt.eq !== eq) return; (o.hall || []).filter(x => /cambi/i.test(x.t) && (x.ref || x.d)).forEach(x => { const nom = (x.ref || x.d).trim(); const c = add('h:' + kEq(nom), nom, 'Hojas de preventivo'); c.cambios.push({ f: o.fin.slice(0, 10), nota: x.d, q: x.q, costo: Number(x.costo) || 0, tec: tt.tec, fotos: (x.fotos || []).length }); }); });
   Object.entries(S.param.baleros || {}).forEach(([id, b]) => { if (!b.eq || !(norm(eq).includes(norm(b.eq)) || norm(b.eq).includes(norm(eq)))) return; const c = add('b:' + id, 'Balero ' + (b.pos || '') + (b.ref ? ' · ' + b.ref : ''), 'Baleros'); (b.hist || []).forEach(h => c.cambios.push({ f: h.f, nota: h.nota, costo: h.costo })); if (b.inst && !c.cambios.some(x => x.f === b.inst)) c.cambios.push({ f: b.inst, nota: 'Instalado' }); const hd = (Number(b.hDia) || 8) * 6 / 7; if (b.vidaH) { c.vidaBase = Math.round(b.vidaH / hd); c.unidad = Number(b.vidaH).toLocaleString('es-MX') + ' h del proveedor'; } });
-  // v15 (18-nov-2026): la vida sale SOLO de lo que registra el técnico (cambios anotados en las hojas y baleros instalados).
-  // Se retiraron las fuentes de COMPRAS (PM_REFAC) y las salidas de Almacén por petición del Ing. Omar (confía en el dato del técnico).
+  // registro directo (botón "Registré un cambio" del técnico en Mi mes, o el manual del jefe/supervisor en Parámetros)
+  const reg = (S.param.cambios || {})[kEq(eq)] || {};
+  Object.entries(reg).forEach(([key, r]) => { if (!r || !(r.cambios || []).length) return; const c = add(key, r.nom || key, 'Registro'); r.cambios.forEach(h => c.cambios.push({ f: h.f, nota: [h.ref, h.horas ? h.horas + ' h' : ''].filter(Boolean).join(' · '), costo: 0, tec: h.por })); });
+  // cambios de refacción registrados en Control de Paros (al resolver la falla); se liga por nombre de máquina
+  (window.PAROS_REFAC || []).forEach(p => { if (!p.maqN || !p.refac || !p.f) return; if (!(norm(eq).includes(norm(p.maqN)) || norm(p.maqN).includes(norm(eq)))) return; const c = add('p:' + kEq(p.refac), p.refac, 'Control de Paros'); c.cambios.push({ f: p.f, nota: p.refac, costo: 0, tec: p.tec }); });
+  // v15 (18-nov-2026): la vida sale SOLO de dato real (hojas, baleros, registro directo y Control de Paros). Sin COMPRAS (PM_REFAC) ni salidas de Almacén. Petición del Ing. Omar.
   const vidas = (S.param.vidas || {})[kEq(eq)] || {};
   return Object.values(C).map(c => {
     c.cambios = c.cambios.filter(z => z.f).sort((a, b) => a.f.localeCompare(b.f));
@@ -1762,7 +1802,7 @@ function pVida() {
   h += '<div class="vida-grid"><div class="vida-lista">' + maqs.filter(m => !S.vBusca || norm(m.eq).includes(norm(S.vBusca))).map(m => { const p = m.peor, col = p ? colVida(p.usado) : '#3A4B5E';
     return '<button class="vm' + (sel && m.eq === sel.eq ? ' sel' : '') + (m.C.length || m.lect.length ? '' : ' sin') + '" data-maqp="' + esc(m.eq) + '"><span class="dmini">' + dibujo(m) + '</span><span class="vm-t"><b>' + esc(m.eq) + '</b><small>' + (m.C.length ? m.C.length + ' refacción(es)' + (p && p.falta != null ? ' · ' + (p.falta < 0 ? 'vencida ' + (-p.falta) + ' d' : 'próx. ' + p.falta + ' d') : '') : m.lect.length ? m.lect.length + ' lectura(s)' : 'sin historial') + '</small></span><span class="vm-s" style="background:' + col + '"></span></button>'; }).join('') + '</div>';
   if (sel) {
-    h += '<div class="vida-det"><div class="vd-top"><span class="dmini" style="width:64px;height:54px">' + dibujo(sel) + '</span><div><h3>' + esc(sel.eq) + '</h3><small>' + esc((CAT[sel.cat] || [sel.cat])[0]) + '</small></div></div>';
+    h += '<div class="vida-det"><div class="vd-top" style="display:flex;align-items:center;gap:10px"><span class="dmini" style="width:64px;height:54px">' + dibujo(sel) + '</span><div><h3>' + esc(sel.eq) + '</h3><small>' + esc((CAT[sel.cat] || [sel.cat])[0]) + '</small></div>' + (califica() ? '<button class="bt s p" data-regmaq="' + esc(sel.eq) + '" style="margin-left:auto">➕ Registrar cambio</button>' : '') + '</div>';
     if (!sel.C.length) h += '<p class="dvacio">Esta máquina todavía no tiene refacciones cambiadas registradas. Se llenan solas cuando el técnico anota "Se cambió refacción" en su hoja, o al registrar un balero.</p>';
     sel.C.forEach(c => {
       const u = c.usado, col = colVida(u);
@@ -2038,6 +2078,8 @@ function cargarAlmacen() {
     const fs = firebase.firestore();
     fs.collection('apps/almacen/catalogo').onSnapshot(q => { const items = {}; q.docs.forEach(d => { const its = (d.data() || {}).items || {}; for (const k in its) items[d.id + '/' + k] = Object.assign({}, its[k], { k, doc: d.id }); }); ALM.items = items; ALM.ok = true; ALM.err = ''; pasarS(); almRefrescar(); }, e => { ALM.err = e.code || e.message; S.alm = null; almRefrescar(); });
     fs.collection('apps/almacen/movimientos').orderBy('t', 'desc').limit(1500).onSnapshot(q => { ALM.movs = q.docs.map(d => Object.assign({ id: d.id }, d.data())); almRefrescar(); }, () => {});
+    // Control de Paros: cambios de refacción anotados al resolver una falla → entran a la vida de piezas en Parámetros
+    fs.collection('apps/paros/eventos').orderBy('t0', 'desc').limit(800).onSnapshot(q => { window.PAROS_REFAC = q.docs.map(d => d.data()).filter(e => e && e.refac && (e.maqN || e.maq)).map(e => ({ maqN: e.maqN || e.maq, refac: String(e.refac).trim(), f: String(e.tLib || e.t0 || '').slice(0, 10), tec: (e.tecRep && e.tecRep.n) || (e.tec && e.tec.n) || '' })).filter(e => e.f && e.refac); if (S.nom && S.pant === 4) render(); }, () => {});
   } catch (e) { ALM.err = e.message; S.alm = null; }
 }
 function almDemo() {
