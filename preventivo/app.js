@@ -478,7 +478,7 @@ function vLlenar() {
     '<table class="xlh"><tr><td><small>NOMBRE DEL TÉCNICO</small>' + esc(nombreTec(t.tec)) + '</td><td><small>FRECUENCIA</small>' + esc((FR[fr] || fr).toUpperCase()) + (aprox ? ' <span class="chip wa">plan: ' + esc(FR[t.fr] || t.fr) + '</span>' : '') + '</td><td><small>PLANTA</small>LÍNEA ITALIA</td></tr>' +
     '<tr><td><small>FECHA PROGRAMADA</small>' + fLarga(t.f) + '</td><td><small>HORA DE INICIO</small>' + (o.ini ? fechaHora(o.ini) : '—') + '</td><td><small>HORA DE TERMINACIÓN</small>' + (o.fin ? fechaHora(o.fin) : (o.ini ? '<span class="reloj" id="reloj">—</span>' : '—')) + '</td></tr>' +
     '<tr><td colspan="2"><small>EQUIPO</small><span class="fila" style="gap:8px"><span style="width:54px;height:44px;display:inline-grid;place-items:center">' + dibujo(t) + '</span><b>' + esc(t.eq) + '</b></span></td><td><small>CATEGORÍA</small>' + esc((CAT[t.cat] || [t.cat])[0]) + '</td></tr>' + celdasPlaca(t, !editable) + '</table>' +
-    '<div class="loto">🦺 <b>ANTES DE INICIAR: BLOQUEO Y ETIQUETADO (LOTO)</b> de energía eléctrica, aire y partes en movimiento; EPP completo.</div>' +
+    '<div class="loto">🦺 <b>ANTES DE INICIAR: BLOQUEO Y ETIQUETADO (LOTO)</b> de energía eléctrica, aire y partes en movimiento; EPP completo.</div>' + btnPedir(t, o) +
     (alertas.length ? '<div class="fila" style="margin-top:8px">' + alertas.map(a => '<span class="chip ' + a.cls + '">' + esc(a.txt) + '</span>').join('') + '</div>' : '') +
     (editable && !o.ini ? '<div class="aviso inf" style="margin:12px 0 0"><span class="i">▶️</span><div style="flex:1"><b>Toca "Iniciar" cuando empieces.</b> Se guarda la hora de inicio y el tiempo real.</div><button class="bt p" data-iniciar>▶ Iniciar</button></div>' : '') + '</div>';
   if (!fmt) h += '<div class="aviso bad"><span class="i">⚠️</span><div>Este equipo no tiene hoja de instrucciones asignada. El jefe la asigna en Configuración → Hojas por equipo.</div></div>';
@@ -2061,6 +2061,9 @@ function coincideMaq(txt, t) {
   if (ws.some(w => m.includes(w))) return true;
   const full = norm(t.eq + ' ' + (e.corto || '')); return m.split(/[^a-z0-9]+/).filter(w => w.length > 3).some(w => full.includes(w));
 }
+// 📋 pedir material (como en Control de Paros): técnico asignado, supervisor o administradores, mientras el preventivo siga abierto (antes o después de Iniciar)
+const puedePedir = (t, o) => (t.tec === tecDe(S.nom) || otorga() || !!yoP().califica) && !o.fin && !['terminada', 'calificada'].includes(o.estado) && o.cal == null;
+const btnPedir = (t, o) => puedePedir(t, o) ? '<div class="pedmat"><button class="bt p" data-pedmat>📋 Pedir material al almacén</button><span class="peq mu">Agrega las piezas que necesita este preventivo: búscalas por <b>máquina</b>, <b>nombre</b>, <b>código del almacén</b> o <b>modelo</b> (también silicón, cinta…). Te da un código PV-0000 para recogerlas en el almacén.</span></div>' : '';
 function almPuede(t, o) { return t.tec === tecDe(S.nom) && !!o.ini && !o.fin && !['terminada', 'calificada'].includes(o.estado) && o.cal == null; }
 function filaAlm(id, it, puede) {
   const [cl, tx] = estAlm(it);
@@ -2068,9 +2071,9 @@ function filaAlm(id, it, puede) {
 }
 function almCaja(t, o, puede) {
   let h = '<div class="caja"><h2>📦 Refacciones del Almacén <span class="r">' + (ALM.ok ? '<span class="chip ok">en línea</span>' : '') + '</span></h2>';
+  h += btnPedir(t, o);
   if (ALM.err) return h + '<div class="aviso inf"><span class="i">📦</span><div>No se pudo leer el Almacén LI (' + esc(ALM.err) + '). Tu nómina debe estar dada de alta en el Almacén para ver existencias (el material se pide con 📋 Pedir material).</div></div></div>';
   if (!ALM.ok) return h + '<p class="peq mu">Conectando con el Almacén…</p></div>';
-  if (o.ini && t.tec === tecDe(S.nom)) h += '<div class="fila" style="margin:-4px 0 12px"><button class="bt p" data-pedmat>📋 Pedir material al almacén (genera código)</button><span class="peq mu">Arma la lista de lo que necesitas (refacciones, silicón, cinta…) y te da un código PV-0000 para recogerlo en el almacén.</span></div>';
   const usadas = o.alm || [];
   if (usadas.length) h += '<p class="peq" style="margin:0 0 6px"><b>Usadas en este preventivo</b> (salida ya registrada en el Almacén):</p><table class="tbl"><tr><th>Código</th><th>Descripción</th><th class="n">Cant.</th><th class="n">Costo</th><th>Hora</th></tr>' +
     usadas.map(u => '<tr><td>' + esc(u.c) + '</td><td>' + esc(u.n) + '</td><td class="n">' + u.q + '</td><td class="n">' + dineroA(u.q * (u.cu || 0)) + '</td><td>' + fechaHora(u.t) + '</td></tr>').join('') + '</table>';
