@@ -880,8 +880,13 @@ const lunes = d => { const x = new Date(d); x.setHours(0, 0, 0, 0); const w = (x
 const isoD = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 // regla del nocturno (igual que Control de Paros): de 1:40 a 7:30 no hay personal, ese lapso no suma horas de paro
 let TURNOS = [];   // apps/paros/config/turnos · cambios con fecha (tercer turno activo = esa noche sí suma)
-const tercerEnO = ts => { let v = false; for (const c of TURNOS) { if (+new Date(c.t) <= ts) v = !!c.tercer; else break; } return v; };
-function minNocheO(A, B) { A = +A; B = +B; if (!(B > A)) return 0; let s = 0; const d = new Date(A); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - 1); for (let i = 0; +d < B && i < 4000; i++, d.setDate(d.getDate() + 1)) { const x = +new Date(d.getFullYear(), d.getMonth(), d.getDate(), 1, 40), z = +new Date(d.getFullYear(), d.getMonth(), d.getDate(), 7, 30); if (tercerEnO(x)) continue; s += Math.max(0, Math.min(B, z) - Math.max(A, x)); } return s; }
+// misma regla que Control de Paros: noche 1:40–7:30 y fin de semana (sábado 1:40 a lunes 7:30) no suman; casillas tercer turno / fin de semana
+const estadoEnO = (ts, k) => { let v = false; for (const c of TURNOS) { if (+new Date(c.t) > ts) break; if (k in c) v = !!c[k]; } return v; };
+function franjasDiaO(d) { const y = d.getFullYear(), m = d.getMonth(), da = d.getDate(), H = (h, mi) => +new Date(y, m, da, h, mi), dow = d.getDay(), fin = +new Date(y, m, da + 1);
+  const ini = H(1, 40), reg = H(7, 30), tercer = estadoEnO(ini, 'tercer'), finde = estadoEnO(H(12, 0), 'finde');
+  if (!finde && dow === 6) return [[tercer ? reg : ini, fin]]; if (!finde && dow === 0) return [[H(0, 0), fin]]; if (!estadoEnO(H(0, 0) - 36e5, 'finde') && dow === 1) return [[H(0, 0), reg]];
+  return tercer ? [] : [[ini, reg]]; }
+function minNocheO(A, B) { A = +A; B = +B; if (!(B > A)) return 0; let s = 0; const d = new Date(A); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - 1); for (let i = 0; +d < B && i < 4000; i++, d.setDate(d.getDate() + 1)) franjasDiaO(d).forEach(([x, z]) => { s += Math.max(0, Math.min(B, z) - Math.max(A, x)); }); return s; }
 async function cargarCorr(k, forzar) {
   if (typeof firebase === 'undefined' || !cargado) return; const c = CORR[k];
   if (c && (c.busy || (!forzar && Date.now() - c.t < 5 * 60000))) return;
