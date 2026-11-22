@@ -1154,5 +1154,85 @@ render = function () { _renderV6.apply(this, arguments); if (tab === 'herr') ren
   if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(function () {});
 })();
 </script><script src="../lib/dialogo-app.js?v=3"></script><script>window.alert = function (m) { if (window.avisoApp) avisoApp({ texto: String(m) }); };</script>
+<style id="skin-paros">
+/* ===================== SKIN CONTROL DE PAROS · v1 (colores, fuentes, animaciones) ===================== */
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600;700&display=swap');
+:root{
+  --navy:#1E4A2A; --verde:#2E7D32; --verde2:#DDEFDF; --ambar:#C99700; --rojo:#C62828; --azul:#1E7FA8;
+  --gris:#4F5A54; --linea:#C9D2CC; --fondo:#EEF2EF; --tx:#1C2620; --card:#FFFFFF;
+  --glow1:#3FC1C9; --glow2:#F5A623;
+  --sombra:0 1px 2px rgba(20,40,25,.08),0 8px 22px rgba(20,40,25,.08);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --navy:#16301E; --verde:#5DBB63; --verde2:#1C3420; --ambar:#E8B935; --rojo:#F06A5E; --azul:#4FB3D9;
+  --gris:#A3B0A8; --linea:#2E3A33; --fondo:#171C19; --tx:#E6ECE8; --card:#1C211E; --sombra:none; }}
+:root[data-theme="dark"]{
+  --navy:#16301E; --verde:#5DBB63; --verde2:#1C3420; --ambar:#E8B935; --rojo:#F06A5E; --azul:#4FB3D9;
+  --gris:#A3B0A8; --linea:#2E3A33; --fondo:#171C19; --tx:#E6ECE8; --card:#1C211E; --sombra:none; }
+body{font-family:'IBM Plex Sans',system-ui,'Segoe UI',Arial,sans-serif}
+
+/* animaciones */
+@keyframes mChispa{0%{transform:translateX(-28%)}100%{transform:translateX(28%)}}
+@keyframes mFlota{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+@keyframes mSube{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+/* header: hero verde con línea animada */
+header{background:linear-gradient(120deg,color-mix(in srgb,var(--navy) 80%,#000),var(--navy) 55%,color-mix(in srgb,var(--navy) 68%,var(--verde)));position:relative;overflow:hidden}
+header::after{content:"";position:absolute;left:-10%;right:-10%;bottom:0;height:3px;background:linear-gradient(90deg,transparent,var(--glow1),var(--glow2),transparent);animation:mChispa 4.5s linear infinite;pointer-events:none}
+
+/* nav tipo pestañas modernas */
+nav{border-bottom:2px solid color-mix(in srgb,var(--verde) 45%,var(--linea))}
+nav button{border-radius:12px 12px 0 0;font-weight:600;transition:background .18s,color .18s,transform .12s}
+nav button:hover{background:var(--verde2);color:var(--verde);transform:translateY(-1px)}
+nav button.on{background:linear-gradient(135deg,var(--verde),color-mix(in srgb,var(--verde) 68%,var(--glow1)));color:#fff;box-shadow:0 4px 12px color-mix(in srgb,var(--verde) 35%,transparent)}
+
+/* botones animados */
+button{border-radius:10px;transition:transform .12s,box-shadow .18s,filter .18s}
+button:hover{transform:translateY(-1px)}
+button:active{transform:translateY(0) scale(.97)}
+.b-verde{background:linear-gradient(135deg,var(--verde),color-mix(in srgb,var(--verde) 70%,var(--glow1)));color:#fff;box-shadow:0 4px 12px color-mix(in srgb,var(--verde) 35%,transparent)}
+.b-verde:hover{box-shadow:0 7px 18px color-mix(in srgb,var(--verde) 42%,transparent)}
+.b-rojo{background:linear-gradient(135deg,var(--rojo),color-mix(in srgb,var(--rojo) 80%,#000));color:#fff}
+
+/* tarjetas del organigrama */
+.card,.chip{border-radius:14px;box-shadow:var(--sombra);transition:transform .18s,box-shadow .18s}
+.card:hover{transform:translateY(-2px);box-shadow:0 10px 26px rgba(20,40,25,.14)}
+
+/* ===== INVENTARIO · tema Paros (reemplaza los colores oscuros fijos) ===== */
+.hk div{background:var(--card);border:1px solid var(--linea);border-left:5px solid var(--c,var(--verde));border-radius:14px;box-shadow:var(--sombra)}
+.hk b{color:var(--tx)} .hk span{color:var(--gris)}
+.tecs button{background:var(--card);color:var(--gris);border:1px solid var(--linea);border-radius:999px;transition:all .15s}
+.tecs button:hover{border-color:var(--verde);color:var(--verde)}
+.tecs button.on{background:linear-gradient(135deg,var(--verde),color-mix(in srgb,var(--verde) 68%,var(--glow1)));color:#fff;border-color:transparent;box-shadow:0 4px 12px color-mix(in srgb,var(--verde) 32%,transparent)}
+.hg{gap:12px}
+.hc{background:var(--card);border:1px solid var(--linea);border-radius:16px;box-shadow:var(--sombra);color:var(--tx);transition:transform .18s,box-shadow .18s;animation:mSube .4s both}
+.hc:hover{transform:translateY(-3px);box-shadow:0 12px 28px rgba(20,40,25,.16)}
+.hc .ft{height:150px;background:var(--verde2) center/cover no-repeat;color:var(--verde);font-size:42px}
+.hc .ft:not([style]){animation:mFlota 4s ease-in-out infinite}
+.hc .bd{color:var(--gris)} .hc .bd b{color:var(--tx)} .hc .bd .pr{color:var(--ambar)}
+.hc .inv button{background:var(--fondo);color:var(--gris);border:1px solid var(--linea);border-radius:9px;transition:all .14s}
+.hform{background:var(--card);border:1px solid var(--linea);border-radius:16px;box-shadow:var(--sombra);padding:14px;gap:10px}
+.hform label{color:var(--gris);font-weight:600}
+.hform input{padding:9px 10px;border:1px solid var(--linea);border-radius:9px;background:var(--fondo);color:var(--tx);transition:border-color .15s,box-shadow .15s}
+.hform input:focus{outline:0;border-color:var(--verde);box-shadow:0 0 0 3px color-mix(in srgb,var(--verde) 22%,transparent)}
+.aviso-h.wa{background:color-mix(in srgb,var(--ambar) 14%,var(--card));border:1px solid var(--ambar);color:var(--tx)}
+.aviso-h.ok{background:color-mix(in srgb,var(--verde) 13%,var(--card));border:1px solid var(--verde);color:var(--tx)}
+.aviso-h.bad{background:color-mix(in srgb,var(--rojo) 14%,var(--card));border:1px solid var(--rojo);color:var(--tx)}
+
+/* "➕ Registrar herramienta" / "➕ Nuevo proyecto" como botón grande y claro */
+#s-herr details>summary,#s-proy details>summary{list-style:none;display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,var(--verde),color-mix(in srgb,var(--verde) 68%,var(--glow1)));color:#fff!important;padding:11px 20px;border-radius:12px;box-shadow:0 4px 12px color-mix(in srgb,var(--verde) 32%,transparent);cursor:pointer;font-size:14.5px;transition:transform .12s,box-shadow .18s}
+#s-herr details>summary::-webkit-details-marker,#s-proy details>summary::-webkit-details-marker{display:none}
+#s-herr details>summary:hover,#s-proy details>summary:hover{transform:translateY(-1px);box-shadow:0 7px 18px color-mix(in srgb,var(--verde) 40%,transparent)}
+#s-herr details[open]>summary,#s-proy details[open]>summary{border-radius:12px 12px 0 0}
+
+/* Nuevos proyectos (pp/pc/per) al tema claro de Paros */
+.pp .per,.pc{background:var(--card);border:1px solid var(--linea);color:var(--tx);box-shadow:var(--sombra);border-radius:16px}
+.pp .per b.n,.pc .h b{color:var(--tx)} .pp .per span.p,.pc .g{color:var(--gris)}
+.pp .tl li{color:var(--tx);border-top-color:var(--linea)} .pp .tl li small{color:var(--gris)}
+.pc select,.pc input,.pc textarea,.pc .tk .add input{background:var(--fondo);color:var(--tx);border:1px solid var(--linea)}
+.pc .tk{border-top-color:var(--linea)} .pc .tk h4{color:var(--verde)}
+.pc .av .bar{background:var(--verde2)} .pc .av .bar i{background:var(--verde)}
+.bdg{box-shadow:var(--sombra)}
+</style>
 </body>
 </html>
