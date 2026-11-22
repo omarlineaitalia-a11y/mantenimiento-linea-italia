@@ -246,15 +246,22 @@ td select{padding:4px;border:1px solid var(--linea);border-radius:5px;background
   <h2 class="noprint">Nuevos proyectos</h2>
   <p class="sub">Proyectos a cargo de <b>Humberto Rubalcaba y su auxiliar Antonio Marín</b>, cada uno con <b>fecha compromiso</b> y una reseña de cómo será un beneficio para la empresa. Se ordenan por fecha compromiso; el seguimiento marca en rojo los vencidos y en ámbar los que vencen en 7 días.</p>
   <div class="chips" id="proyRes"></div>
-  <div class="form noprint">
-   <label class="ancho">Proyecto / tarea<input id="yTit" placeholder="Ej. Tanque pulmón 3000 L para compresores"></label>
-   <label>Responsable<select id="yResp"></select></label>
-   <label>Auxiliar<select id="yApo"></select></label>
-   <label>Fecha de inicio<input type="date" id="yIni"></label>
-   <label>Fecha compromiso<input type="date" id="yFin"></label>
-   <label>Prioridad<select id="yPri"><option>Alta</option><option selected>Media</option><option>Baja</option></select></label>
-   <label class="ancho" style="grid-column:1/-1">Beneficio para la empresa (reseña)<textarea id="yBen" rows="2" style="padding:7px;border:1px solid var(--linea);border-radius:5px;background:var(--card);color:var(--tx)" placeholder="Ej. Evita paros por caída de presión, ahorra energía y protege los compresores"></textarea></label>
-   <label>&nbsp;<button class="b-verde" id="bAddProy">Agregar proyecto</button></label>
+  <div class="form formNP noprint">
+   <label class="ancho" style="grid-column:1/-1">🏗️ ¿Qué proyecto o mejora vas a registrar?<input id="yTit" placeholder="Ej. Tanque pulmón 3000 L para compresores"></label>
+   <label>👷 Responsable<select id="yResp"></select></label>
+   <label>🤝 Auxiliar<select id="yApo"></select></label>
+   <label>📅 Inicio<input type="date" id="yIni"></label>
+   <label>🏁 Fecha compromiso<input type="date" id="yFin"></label>
+   <label style="grid-column:1/-1">🚦 Prioridad
+    <div class="priseg" id="yPriSeg">
+     <button type="button" data-pri="Alta" class="pa">🔴 Alta</button>
+     <button type="button" data-pri="Media" class="pm on">🟡 Media</button>
+     <button type="button" data-pri="Baja" class="pb">🟢 Baja</button>
+    </div>
+    <select id="yPri" hidden><option>Alta</option><option selected>Media</option><option>Baja</option></select>
+   </label>
+   <label class="ancho" style="grid-column:1/-1">💡 ¿En qué beneficia a la empresa?<textarea id="yBen" rows="2" placeholder="Ej. Evita paros por caída de presión, ahorra energía y protege los compresores"></textarea></label>
+   <button class="b-verde big" id="bAddProy" style="grid-column:1/-1">✔ Agregar proyecto</button>
   </div>
   <div class="tw"><table id="tProy"></table></div>
  </section>
@@ -729,32 +736,24 @@ render();
 cargarNube();
 </script>
 <style>
-/* ===== v2 · cara de tablero (como Mantenimiento Preventivo) · solo en pantalla; lo impreso sigue en blanco ===== */
+/* ===== v3 · tablero CLARO estilo Preventivo (solo pantalla; lo impreso sigue en blanco) ===== */
 @media screen{
-:root,:root[data-theme="light"],:root[data-theme="dark"]{--navy:#0E2A47;--fondo:transparent;--card:rgba(19,28,39,.88);--tx:#E6EDF5;--gris:#8FA3B8;--linea:#243244;--verde2:#12321F}
-html{background:#0B1118}body{background:transparent!important;color:#E6EDF5}
-header{background:linear-gradient(120deg,rgba(11,26,51,.95),rgba(20,40,75,.92) 60%,rgba(31,61,110,.9))!important;border-bottom:3px solid #F5A623}
-nav{background:rgba(11,17,24,.82)!important;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border-bottom:2px solid #2ECC71!important}
-nav button{color:#9FB3C8!important}nav button.on{background:#2F78C4!important;color:#fff!important}
-main,.wrap,section.on{position:relative}
-table{background:rgba(19,28,39,.9)}td,th{border-color:#243244!important}
-th{background:#16304F!important;color:#fff!important}
-tr.tot td{background:rgba(22,48,79,.6)!important;color:#fff}
-input,select,textarea{background:#131C27!important;color:#E6EDF5!important;border-color:#2C3B4F!important}
-.gc{background:#F4F7FA!important;color:#14212E!important;border-radius:14px}.gc h3{color:#14284B!important}
-.card{background:rgba(19,28,39,.92)!important;color:#E6EDF5}.card .ar{background:#12321F!important;color:#7CE0A4!important}
-.chip{background:rgba(19,28,39,.9)!important;color:#E6EDF5}
-.b-gris{background:#243244!important;color:#E6EDF5!important}.b-blanco{background:#fff!important;color:#0E2A47!important}
-#fondoOrg{position:fixed;inset:0;z-index:-1;pointer-events:none}#fondoOrg svg{width:100%;height:100%}
-#fondoOrg .velo{position:absolute;inset:0;background:linear-gradient(180deg,rgba(11,17,24,.25),rgba(11,17,24,.5) 55%,rgba(11,17,24,.75))}
+  main,.wrap,section.on{position:relative}
+  table{background:var(--card)}td,th{border-color:var(--linea)!important}
+  th{background:var(--navy)!important;color:#fff!important}
+  tr.tot td{background:var(--verde2)!important;color:var(--navy)!important;font-weight:700}
+  input,select,textarea{background:#fff!important;color:var(--tx)!important;border:1px solid var(--linea)!important;border-radius:10px}
+  .gc{background:var(--card)!important;color:var(--tx)!important;border-radius:14px}.gc h3{color:var(--navy)!important}
+  .card .ar{background:var(--verde2)!important;color:var(--azul)!important}
+  #fondoOrg{display:none!important}
 }
 @media print{#fondoOrg,.donas,#parosAuto{display:none!important}}
 .donas{display:flex;flex-wrap:wrap;gap:12px;align-items:stretch;margin:4px 0 14px}
-.donas .dg{display:flex;align-items:center;gap:14px;background:rgba(15,22,32,.85);border:1px solid #243244;border-radius:16px;padding:12px 16px}
-.donas .dg b{display:block;color:#fff;font-size:15px}.donas .dg span{color:#8FA3B8;font-size:12px}
-.donas .dt{display:flex;flex-direction:column;align-items:center;gap:4px;background:rgba(15,22,32,.85);border:1px solid #243244;border-radius:14px;padding:10px 8px;width:112px;text-align:center}
-.donas .dt b{color:#E6EDF5;font-size:12px;line-height:1.2}.donas .dt span{font-size:11px;font-weight:bold}
-#parosAuto{margin:6px 0 10px;padding:9px 12px;border-radius:10px;background:rgba(47,120,196,.16);border:1px solid #2F78C4;color:#CFE3F8;font-size:13px}
+.donas .dg{display:flex;align-items:center;gap:14px;background:var(--card);border:1px solid var(--linea);border-radius:16px;padding:12px 16px;box-shadow:var(--sombra)}
+.donas .dg b{display:block;color:var(--tx);font-size:15px}.donas .dg span{color:var(--gris);font-size:12px}
+.donas .dt{display:flex;flex-direction:column;align-items:center;gap:4px;background:var(--card);border:1px solid var(--linea);border-radius:14px;padding:10px 8px;width:112px;text-align:center;box-shadow:var(--sombra)}
+.donas .dt b{color:var(--tx);font-size:12px;line-height:1.2}.donas .dt span{font-size:11px;font-weight:bold}
+#parosAuto{margin:6px 0 10px;padding:9px 12px;border-radius:10px;background:var(--verde2);border:1px solid var(--azul);color:var(--navy);font-size:13px}
 </style>
 <script>
 /* ===== v2 · Organigrama enlazado: paros automáticos desde Control de Paros + desglose + gráficas circulares + fondo ===== */
@@ -856,14 +855,14 @@ areaDe = function (p) {
   return _areaBase(p);
 };
 </script><style>
-.corr{background:rgba(15,22,32,.88);border:1px solid #243244;border-radius:14px;padding:12px 14px;margin:6px 0 14px}
-.corr h3{margin:0 0 8px;color:#fff;font-size:15px}.corr .gr{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
-.corr .bx{background:rgba(22,33,46,.9);border-radius:12px;padding:10px 12px}.corr .bx b.t{display:block;color:#fff;margin-bottom:6px}
+.corr{background:var(--card);border:1px solid var(--linea);border-radius:14px;padding:12px 14px;margin:6px 0 14px;box-shadow:var(--sombra)}
+.corr h3{margin:0 0 8px;color:var(--navy);font-size:15px}.corr .gr{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.corr .bx{background:var(--fondo);border:1px solid var(--linea);border-radius:12px;padding:10px 12px}.corr .bx b.t{display:block;color:var(--navy);margin-bottom:6px}
 .corr table{width:100%;font-size:12.5px}.corr td,.corr th{padding:4px 6px!important}
 .corr .pt{font-weight:bold;border-radius:6px;padding:1px 7px}
-.corr .p100{background:#12321F;color:#7CE0A4}.corr .p75{background:#15304F;color:#9FD0FF}.corr .p50{background:#3A2E0E;color:#F2CF6B}.corr .p0{background:#3A1A1E;color:#FF9AA8}
-.corr .nota2{color:#8FA3B8;font-size:12px;margin-top:6px}
-@media print{.corr{display:none}}@media screen{tr.pend td{background:rgba(242,84,106,.2)!important;color:#FFD6DC!important}}
+.corr .p100{background:#E3F4EC;color:#14663F}.corr .p75{background:#E4EEFA;color:#174F96}.corr .p50{background:#FFF4D6;color:#7A5600}.corr .p0{background:#FDE7E7;color:#A52222}
+.corr .nota2{color:var(--gris);font-size:12px;margin-top:6px}
+@media print{.corr{display:none}}@media screen{tr.pend td{background:#FDE7E7!important;color:#A52222!important}}
 </style>
 <script>
 /* ===== v5 · CORRECTIVO por puesto (acuerdo con Ing. Omar, 15-nov-2026) =====
@@ -1002,6 +1001,7 @@ setInterval(() => { if (cargado) cargarCorr(mesKey(), true); }, 5 * 60000);
 /* ===================== v6 · NUEVOS PROYECTOS: tarjetas + tareas de los dos encargados ===================== */
 const _renderProyBase = renderProy;
 function avanceDe(x) { const T = (x.tareas || []); return T.length ? Math.round(T.filter(t => t.hecha).length / T.length * 100) : (+x.avance || 0); }
+function colAv(v) { v = +v || 0; return v >= 100 ? '#1E8E5A' : v >= 70 ? '#1F6FD1' : v >= 40 ? '#E0A100' : '#D32F2F'; }
 function fCortaO(d) { if (!d) return '—'; const [y, m, dd] = d.split('-'); return dd + '/' + m; }
 renderProy = function () {
   _renderProyBase.apply(this, arguments);   // chips, formulario y tabla original (la tabla se oculta en pantalla)
@@ -1023,7 +1023,7 @@ renderProy = function () {
       '<div class="g"><label>Responsable<select data-py="' + i + '" data-c="resp">' + optsPer(x.resp) + '</select></label><label>Auxiliar<select data-py="' + i + '" data-c="apo">' + optsPer(x.apo, true) + '</select></label>' +
       '<label>Inicio<input type="date" data-py="' + i + '" data-c="ini" value="' + esc(x.ini || '') + '"></label><label>Fecha compromiso<input type="date" data-py="' + i + '" data-c="fin" value="' + esc(x.fin || '') + '"></label>' +
       '<label>Prioridad<select data-py="' + i + '" data-c="pri">' + ['Alta', 'Media', 'Baja'].map(o => '<option' + (x.pri === o ? ' selected' : '') + '>' + o + '</option>').join('') + '</select></label><label>Estado<select data-py="' + i + '" data-c="estado">' + ESTADOS.map(e => '<option' + (x.estado === e ? ' selected' : '') + '>' + e + '</option>').join('') + '</select></label></div>' +
-      '<div class="av"><span style="font-size:12px;color:#8FA3B8">Avance</span><div class="bar"><i style="width:' + av + '%"></i></div><b>' + av + ' %</b>' + (T.length ? '<small style="color:#8FA3B8">por tareas</small>' : '<input type="number" min="0" max="100" step="5" data-py="' + i + '" data-c="avance" value="' + av + '" style="width:62px">') + '</div>' +
+      '<div class="avbig">' + donaO(av, 84, 11, colAv(av)) + '<div class="avm"><span class="avt">Avance del proyecto</span><div class="barbig"><i style="width:' + av + '%;background:linear-gradient(90deg,' + colAv(av) + ',' + colAv(av) + 'cc)"></i></div>' + (T.length ? '<small>✅ ' + T.filter(t => t.hecha).length + ' de ' + T.length + ' tareas hechas</small>' : '<div class="avedit"><input type="number" min="0" max="100" step="5" data-py="' + i + '" data-c="avance" value="' + av + '"> % (manual)</div>') + '</div></div>' +
       '<label style="font-size:12px;color:#8FA3B8">Beneficio para la empresa<textarea data-py="' + i + '" data-c="ben">' + esc(x.ben || '') + '</textarea></label>' +
       '<div class="tk"><h4>✅ Tareas (' + T.filter(t => t.hecha).length + ' de ' + T.length + ')</h4>' +
       T.map((t, j) => { const d = diasA(t.fecha), venc = !t.hecha && d != null && d < 0; return '<div class="r' + (t.hecha ? ' ok' : '') + '"><input type="checkbox" data-tk="' + i + '|' + j + '"' + (t.hecha ? ' checked' : '') + '><span' + (venc ? ' style="color:#FF9AA8"' : '') + '>' + esc(t.t) + (t.hecha && t.tHecha ? ' <small style="color:#6B7F94">· hecha ' + fCortaO(t.tHecha.slice(0, 10)) + '</small>' : '') + '</span><select data-tkr="' + i + '|' + j + '">' + optsPer(t.resp || x.resp) + '</select><input type="date" data-tkf="' + i + '|' + j + '" value="' + esc(t.fecha || '') + '"><button class="x noprint" data-tkd="' + i + '|' + j + '" title="Quitar">✕</button></div>'; }).join('') +
@@ -1158,33 +1158,46 @@ render = function () { _renderV6.apply(this, arguments); if (tab === 'herr') ren
 /* ===================== SKIN CONTROL DE PAROS · v1 (colores, fuentes, animaciones) ===================== */
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600;700&display=swap');
 :root{
-  --navy:#1E4A2A; --verde:#2E7D32; --verde2:#DDEFDF; --ambar:#C99700; --rojo:#C62828; --azul:#1E7FA8;
-  --gris:#4F5A54; --linea:#C9D2CC; --fondo:#EEF2EF; --tx:#1C2620; --card:#FFFFFF;
+  /* --verde = color PRIMARIO de la app; lo pongo AZUL (Paros) para que todo lo interactivo quede azul */
+  --navy:#0E2A47; --verde:#1F6FD1; --verde2:#E4EEFA; --ambar:#E0A100; --rojo:#D32F2F; --azul:#1F6FD1;
+  --gris:#5A6676; --linea:#D7DEE6; --fondo:#ECF0F4; --tx:#15233B; --card:#FFFFFF;
   --glow1:#3FC1C9; --glow2:#F5A623;
-  --sombra:0 1px 2px rgba(20,40,25,.08),0 8px 22px rgba(20,40,25,.08);
+  --sombra:0 1px 2px rgba(14,42,71,.07),0 8px 22px rgba(14,42,71,.10);
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --navy:#16301E; --verde:#5DBB63; --verde2:#1C3420; --ambar:#E8B935; --rojo:#F06A5E; --azul:#4FB3D9;
-  --gris:#A3B0A8; --linea:#2E3A33; --fondo:#171C19; --tx:#E6ECE8; --card:#1C211E; --sombra:none; }}
+  --navy:#0B2038; --verde:#4F93E6; --verde2:#132A44; --ambar:#E8B935; --rojo:#F0685E; --azul:#4F93E6;
+  --gris:#9FB0C4; --linea:#273548; --fondo:#0E1622; --tx:#E6EDF5; --card:#16202E; --sombra:none; }}
 :root[data-theme="dark"]{
-  --navy:#16301E; --verde:#5DBB63; --verde2:#1C3420; --ambar:#E8B935; --rojo:#F06A5E; --azul:#4FB3D9;
-  --gris:#A3B0A8; --linea:#2E3A33; --fondo:#171C19; --tx:#E6ECE8; --card:#1C211E; --sombra:none; }
-body{font-family:'IBM Plex Sans',system-ui,'Segoe UI',Arial,sans-serif}
+  --navy:#0B2038; --verde:#4F93E6; --verde2:#132A44; --ambar:#E8B935; --rojo:#F0685E; --azul:#4F93E6;
+  --gris:#9FB0C4; --linea:#273548; --fondo:#0E1622; --tx:#E6EDF5; --card:#16202E; --sombra:none; }
+body{font-family:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif}
+html,body{background:var(--fondo)!important;color:var(--tx)}
 
 /* animaciones */
 @keyframes mChispa{0%{transform:translateX(-28%)}100%{transform:translateX(28%)}}
 @keyframes mFlota{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
 @keyframes mSube{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 
-/* header: hero verde con línea animada */
-header{background:linear-gradient(120deg,color-mix(in srgb,var(--navy) 80%,#000),var(--navy) 55%,color-mix(in srgb,var(--navy) 68%,var(--verde)));position:relative;overflow:hidden}
+/* header: hero VERDE Paros con brillo y línea animada (vivo en claro y oscuro) */
+@keyframes mShine{0%,100%{transform:translateX(-60%)}50%{transform:translateX(60%)}}
+@keyframes mPulso{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--verde) 55%,transparent)}70%{box-shadow:0 0 0 9px transparent}100%{box-shadow:0 0 0 0 transparent}}
+@keyframes mLatido2{0%,100%{opacity:.45}50%{opacity:1}}
+header{background:linear-gradient(120deg,#0A2038,#0E2A47 52%,#1F6FD1)!important;color:#fff!important;position:relative;overflow:hidden}
+header h1,header p{color:#fff!important;position:relative;z-index:1}
+header::before{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 32%,rgba(255,255,255,.16) 48%,transparent 64%);transform:translateX(-60%);animation:mShine 5s ease-in-out infinite;pointer-events:none}
 header::after{content:"";position:absolute;left:-10%;right:-10%;bottom:0;height:3px;background:linear-gradient(90deg,transparent,var(--glow1),var(--glow2),transparent);animation:mChispa 4.5s linear infinite;pointer-events:none}
 
-/* nav tipo pestañas modernas */
+/* nav tipo pestañas modernas, activa VERDE con subrayado que late */
 nav{border-bottom:2px solid color-mix(in srgb,var(--verde) 45%,var(--linea))}
-nav button{border-radius:12px 12px 0 0;font-weight:600;transition:background .18s,color .18s,transform .12s}
+nav button{border-radius:12px 12px 0 0;font-weight:600;transition:background .18s,color .18s,transform .12s;position:relative}
 nav button:hover{background:var(--verde2);color:var(--verde);transform:translateY(-1px)}
-nav button.on{background:linear-gradient(135deg,var(--verde),color-mix(in srgb,var(--verde) 68%,var(--glow1)));color:#fff;box-shadow:0 4px 12px color-mix(in srgb,var(--verde) 35%,transparent)}
+nav button.on{background:linear-gradient(135deg,#2F80ED,#1F6FD1)!important;color:#fff!important;box-shadow:0 5px 14px color-mix(in srgb,var(--azul) 42%,transparent)}
+nav button.on::after{content:"";position:absolute;left:12px;right:12px;bottom:-2px;height:3px;border-radius:3px;background:var(--glow2);animation:mLatido2 1.6s ease-in-out infinite}
+
+/* título de sección con punto verde que late (estilo Paros) */
+main h2{display:flex;align-items:center;gap:9px}
+main h2::before{content:"";width:10px;height:10px;border-radius:50%;background:var(--verde);animation:mPulso 2.2s infinite;flex:none}
+section.on{animation:mSube .35s both}
 
 /* botones animados */
 button{border-radius:10px;transition:transform .12s,box-shadow .18s,filter .18s}
@@ -1233,6 +1246,190 @@ button:active{transform:translateY(0) scale(.97)}
 .pc .tk{border-top-color:var(--linea)} .pc .tk h4{color:var(--verde)}
 .pc .av .bar{background:var(--verde2)} .pc .av .bar i{background:var(--verde)}
 .bdg{box-shadow:var(--sombra)}
+
+/* ===================== ACOMODO estilo PREVENTIVO (tarjetas KPI, botones, pestañas) ===================== */
+main{max-width:1280px}
+/* botones con "sombrita" tipo Preventivo */
+button{border-radius:12px;min-height:40px}
+.b-verde{background:var(--azul)!important;color:#fff!important;border:1px solid var(--azul)!important;box-shadow:0 2px 0 #1555A8!important}
+.b-verde:hover{filter:brightness(1.06);transform:none;box-shadow:0 2px 0 #1555A8!important}
+.b-verde:active{transform:translateY(1px);box-shadow:0 1px 0 #1555A8!important}
+.b-blanco{background:#fff!important;border:1px solid var(--linea)!important;color:var(--navy)!important;box-shadow:none}
+.b-gris{background:var(--verde2)!important;color:var(--navy)!important;border:1px solid var(--linea)!important;box-shadow:none}
+.b-rojo{background:var(--rojo)!important;color:#fff!important;box-shadow:0 2px 0 #9B1C1C!important}
+
+/* chips de resumen → mosaicos KPI (como .kpi de Preventivo) */
+.chips{gap:12px;margin:10px 0 16px}
+.chip{display:flex;flex-direction:column-reverse;align-items:flex-start;gap:0;background:var(--card)!important;border:1px solid var(--linea)!important;border-left:0!important;border-top:4px solid var(--navy)!important;border-radius:14px!important;padding:12px 16px!important;min-width:118px;box-shadow:var(--sombra)}
+.chip b{font-size:26px!important;line-height:1.05;color:var(--navy)}
+.chip.v{border-top-color:var(--verde)!important}.chip.v b{color:var(--verde)}
+.chip.a{border-top-color:var(--ambar)!important}.chip.a b{color:var(--ambar)}
+
+/* pestañas tipo pastilla (como Preventivo) */
+nav{background:var(--fondo);border-bottom:1px solid var(--linea);padding-bottom:10px;gap:6px}
+nav button{background:var(--card);border:1px solid var(--linea);border-radius:12px;color:var(--gris);min-height:40px;padding:9px 14px}
+nav button:hover{background:var(--verde2);color:var(--azul);border-color:color-mix(in srgb,var(--azul) 40%,var(--linea));transform:none}
+nav button.on{border:1px solid transparent}
+nav button.on::after{display:none}
+/* iconos en cada pestaña (entender de un vistazo) */
+nav button[data-t="org"]::before{content:"🏢";margin-right:6px}
+nav button[data-t="ev"]::before{content:"⭐";margin-right:6px}
+nav button[data-t="cum"]::before{content:"✅";margin-right:6px}
+nav button[data-t="cal"]::before{content:"⏱️";margin-right:6px}
+nav button[data-t="graf"]::before{content:"📈";margin-right:6px}
+nav button[data-t="proy"]::before{content:"🚧";margin-right:6px}
+
+/* títulos de sección más limpios */
+main h2{color:var(--tit,var(--navy));font-size:18px}
+main h2::before{background:var(--azul)}
+
+/* textos claros "en línea" que quedaban ilegibles sobre blanco → color legible */
+[style*="8FA3B8"]{color:var(--gris)!important}
+[style*="9FD0FF"]{color:var(--azul)!important}
+[style*="C9D8E8"]{color:var(--gris)!important}
+[style*="6B7F94"]{color:var(--gris)!important}
+[style*="9FB3C8"]{color:var(--gris)!important}
+[style*="DCE7F3"]{color:var(--tx)!important}
+
+/* ===================== "CHINGÓN": animaciones + recuadros modernos (todas las pantallas) ===================== */
+@keyframes mPop{from{opacity:0;transform:translateY(14px) scale(.985)}to{opacity:1;transform:none}}
+@keyframes mShine2{from{transform:translateX(-130%)}to{transform:translateX(130%)}}
+/* entrada escalonada de cualquier tarjeta/mosaico */
+.card,.chip,.hc,.pc,.pp .per,.donas .dg,.donas .dt,.corr,.corr .bx,.anillo{animation:mPop .5s cubic-bezier(.2,.8,.2,1) both}
+.chips>*:nth-child(2),.hg>*:nth-child(2),.donas>*:nth-child(2),.pcs>*:nth-child(2){animation-delay:.05s}
+.chips>*:nth-child(3),.hg>*:nth-child(3),.donas>*:nth-child(3),.pcs>*:nth-child(3){animation-delay:.1s}
+.chips>*:nth-child(4),.hg>*:nth-child(4),.donas>*:nth-child(4),.pcs>*:nth-child(4){animation-delay:.15s}
+.chips>*:nth-child(5),.hg>*:nth-child(5),.donas>*:nth-child(5){animation-delay:.2s}
+.chips>*:nth-child(n+6),.hg>*:nth-child(n+6){animation-delay:.25s}
+/* hover moderno en todo */
+.card,.chip,.hc,.pc,.pp .per,.donas .dg,.corr{transition:transform .2s,box-shadow .2s}
+.chip:hover,.donas .dg:hover,.pp .per:hover,.corr:hover,.pc:hover{transform:translateY(-3px);box-shadow:0 14px 30px rgba(14,42,71,.16)}
+/* brillo diagonal al pasar el mouse (recuadro moderno) */
+.chip,.hc,.donas .dg,.kpi{position:relative;overflow:hidden}
+.chip::after,.hc::after,.donas .dg::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 42%,rgba(255,255,255,.45) 50%,transparent 58%);transform:translateX(-140%);pointer-events:none}
+.chip:hover::after,.hc:hover::after,.donas .dg:hover::after{animation:mShine2 .75s ease}
+/* punto del título con gradiente + subrayado animado */
+main h2::before{background:linear-gradient(135deg,var(--azul),var(--glow1))}
+main h2{padding-bottom:5px;border-bottom:2px solid transparent;border-image:linear-gradient(90deg,var(--azul),var(--glow1) 45%,transparent) 1}
+/* iconos por puesto en el organigrama (imágenes para entender) */
+.card.gerente .pu::before{content:"👔 "}
+.card.jefe .pu::before{content:"🛠️ "}
+.card.supervisor .pu::before{content:"📋 "}
+.card.apoyo .pu::before{content:"🤝 "}
+.org .card:not(.gerente):not(.jefe):not(.supervisor):not(.apoyo):not(.ext) .pu::before{content:"👷 "}
+/* ===================== HERO innovador (estilo Base de Datos): escaneo + pulso + iconos flotando ===================== */
+.heroLI{margin:14px 0 18px;padding:24px 24px 20px;border-radius:22px;color:#EAF2FB;position:relative;overflow:hidden;box-shadow:0 14px 34px rgba(14,42,71,.28);display:grid;grid-template-columns:minmax(0,1fr) minmax(160px,280px);gap:20px;align-items:center;animation:mPop .55s cubic-bezier(.2,.8,.2,1) both;
+  background:radial-gradient(700px 260px at 85% 0%,rgba(63,193,201,.28),transparent 60%),radial-gradient(500px 240px at 0% 100%,rgba(245,166,35,.16),transparent 60%),linear-gradient(125deg,#0B1F35,#0E2A47 50%,#1A4877)}
+.heroLI::before{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px);background-size:28px 28px;-webkit-mask-image:linear-gradient(90deg,transparent,#000 55%);mask-image:linear-gradient(90deg,transparent,#000 55%);pointer-events:none}
+.heroLI::after{content:"";position:absolute;left:0;right:0;height:120px;top:-120px;background:linear-gradient(180deg,transparent,rgba(63,193,201,.18),transparent);animation:escaneoH 5s linear infinite;pointer-events:none}
+@keyframes escaneoH{to{top:112%}}
+.heroLI .hcont{position:relative;z-index:1;min-width:0;background:transparent!important;border:0!important;box-shadow:none!important}
+.heroLI .eti{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#9FE3E7;background:rgba(63,193,201,.14);border:1px solid rgba(63,193,201,.35);border-radius:99px;padding:3px 10px}
+.heroLI .eti i{width:8px;height:8px;border-radius:50%;background:#3FC1C9;box-shadow:0 0 0 0 rgba(63,193,201,.7);animation:latidoH 1.8s infinite}
+@keyframes latidoH{70%{box-shadow:0 0 0 9px rgba(63,193,201,0)}100%{box-shadow:0 0 0 0 rgba(63,193,201,0)}}
+.heroLI h2{font-size:30px;line-height:1.15;margin:10px 0 4px;color:#fff;letter-spacing:-.01em;border:0!important;padding:0;display:block}
+.heroLI h2::before{display:none}
+.heroLI h2 span{background:linear-gradient(90deg,#F5A623,#FFD27A);-webkit-background-clip:text;background-clip:text;color:transparent}
+.heroLI .sub{margin:0;color:#B8CBE0;font-size:14.5px}
+.heroLI .maqs{position:relative;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;align-content:center;z-index:0}
+.heroLI .maqs div{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:14px;display:grid;place-items:center;padding:10px;font-size:30px;animation:flotaH 6s ease-in-out infinite}
+.heroLI .maqs div:nth-child(2n){animation-delay:-2s}.heroLI .maqs div:nth-child(3n){animation-delay:-4s}
+@keyframes flotaH{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+@media (max-width:560px){.heroLI{grid-template-columns:1fr;padding:20px 16px}.heroLI .maqs{display:none}.heroLI h2{font-size:24px}}
+
+/* ===== más innovación en cada apartado: destello automático en mosaicos ===== */
+@keyframes mAuto{0%,90%{transform:translateX(-140%)}95%{transform:translateX(140%)}100%{transform:translateX(140%)}}
+.chips .chip::after{animation:mAuto 7s ease-in-out infinite}
+.chips .chip:nth-child(2n)::after{animation-delay:1.4s}
+.chips .chip:nth-child(3n)::after{animation-delay:2.8s}
+.hk div{position:relative;overflow:hidden}
+.hk div::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 42%,rgba(255,255,255,.4) 50%,transparent 58%);transform:translateX(-140%);pointer-events:none;animation:mAuto 8s ease-in-out infinite}
+/* icono (ilustración) en cada mosaico KPI */
+.chips .chip[data-ic]::before,.hk div[data-ic]::before{content:attr(data-ic);position:absolute;top:8px;right:10px;font-size:21px;line-height:1;opacity:.92;z-index:2;animation:mFlota 5s ease-in-out infinite;pointer-events:none;filter:drop-shadow(0 2px 3px rgba(14,42,71,.25))}
+.chips .chip[data-ic]{padding-right:38px!important}.hk div[data-ic]{padding-right:40px!important}
+/* acento animado bajo el título de cada sección */
+@keyframes mDesliz{to{background-position:-200% 0}}
+main h2{border-bottom:0!important;position:relative}
+main h2::after{content:"";position:absolute;left:19px;right:0;bottom:-3px;height:2px;background:linear-gradient(90deg,var(--azul),var(--glow1),transparent);background-size:200% 100%;animation:mDesliz 3.5s linear infinite;border-radius:2px;opacity:.85}
+.heroLI h2::after{display:none}
+
+/* ===================== NUEVOS PROYECTOS: captura visual + avances ===================== */
+.formNP{display:grid;grid-template-columns:1fr 1fr;gap:12px;background:var(--card);border:1px solid var(--linea);border-radius:0 0 16px 16px;box-shadow:var(--sombra);padding:16px;animation:mPop .4s both}
+.formNP label{display:flex;flex-direction:column;gap:5px;font-size:12.5px;font-weight:700;color:var(--gris)}
+.formNP input,.formNP select,.formNP textarea{padding:11px 12px;border:1px solid var(--linea)!important;border-radius:11px;background:#fff!important;color:var(--tx)!important;font-size:14px;transition:border-color .15s,box-shadow .15s}
+.formNP input:focus,.formNP select:focus,.formNP textarea:focus{outline:0;border-color:var(--azul)!important;box-shadow:0 0 0 3px color-mix(in srgb,var(--azul) 22%,transparent)}
+.formNP textarea{min-height:60px;resize:vertical}
+.formNP .big{font-size:16px;padding:14px;border-radius:12px}
+.priseg{display:flex;gap:8px;flex-wrap:wrap}
+.priseg button{flex:1;min-width:92px;padding:11px 10px;border-radius:12px;border:2px solid var(--linea);background:#fff;color:var(--gris);font-weight:700;font-size:14px;transition:transform .12s,background .15s,border-color .15s,color .15s}
+.priseg button:hover{transform:translateY(-1px)}
+.priseg .pa.on{border-color:#D32F2F;background:#FDE7E7;color:#A52222}
+.priseg .pm.on{border-color:#E0A100;background:#FFF4D6;color:#7A5600}
+.priseg .pb.on{border-color:#1E8E5A;background:#E3F4EC;color:#14663F}
+.avbig{display:flex;align-items:center;gap:14px;margin:10px 0;padding:10px;background:var(--fondo);border-radius:14px}
+.avbig svg{flex:none;filter:drop-shadow(0 4px 8px rgba(14,42,71,.14))}
+.avbig .avm{flex:1;min-width:0}
+.avbig .avt{font-size:12.5px;font-weight:700;color:var(--gris);display:block;margin-bottom:6px}
+.avbig .barbig{height:14px;border-radius:8px;background:var(--linea);overflow:hidden;box-shadow:inset 0 1px 2px rgba(0,0,0,.08)}
+.avbig .barbig i{display:block;height:100%;border-radius:8px;transition:width 1s cubic-bezier(.2,.8,.2,1)}
+.avbig small{display:block;margin-top:6px;color:var(--gris);font-size:12.5px;font-weight:600}
+.avbig .avedit{margin-top:6px;font-size:12.5px;color:var(--gris)}.avbig .avedit input{width:64px;padding:5px 8px;border:1px solid var(--linea);border-radius:8px;background:#fff;color:var(--tx)}
+/* número del centro de las donas: legible (antes blanco sobre blanco) */
+.donas svg text,.pp .per svg text,.avbig svg text{fill:var(--tx)!important}
+
+/* respeta a quien prefiere menos movimiento */
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
 </style>
+<script>
+/* Hero innovador (banner tablero) al inicio de main, visible en todas las pantallas */
+(function () {
+  function poner() {
+    var m = document.querySelector('main'); if (!m || document.getElementById('heroOrg')) return;
+    var h = document.createElement('div'); h.id = 'heroOrg'; h.className = 'heroLI';
+    h.innerHTML = '<div class="hcont"><span class="eti"><i></i> En vivo · Mantenimiento LI</span>' +
+      '<h2>Organigrama y <span>Desempeño</span></h2>' +
+      '<p class="sub">Equipo, cumplimiento del preventivo, paros y calificación del área — en un solo tablero.</p></div>' +
+      '<div class="maqs"><div>👔</div><div>🛠️</div><div>📋</div><div>👷</div><div>⭐</div><div>🔧</div></div>';
+    m.insertBefore(h, m.firstChild);
+  }
+  if (document.readyState !== 'loading') setTimeout(poner, 250);
+  else document.addEventListener('DOMContentLoaded', function () { setTimeout(poner, 250); });
+})();
+
+/* Ilustraciones en mosaicos KPI + números que cuentan (dashboard vivo) */
+(function () {
+  var IC = [['gerenc', '🏢'], ['jefat', '🛠️'], ['superv', '📋'], ['tecnic', '👷'], ['técnic', '👷'], ['personal', '👥'],
+    ['proyect', '🚧'], ['pendiente', '⏳'], ['proceso', '🔄'], ['terminad', '✅'], ['detenid', '⏸️'], ['vencid', '⚠️'],
+    ['vencen', '⏰'], ['avance', '📈'], ['registrad', '🧰'], ['valor', '💰'], ['inventario', '📦'], ['reponer', '🔁'],
+    ['cobro', '💲'], ['excelente', '🌟'], ['satisfact', '👍'], ['aceptable', '⚠️'], ['bajo', '🔻']];
+  function ico(txt) { txt = (txt || '').toLowerCase(); for (var i = 0; i < IC.length; i++) if (txt.indexOf(IC[i][0]) >= 0) return IC[i][1]; return '📊'; }
+  function ponIconos() {
+    document.querySelectorAll('.chips .chip, .hk div').forEach(function (el) {
+      if (el.dataset.ic) return; var t = el.textContent || ''; if (!/[a-záéíóú]/i.test(t)) return; el.dataset.ic = ico(t);
+    });
+  }
+  function cuNum(b) {
+    var raw = (b.textContent || '').trim(), m = raw.match(/^(\$?)(\d{1,6})(\s*%)?$/); if (!m) return;
+    var pre = m[1], end = parseInt(m[2], 10), suf = m[3] ? ' %' : ''; if (end < 2) return;
+    if (b.dataset.cu === String(end)) return; b.dataset.cu = String(end);
+    var dur = 650, t0 = performance.now();
+    (function step(t) { var p = Math.min(1, (t - t0) / dur), v = Math.round((1 - Math.pow(1 - p, 3)) * end); b.textContent = pre + v + suf; if (p < 1) requestAnimationFrame(step); })(performance.now());
+  }
+  function animar() { ponIconos(); document.querySelectorAll('.chips .chip b, .hk b').forEach(cuNum); }
+  function pronto() { setTimeout(animar, 300); }
+  document.addEventListener('click', function (e) { if (e.target.closest('nav button')) pronto(); });
+  if (document.readyState !== 'loading') pronto(); else document.addEventListener('DOMContentLoaded', pronto);
+  setInterval(animar, 2500);
+})();
+
+/* Prioridad segmentada (botones de color) en Nuevos proyectos */
+(function () {
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('#yPriSeg [data-pri]'); if (!b) return;
+    var sel = document.getElementById('yPri'); if (sel) sel.value = b.dataset.pri;
+    b.parentElement.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); });
+  });
+})();
+</script>
 </body>
 </html>
