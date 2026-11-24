@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#2F6FDB">
+<meta name="description" content="Misión Enfoque · tamizaje de atención (no diagnóstico) · CECyTEA Plantel Cd. Satélite Morelos">
+<title>Misión Enfoque · CECyTEA</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="iconos/icono-192.png">
+<link rel="apple-touch-icon" href="iconos/icono-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="estilos.css?v=1">
+</head>
+<body>
+
+<!-- ===================== CARGANDO ===================== -->
+<section class="pant on" id="vCarga"><div style="margin:auto;text-align:center"><span class="cargando"></span><p class="muted">Cargando Misión Enfoque…</p></div></section>
+
+<!-- ===================== ACCESO ===================== -->
+<section class="pant" id="vAcceso">
+  <div class="logo" data-logo></div>
+  <div class="plantel">Plantel Cd. Satélite Morelos</div>
+  <div class="heroe">
+    <div data-arte="astronauta"></div>
+    <h1>Misión Enfoque</h1>
+    <div class="sub">Acceso para orientación y administradores</div>
+  </div>
+  <form class="card" id="fAcceso" autocomplete="on" novalidate>
+    <p class="muted" style="margin-top:0">📱 La encuesta se aplica en el teléfono de orientación: inicia sesión y toca <b>Iniciar encuesta</b>.</p>
+    <label class="campo" for="aUsuario">Usuario</label>
+    <input id="aUsuario" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" inputmode="email">
+    <label class="campo" for="aClave">Contraseña</label>
+    <input id="aClave" type="password" autocomplete="current-password">
+    <p class="err" id="aErr"></p>
+    <button class="btn" type="submit" id="aEntrar">Entrar 🚀</button>
+  </form>
+  <div class="banner-demo oculto" id="aDemo">🧪 MODO DEMO: los datos se guardan solo en este navegador. Cuenta inicial: <b>kimberly</b> / <b>000000</b></div>
+  <p class="transp">Es una encuesta de tamizaje, no un diagnóstico. Las respuestas las revisa el área de orientación del plantel.</p>
+  <p class="centro"><button class="enlace" data-acerca>Acerca del cuestionario y créditos</button></p>
+</section>
+
+<!-- ===================== PANEL ===================== -->
+<div id="vPanel" class="oculto">
+  <header class="barra-sup">
+    <div class="in">
+      <div class="marca"><span data-arte="marca"></span><span>Misión Enfoque</span></div>
+      <div class="quien"><b id="pNombre"></b><span id="pRol"></span></div>
+      <button class="btn mini sec" id="pSalir">Salir</button>
+    </div>
+    <nav class="pestanas" id="pTabs">
+      <button data-v="inicio">🏠 Inicio</button>
+      <button data-v="tablero" data-perm="verEstadisticas">📊 Tablero</button>
+      <button data-v="participantes" data-perm="verEstadisticas">👥 Participantes</button>
+      <button data-v="informe" data-perm="descargarInformes">📄 Informe</button>
+      <button data-v="personas" data-gen>🔐 Personas</button>
+      <button data-v="cuenta">👤 Mi cuenta</button>
+      <button data-v="acerca">ℹ️ Acerca de</button>
+    </nav>
+  </header>
+  <main class="contenido">
+    <div class="banner-demo oculto" id="pDemo">🧪 MODO DEMO · datos solo en este navegador
+      <button class="btn mini" id="bEjemplos">Cargar 60 encuestas de ejemplo</button>
+      <button class="btn mini sec" id="bBorrarDemo">Borrar todo (demo)</button>
+    </div>
+
+    <!-- filtros compartidos -->
+    <div class="filtros oculto" id="filtros">
+      <div><label for="fDesde">Desde</label><input type="date" id="fDesde"></div>
+      <div><label for="fHasta">Hasta</label><input type="date" id="fHasta"></div>
+      <div><label for="fSem">Semestre</label><select id="fSem"></select></div>
+      <div><label for="fGru">Grupo</label><select id="fGru"></select></div>
+      <div><label for="fTur">Turno</label><select id="fTur"></select></div>
+      <div><label for="fSex">Sexo</label><select id="fSex"></select></div>
+      <div><label for="fEda">Edad</label><select id="fEda"></select></div>
+      <div class="acc"><span class="muted" id="fCuenta"></span><button class="btn mini sec" id="fLimpiar">Quitar filtros</button><button class="btn mini sec" id="fRecargar">↻ Actualizar</button></div>
+    </div>
+
+    <section class="vista" id="v-inicio">
+      <div class="inicio-kiosco">
+        <span data-arte="cohete"></span>
+        <div style="flex:1">
+          <h2>Modo encuesta</h2>
+          <p style="margin:0 0 4px">El teléfono queda listo para que los alumnos contesten uno tras otro. Para salir se pide tu contraseña.</p>
+          <button class="btn" id="bKiosco">▶ Iniciar encuesta</button>
+        </div>
+      </div>
+      <div class="card" id="iPend"></div>
+      <div class="kpis" id="iKpis"></div>
+      <div class="card">
+        <h3>¿Cómo funciona?</h3>
+        <p class="muted">1) Inicia el modo encuesta y entrega el teléfono al alumno. 2) El alumno llena sus datos (el nombre es opcional), contesta 6 preguntas (ASRS v1.1, Parte A) y, si quiere, juega 4 misiones cortas. 3) Al terminar ve un mensaje de agradecimiento (no ve su resultado). 4) Orientación revisa los resultados aquí, de forma confidencial.</p>
+      </div>
+    </section>
+
+    <section class="vista" id="v-tablero">
+      <div class="kpis" id="tKpis"></div>
+      <div class="graficas" id="tGraficas"></div>
+    </section>
+
+    <section class="vista" id="v-participantes">
+      <div class="fila" style="align-items:center;flex-wrap:wrap;margin-bottom:10px">
+        <input type="search" id="pBuscar" placeholder="Buscar folio o nombre…" style="flex:2;min-width:180px">
+        <select id="pSolo" style="flex:1;min-width:150px"><option value="">Todos</option><option value="pos">Solo requieren valoración</option><option value="neg">Solo sin indicios</option></select>
+        <button class="btn mini" id="bCsv" data-perm="exportarExcel" style="flex:none">⬇ Excel (CSV)</button>
+      </div>
+      <div class="tabla-c"><table class="t" id="pTabla"></table></div>
+    </section>
+
+    <section class="vista" id="v-informe">
+      <div class="card">
+        <h2>Informe en PDF</h2>
+        <p class="muted">Incluye portada, resumen ejecutivo, metodología, gráficas, análisis automático, desempeño en misiones, lista de participantes (los que requieren valoración resaltados en rojo) y ruta de referencia. Usa los filtros de arriba.</p>
+        <div class="fila" style="flex-wrap:wrap">
+          <button class="btn" id="bPdfPrev">👁 Generar vista previa</button>
+          <button class="btn sec" id="bPdfBajar" disabled>⬇ Descargar PDF</button>
+        </div>
+        <p class="err" id="pdfMsg" style="color:var(--gris)"></p>
+      </div>
+      <div id="pdfZona"></div>
+    </section>
+
+    <section class="vista" id="v-personas">
+      <div class="fila" style="align-items:center;flex-wrap:wrap;margin-bottom:10px">
+        <h2 style="flex:1;margin:0">Administradores</h2>
+        <button class="btn mini" id="bAgregar" style="flex:none">＋ Agregar administrador</button>
+      </div>
+      <p class="muted">Solo tú (administradora general) ves esta pantalla y las contraseñas. Cada quien puede cambiar la suya en "Mi cuenta"; aquí verás siempre la vigente.</p>
+      <div class="personas" id="lPersonas"></div>
+    </section>
+
+    <section class="vista" id="v-cuenta">
+      <div class="card" id="cDatos"></div>
+      <div class="card">
+        <h3>Cambiar mi contraseña</h3>
+        <label class="campo" for="cActual">Contraseña actual</label><input id="cActual" type="password" autocomplete="current-password">
+        <label class="campo" for="cNueva">Contraseña nueva <small>(mínimo 6; mejor 10 o más con letras y números)</small></label><input id="cNueva" type="password" autocomplete="new-password">
+        <label class="campo" for="cNueva2">Repite la contraseña nueva</label><input id="cNueva2" type="password" autocomplete="new-password">
+        <p class="err" id="cMsg"></p>
+        <button class="btn" id="bCambiar">Guardar contraseña</button>
+      </div>
+    </section>
+
+    <section class="vista" id="v-acerca"><div class="card" id="acercaTxt"></div></section>
+  </main>
+</div>
+
+<!-- ===================== MODO ENCUESTA (kiosco) ===================== -->
+<button class="candado oculto" id="kCandado" title="Salir del modo encuesta" aria-label="Salir del modo encuesta">🔒</button>
+
+<section class="pant" id="kPortada">
+  <div class="logo" data-logo></div>
+  <div class="plantel">Plantel Cd. Satélite Morelos</div>
+  <div class="heroe">
+    <div data-arte="astronauta"></div>
+    <h1>Misión Enfoque</h1>
+    <div class="sub">6 preguntas + 4 mini misiones · unos 5 minutos</div>
+    <div class="etiquetas"><span>🧠 Atención</span><span>⚡ Reflejos</span><span>⭐ Retos</span></div>
+  </div>
+  <button class="btn" id="kComenzar" style="font-size:21px;padding:19px">¡Comenzar! 🚀</button>
+  <p class="transp">Es una encuesta de tamizaje, no un diagnóstico. Tus respuestas las revisa el área de orientación de tu plantel.</p>
+</section>
+
+<section class="pant" id="kDatos">
+  <h2 style="margin-top:8px">Cuéntanos de ti 👋</h2>
+  <div class="card">
+    <label class="campo" for="dNombre">Nombre <small>· opcional, puedes dejarlo vacío</small></label>
+    <input id="dNombre" type="text" autocomplete="off" maxlength="80" placeholder="Puedes dejarlo vacío">
+    <label class="campo">Edad *</label><div class="chips" data-campo="edad"></div>
+    <label class="campo">Sexo *</label><div class="chips grande" data-campo="sexo"></div>
+    <label class="campo">Semestre *</label><div class="chips" data-campo="semestre"></div>
+    <label class="campo">Grupo *</label><div class="chips" data-campo="grupo"></div>
+    <label class="campo">Turno *</label><div class="chips grande" data-campo="turno"></div>
+    <p class="err" id="dErr"></p>
+  </div>
+  <button class="btn" id="dSig">Siguiente ➜</button>
+  <button class="btn sec" id="dAtras">Regresar</button>
+</section>
+
+<section class="pant" id="kInstr">
+  <div class="heroe">
+    <div data-arte="cerebro"></div>
+    <h2>Antes de empezar</h2>
+    <p id="iIntro" style="font-weight:700"></p>
+  </div>
+  <div class="card">
+    <p><b>Instrucción:</b> <span id="iInstr"></span></p>
+    <p class="chico">Las preguntas son las del cuestionario oficial (por eso dicen "usted"). Debajo de cada una hay un ejemplo opcional 💡.</p>
+  </div>
+  <button class="btn" id="iEmpezar">Empezar preguntas ➜</button>
+</section>
+
+<section class="pant" id="kPregunta">
+  <div class="prog"><button class="btn mini sec" id="qAtras" aria-label="Pregunta anterior">◀</button><div class="barra"><i id="qBarra"></i></div><b id="qNum">1 / 6</b></div>
+  <div class="preg" id="qCaja"></div>
+  <div id="qOpc"></div>
+</section>
+
+<section class="pant" id="kMisiones">
+  <div class="heroe" style="padding:14px">
+    <h2 style="margin:4px 0">Mapa de misiones 🗺️</h2>
+    <div class="sub" id="mSub">Opcionales, pero ¡están chidas! · unos 3 minutos</div>
+  </div>
+  <div class="mapa" id="mMapa"></div>
+  <button class="btn" id="mTerminar">Terminar y enviar ✔</button>
+</section>
+
+<section class="pant" id="kMisionIntro">
+  <div class="heroe"><div style="font-size:64px" id="miEmoji"></div><h2 id="miTitulo"></h2><div class="sub" id="miHab"></div></div>
+  <div class="card" id="miTexto"></div>
+  <button class="btn" id="miListo">¡Listo! ➜</button>
+  <button class="btn sec" id="miSaltar">Saltar esta misión</button>
+</section>
+
+<section class="pant" id="kJuego">
+  <div class="hud"><span id="jTitulo"></span><span id="jInfo"></span></div>
+  <div class="prog"><div class="barra"><i id="jBarra"></i></div></div>
+  <div class="arena" id="arena"><div id="jCaja"></div><div class="flash" id="flash"></div></div>
+  <p class="muted centro" id="jPista"></p>
+</section>
+
+<section class="pant" id="kMisionOk">
+  <div class="heroe"><h2 id="okTitulo">¡Misión cumplida!</h2><div class="grandes" id="okEstrellas"></div><p id="okMsg" style="font-weight:700"></p></div>
+  <button class="btn" id="okMapa">Volver al mapa 🗺️</button>
+</section>
+
+<section class="pant" id="kFinal">
+  <div class="heroe">
+    <div data-arte="trofeo"></div>
+    <h1>¡Gracias!</h1>
+    <div class="sub" id="fEstrellas"></div>
+    <p style="font-weight:800;font-size:18px;color:var(--marino)">Si quieres hablar con alguien, acude a orientación. 💙</p>
+  </div>
+  <div class="card centro">
+    <p class="muted" style="margin:0">Este cuestionario no diagnostica. Si te sientes muy mal o en peligro, llama gratis:</p>
+    <a class="tel" href="tel:8009112000">📞 Línea de la Vida 800 911 2000</a>
+    <p class="muted" style="margin:0">24 horas, todos los días · Emergencias: <a href="tel:911"><b>911</b></a></p>
+  </div>
+  <p class="muted centro" id="fEstado"></p>
+  <button class="btn" id="fOtro">Listo · siguiente alumno</button>
+</section>
+
+<script src="../firebase-config.js"></script>
+<script src="instrumentos.js?v=1"></script>
+<script src="ilustraciones.js?v=1"></script>
+<script src="dialogo.js?v=1"></script>
+<script src="almacenamiento.js?v=1"></script>
+<script src="juegos.js?v=1"></script>
+<script src="encuesta.js?v=1"></script>
+<script src="informe.js?v=1"></script>
+<script src="panel.js?v=1"></script>
+<script>/* pruebas automáticas: solo en modo demo con ?demo&autotest=... */
+if (window.Mision && Mision.modo === 'demo' && /[?&]autotest=/.test(location.search)) { var s = document.createElement('script'); s.src = 'pruebas/autoprueba.js'; document.body.appendChild(s); }</script>
+</body>
+</html>

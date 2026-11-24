@@ -1,0 +1,17 @@
+{
+  "name": "Misión Enfoque · CECyTEA",
+  "short_name": "Misión Enfoque",
+  "description": "Tamizaje de atención (no diagnóstico) · CECyTEA Plantel Cd. Satélite Morelos",
+  "lang": "es-MX",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FFFFFF",
+  "theme_color": "#2F6FDB",
+  "icons": [
+    { "src": "iconos/icono-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "iconos/icono-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "iconos/icono-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
