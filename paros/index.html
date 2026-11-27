@@ -1109,21 +1109,7 @@ async function resumenPdfGen(){
   tabla(['Fecha','Máquina','Falla reportada','Causa / solución capturada','Atendió','Paro'],
     c.dudoso.map(e => [fh(e.t0), lim(e.maqN), lim(e.falla), lim(e.causa) + ' / ' + lim(e.solucion), nom((e.tecRep || e.tec)?.n), mi(paro(e)) + ' min']).concat(c.dudoso.length ? [filaTot('Total por confirmar', 5, suma(c.dudoso) + ' min')] : []),
     AM, { columnStyles:{ 0:{ cellWidth:19 }, 5:{ halign:'right', cellWidth:14 } } });
-  // 3 · registros de prueba
-  titulo('4 · Registros de prueba (dicen "prueba"; no cuentan como paro)', MO);
-  tabla(['Fecha','Máquina','Falla capturada','Quién la hizo','Atendió','Min'],
-    c.prueba.map(e => [fh(e.t0), lim(e.maqN), lim(e.falla), nom(e.op?.n), nom((e.tecRep || e.tec)?.n), String(mi(paro(e)))]).concat(c.prueba.length ? [filaTot(c.prueba.length + ' registros de prueba', 5, String(suma(c.prueba)))] : []),
-    MO, { columnStyles:{ 0:{ cellWidth:19 }, 5:{ halign:'right', cellWidth:12 } } });
-  // 4 · pruebas de alarma (agrupadas por día y equipo)
-  titulo('5 · Pruebas de alarma (botón de prueba)', MO);
-  const ga = {}; prs.forEach(e => { const k = fday(new Date(e.t0)) + '|' + e.maqN; ga[k] = ga[k] || { n:0, m:0, tecs:new Set() }; ga[k].n++; ga[k].m += mi(minPrueba(e)); if (e.tec?.n) ga[k].tecs.add(nom(e.tec.n)); });
-  tabla(['Día','Equipo','Atendió','Pruebas','Min'],
-    Object.entries(ga).map(([k, o]) => { const [dd, mq] = k.split('|'); return [dd, lim(mq), [...o.tecs].join(', ') || '—', String(o.n), String(o.m)]; }).concat(prs.length ? [[{ content:'Total', colSpan:3, styles:{ fontStyle:'bold' } }, { content:String(prs.length), styles:{ fontStyle:'bold', halign:'right' } }, { content:String(prs.reduce((s,e) => s + mi(minPrueba(e)), 0)), styles:{ fontStyle:'bold', halign:'right' } }]] : []),
-    MO, { columnStyles:{ 0:{ cellWidth:22 }, 3:{ halign:'right', cellWidth:16 }, 4:{ halign:'right', cellWidth:14 } } });
-  // quién atendió
-  titulo('Quién atendió (paros reales y por confirmar)', [60,70,82]);
-  const qa = {}; c.real.forEach(e => { const n = nom((e.tecRep || e.tec)?.n); qa[n] = qa[n] || [0,0]; qa[n][0]++; }); c.dudoso.forEach(e => { const n = nom((e.tecRep || e.tec)?.n); qa[n] = qa[n] || [0,0]; qa[n][1]++; });
-  tabla(['Técnico','Reales','Por confirmar'], Object.entries(qa).sort((a,b) => b[1][0] - a[1][0] || b[1][1] - a[1][1]).map(([n, v]) => [n, String(v[0]), String(v[1])]), [60,70,82], { tableWidth:110, columnStyles:{ 1:{ halign:'right' }, 2:{ halign:'right' } } });
+  // (Se quitaron del PDF, a petición del Ing. Omar: "4 · Registros de prueba", "5 · Pruebas de alarma" y "Quién atendió".)
   // pie con número de hoja
   const np = d.getNumberOfPages();
   for (let i = 1; i <= np; i++) { d.setPage(i); d.setDrawColor(214,221,228); d.line(M, 268, W - M, 268); d.setFontSize(7); d.setTextColor(...GR); d.text('Control de Paros · Línea Italia · Departamento de Mantenimiento', M, 272); d.text('Hoja ' + i + ' de ' + np, W - M, 272, { align:'right' }); }
@@ -1614,5 +1600,5 @@ $('logo').title = 'Doble clic: configuración';
 <script src="iconos.js?v=14"></script>
 <script src="iconos-maquinas.js?v=14"></script>
 <script src="tema-master.js?v=14"></script>
-<script src="../lib/dialogo-app.js?v=3"></script><script src="../lib/pedido-material.js?v=4"></script><script src="pedido-paros.js?v=2"></script>
+<script src="../lib/dialogo-app.js?v=3"></script><script src="../lib/pedido-material.js?v=4"></script><script src="pedido-paros.js?v=2"></script><script src="../lib/por-llegar.js?v=1"></script><script src="por-llegar-paros.js?v=1"></script>
 </body></html>

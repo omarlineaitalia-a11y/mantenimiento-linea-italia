@@ -1493,5 +1493,5 @@ window.addEventListener('appinstalled', () => { pedirInstalar = null; $('#btnIns
 $('#btnInstalar').onclick = async () => { if (!pedirInstalar) return; pedirInstalar.prompt(); try { await pedirInstalar.userChoice; } catch (e) {} pedirInstalar = null; $('#btnInstalar').hidden = true; };
 </script>
 <script>if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});</script>
-<script src="../lib/dialogo-app.js?v=3"></script><script>window.alert = function (m) { if (window.avisoApp) avisoApp({ texto: String(m) }); };</script>
+<script src="../lib/dialogo-app.js?v=3"></script><script>window.alert = function (m) { if (window.avisoApp) avisoApp({ texto: String(m) }); };</script><script src="../lib/por-llegar.js?v=1"></script><script src="por-llegar-eq.js?v=1"></script>
 </body></html>
