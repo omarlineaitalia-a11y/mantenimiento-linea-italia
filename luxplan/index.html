@@ -1005,7 +1005,7 @@ function renderPlano(){
   <div class="lp-wrap">
     <div class="card lp-main">
       <div class="lp-tools">
-        <button class="btn" id="lpAdd">＋ UFO 200 W</button>
+        <button class="btn" id="lpAdd">＋ UFO 250 W</button>
         <button class="btn pri" id="lpOver">🎯 UFO sobre máquina</button>
         <button class="btn" id="lpMes">★ Marcar “del mes”</button>
         <button class="btn" id="lpSensor">Radio sensor</button>
@@ -1025,6 +1025,12 @@ function renderPlano(){
         <label class="lp-f"><span>Óptica UFO</span><select id="lpB"><option value="90" selected>90° angosto (high-bay)</option><option value="120">120° abierto</option></select></label>
         <div id="lpLux" class="lp-lux"></div>
       </div>
+      <div class="lp-calc">
+        <h4 style="margin:12px 0 6px">Cuántas en la nave</h4>
+        <label class="lp-f"><span>Largo nave</span><input type="number" id="lpL" value="115" step="any" inputmode="decimal"><em>m</em></label>
+        <label class="lp-f"><span>Ancho efectivo</span><input type="number" id="lpW" value="32" step="any" inputmode="decimal"><em>m</em></label>
+        <div id="lpNave" class="lp-lux"></div>
+      </div>
       <div style="display:flex;gap:8px;margin-top:10px">
         <button class="btn pri" id="lpSave" style="flex:1">💾 Guardar acomodo</button>
         <button class="btn" id="lpReset">↺ Reiniciar</button>
@@ -1035,12 +1041,12 @@ function renderPlano(){
         <div><span class="sw" style="background:#9333ea"></span>Acabado</div>
         <div><span class="sw" style="background:#0d9488"></span>Costura</div>
         <div><span class="sw" style="background:#2563eb"></span>Empaque</div>
-        <div><span class="sw" style="background:#f59e0b;border-radius:50%"></span>UFO 200 W</div>
+        <div><span class="sw" style="background:#f59e0b;border-radius:50%"></span>UFO 250 W</div>
         <div><span class="sw" style="background:#f5a623;border-radius:50%;box-shadow:0 0 0 2px var(--panel),0 0 0 4px #c77f00"></span>UFO del mes</div>
       </div>
       <div class="lp-ufo">
-        <div class="h">💡 UFO LED 200 W · Home Depot</div>
-        <table><tr><td>Flujo</td><td>30,000 lm</td></tr><tr><td>Color</td><td>5000 K</td></tr><tr><td>Sensor</td><td>Microondas 12–16 m</td></tr><tr><td>Precio</td><td>$559.99 / 6 pzas</td></tr><tr><td>Reemplaza</td><td>3 × T8 30 W</td></tr></table>
+        <div class="h">💡 UFO LED 250 W ajustable · high-bay</div>
+        <table><tr><td>Marca</td><td>BSMOOM (aluminio)</td></tr><tr><td>Potencia</td><td>150/200/250 W</td></tr><tr><td>Flujo</td><td>22,500 / 30,000 / 37,500 lm</td></tr><tr><td>Color</td><td>4000 / 5000 / 6500 K</td></tr><tr><td>Voltaje</td><td>110–227 V</td></tr><tr><td>Sensor · vida</td><td>Sí · 100,000 h</td></tr><tr><td>Precio</td><td>$969 oferta · $2,199</td></tr></table>
       </div>
       <p class="note" style="margin-top:10px">El lux rápido es una <b>estimación</b> (fuente puntual, haz 120°). La memoria formal por máquina se hace en la pestaña <b>Interior</b>. Instalación en altura: LOTO (NOM-029), arnés y plataforma (NOM-009).</p>
     </aside>
@@ -1076,7 +1082,7 @@ function renderPlano(){
     if(sel.t==='m'){pill.textContent='Máquina';const cov=ufos.some(u=>Math.hypot(u.x-machines.find(x=>x.num===sel.num).x,u.y-machines.find(x=>x.num===sel.num).y)<=SNAP);el.innerHTML=`<div class="big">Nº ${sel.num} · ${NOM[sel.num]||'—'}</div><div class="sm">Zona: ${fam(sel.num)} · ${cov?'<b style="color:var(--ok)">con luminaria ✓</b>':'sin luminaria'}</div>`}
     else{const u=ufos.find(x=>x.id===sel.id);pill.textContent='Luminaria';el.innerHTML=`<div class="big">UFO 200 W ${u&&u.mes?'★ del mes':''}</div><div class="sm">Arrástrala; “Marcar del mes” o “Quitar”.</div>`}}
   function lux(){const h=+$('#lpH').value,T=+$('#lpT').value,beam=+$('#lpB').value;$('#lpHv').textContent=h.toFixed(1)+' m';
-    const half=beam/2*Math.PI/180; const I0=30000/(2*Math.PI*(1-Math.cos(half))); const E0=I0/(h*h);
+    const half=beam/2*Math.PI/180; const I0=37500/(2*Math.PI*(1-Math.cos(half))); const E0=I0/(h*h);
     let area=0,ok=E0>=T;
     if(ok){const cm=Math.cbrt(T*h*h/I0);const th=Math.acos(Math.min(1,cm));const r=h*Math.tan(th);area=Math.PI*r*r}
     $('#lpLux').innerHTML=`<div class="lp-row"><span>Bajo la UFO</span><b>${Math.round(E0)} lux</b></div>`+
@@ -1099,10 +1105,19 @@ function renderPlano(){
   $('#lpSensor').onclick=()=>{showSensor=!showSensor;draw()};
   $('#lpSave').onclick=()=>{store.set('plano',{machines,ufos});flashP('💾 Acomodo guardado')};
   $('#lpReset').onclick=()=>{machines=defMachines();ufos=defUfos();sel=null;draw();info();flashP('Reiniciado (no guardado)')};
-  $('#lpH').addEventListener('input',lux);$('#lpT').addEventListener('change',lux);$('#lpB').addEventListener('change',lux);
+  function nave(){const L=+$('#lpL').value||0,W=+$('#lpW').value||0,h=+$('#lpH').value,T=+$('#lpT').value;
+    const A=L*W,FLUX=37500,FM=0.8,CU=Math.max(0.60,Math.min(0.78,0.84-0.03*h));
+    if(!(A>0)){$('#lpNave').innerHTML='<div class="lp-bad">Escribe largo y ancho de la nave.</div>';return}
+    const N=Math.ceil(T*A/(FLUX*CU*FM));
+    let nx=Math.max(1,Math.round(Math.sqrt(N*L/W))),ny=Math.ceil(N/nx);
+    const sx=L/nx,sy=W/ny,Sh=Math.max(sx,sy)/Math.max(.1,h-0.85);
+    $('#lpNave').innerHTML=`<div class="lp-row"><span>Área</span><b>${A.toLocaleString('es-MX')} m²</b></div><div class="lp-row"><span>UFO 250 W (a ${T} lux)</span><b>${N} pzas</b></div><div class="lp-row"><span>Distribución</span><b>${nx} × ${ny}</b></div><div class="lp-row"><span>Separación</span><b>${sx.toFixed(1)} × ${sy.toFixed(1)} m</b></div>`+
+      (Sh>1.6?`<div class="lp-bad">S/h=${Sh.toFixed(2)}: separación alta, puede haber sombras; sube a ${nx+1}×${ny} o baja el montaje.</div>`:`<div class="lp-ok">S/h=${Sh.toFixed(2)} (buena uniformidad). A 6/mes ≈ ${Math.ceil(N/6)} meses de programa.</div>`);}
+  $('#lpH').addEventListener('input',()=>{lux();nave()});$('#lpT').addEventListener('change',()=>{lux();nave()});$('#lpB').addEventListener('change',lux);
+  ['lpL','lpW'].forEach(id=>$('#'+id).addEventListener('input',nave));
   function flashP(m){let e=$('#lpFlash');if(!e){e=document.createElement('div');e.id='lpFlash';e.className='lp-flash';document.body.appendChild(e)}e.textContent=m;e.style.opacity='1';clearTimeout(e._t);e._t=setTimeout(()=>e.style.opacity='0',1700)}
 
-  draw();info();lux();
+  draw();info();lux();nave();
 }
 
 /* =================== arranque =================== */
